@@ -4,25 +4,26 @@ correspond to a unique signature.
 Such a variable is similar to a binary target variable, where 1 is a singleout
 and 0 otherwise.
 """
-
-from os import sep, getcwd
+import random
 import pandas as pd
 import numpy as np
 
-def single_outs():
-    """Creates a new binary variable with singleouts information based on selected quasi-identifiers
+def single_outs(data: pd.DataFrame) -> tuple[pd.DataFrame, list]:
+    """It takes a dataframe and returns a new dataframe with a new column called 'single_out'
+    that is 1 if the row is a single out and 0 otherwise, based on select quasi-identifiers
+
+    :param data: the dataframe you want to create the single out variable
 
     Returns:
         dataframe: Dataframe with single outs variable
+        list: selected quasi-identifiers
     """
-    data = pd.read_csv(f'{getcwd()}{sep}dataset.csv')
-
-    key_vars = ['age', 'det_ind_code', 'det_occ_code', 'weeks_worked', 'year']
-
-    data_copy = data.copy()
-
+    # select 10% of attributes as quasi-identifiers
+    random.seed(42)
+    key_vars = random.choices(data.columns, k=int(0.1*len(data.columns)))
     k = data.groupby(key_vars)[key_vars[0]].transform(len)
 
+    data_copy = data.copy()
     data_copy['single_out'] = None
     data_copy['single_out'] = np.where(k == 1, 1, 0)
 

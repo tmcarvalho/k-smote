@@ -5,7 +5,8 @@ import recordlinkage
 import pandas as pd
 import numpy as np
 
-def record_linkage(transformed: pd.DataFrame, original: pd.DataFrame, columns: list) -> pd.DataFrame:
+def record_linkage(transformed: pd.DataFrame,
+    original: pd.DataFrame, columns: list) -> pd.DataFrame:
     """_summary_
 
     Args:
@@ -31,6 +32,6 @@ def record_linkage(transformed: pd.DataFrame, original: pd.DataFrame, columns: l
 
     comparisons = compare.compute(candidates, transformed, original)
     potential_matches = comparisons[comparisons.sum(axis=1) > 1].reset_index()
-    potential_matches['Score'] = potential_matches.iloc[:, :-1].sum(axis=1)
+    potential_matches['Score'] = potential_matches.iloc[:, 2:-1].sum(axis=1)
 
     return potential_matches

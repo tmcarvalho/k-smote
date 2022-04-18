@@ -11,6 +11,7 @@ seaborn = "*"
 matplotlib = "*"
 ipython = "*"
 recordlinkage = "*"
+xgboost = "*"
 
 [dev-packages]
 ipykernel = "*"

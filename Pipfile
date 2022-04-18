@@ -9,6 +9,8 @@ pylint = "*"
 imblearn = "*"
 seaborn = "*"
 matplotlib = "*"
+ipython = "*"
+recordlinkage = "*"
 
 [dev-packages]
 ipykernel = "*"

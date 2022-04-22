@@ -15,17 +15,17 @@ from xgboost import XGBClassifier
 def evaluate_model(
     x: pd.DataFrame,
     y: np.int64,
-    validation: dict,
-    test: dict,
-    neirest_neighbours: np.int64):
-    """_summary_
+    neirest_neighbours: np.int64,
+    privacy_risk: np.int64,
+    privacy_risk_max: np.int64):
+    """Evaluatation
 
     Args:
         x (pd.DataFrame): dataframe to train
         y (np.int64): target variable
-        validation (dict): validation scores
-        test (dict): test results
-        nn (np.int64): neirest neighbours from smote
+        neirest_neighbours (np.int64): neirest neighbours from smote
+        privacy_risk (np.int64): record linkage result with 50% score
+        privacy_risk_max (np.int64): record linkage result with 100% score
 
     Returns:
         tuple: dictionary with validation and test results
@@ -35,16 +35,7 @@ def evaluate_model(
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
 
     seed = np.random.seed(1234)
-    # rfc = RandomForestClassifier(random_state=seed)
-    rfc = RandomForestClassifier(random_state=seed)
-    bc = BaggingClassifier(random_state=seed)
-    xgb = XGBClassifier(
-        objective='binary:logistic',
-        eval_metric='logloss',
-        use_label_encoder=False,
-        random_state=seed)
-    lreg = LogisticRegression(random_state=seed)
-    nnet = MLPClassifier(random_state=seed)
+
     n_feat = x_train.shape[1]
 
     # set parameters
@@ -75,44 +66,50 @@ def evaluate_model(
                        'max_iter': [10000, 100000]
                        }
     # define metric functions
-    gmean = make_scorer(geometric_mean_score)
-    scoring = {'gmean': gmean, 'acc': 'accuracy', 'bal_acc': 'balanced_accuracy',
-               'f1': 'f1', 'f1_weighted': 'f1_weighted'}
+    scoring = {
+        'gmean': make_scorer(geometric_mean_score),
+        'acc': 'accuracy',
+        'bal_acc': 'balanced_accuracy',
+        'f1': 'f1',
+        'f1_weighted': 'f1_weighted'}
 
-    inner_cv = RepeatedKFold(n_splits=5, n_repeats=2)
     # create the parameter grid
     gs_rf = GridSearchCV(
-        estimator=rfc,
+        estimator=RandomForestClassifier(random_state=seed),
         param_grid=param_grid_rf,
-        cv=inner_cv,
+        cv=RepeatedKFold(n_splits=5, n_repeats=2),
         scoring=scoring,
         refit='f1_weighted',
         return_train_score=True)
     gs_bc = GridSearchCV(
-        estimator=bc,
+        estimator=BaggingClassifier(random_state=seed),
         param_grid=param_grid_bc,
-        cv=inner_cv,
+        cv=RepeatedKFold(n_splits=5, n_repeats=2),
         scoring=scoring,
         refit='f1_weighted',
         return_train_score=True)
     gs_xgb = GridSearchCV(
-        estimator=xgb,
+        estimator=XGBClassifier(
+            objective='binary:logistic',
+            eval_metric='logloss',
+            use_label_encoder=False,
+            random_state=seed),
         param_grid=param_grid_xgb,
-        cv=inner_cv,
+        cv=RepeatedKFold(n_splits=5, n_repeats=2),
         scoring=scoring,
         refit='f1_weighted',
         return_train_score=True)
     gs_lreg = GridSearchCV(
-        estimator=lreg,
+        estimator=LogisticRegression(random_state=seed),
         param_grid=param_grid_lreg,
-        cv=inner_cv,
+        cv=RepeatedKFold(n_splits=5, n_repeats=2),
         scoring=scoring,
         refit='f1_weighted',
         return_train_score=True)
     gs_nnet = GridSearchCV(
-        estimator=nnet,
+        estimator=MLPClassifier(random_state=seed),
         param_grid=param_grid_nnet,
-        cv=inner_cv,
+        cv=RepeatedKFold(n_splits=5, n_repeats=2),
         scoring=scoring,
         refit='f1_weighted',
         return_train_score=True)
@@ -131,6 +128,7 @@ def evaluate_model(
     # Fit the grid search objects
     # print('Performing model optimizations...')
 
+    validation = test = {}
     for idx, gs in enumerate(grids):
         print(f'\nEstimator: {grid_dict[idx]}')
         # Performing cross validation to tune parameters for best model fit
@@ -141,7 +139,13 @@ def evaluate_model(
         print(f'Best training accuracy: {gs.best_score_}')
         # Store results from grid search
         validation['cv_results_' + str(grid_dict[idx])] = gs.cv_results_
-        validation['neirest_neighbours'] = neirest_neighbours
+        validation['cv_results_' + str(grid_dict[idx])]['neirest_neighbours']\
+            = neirest_neighbours
+        validation['cv_results_' + str(grid_dict[idx])]['privacy_risk']\
+            = privacy_risk
+        validation['cv_results_' + str(grid_dict[idx])]['privacy_risk_max']\
+            = privacy_risk_max
+
         # Predict on test data with best params
         y_pred = gs.predict(x_test)
         # Test data accuracy of model with best params
@@ -150,5 +154,7 @@ def evaluate_model(
         # Store results from grid search
         test[str(grid_dict[idx])] = f1_score(y_test, y_pred, average='weighted')
         test['neirest_neighbours'] = neirest_neighbours
+        test['privacy_risk'] = privacy_risk
+        test['privacy_risk_max'] = privacy_risk_max
 
     return validation, test

@@ -3,7 +3,6 @@ This script applies comparisons between the select QIs for all single outs.
 """
 import recordlinkage
 import pandas as pd
-import numpy as np
 
 def record_linkage(transformed: pd.DataFrame,
     original: pd.DataFrame, columns: list) -> pd.DataFrame:
@@ -23,15 +22,10 @@ def record_linkage(transformed: pd.DataFrame,
     print(len(candidates))
     compare = recordlinkage.Compare()
     for idx, col in enumerate(columns):
-        if transformed[col].dtype in (np.int_, np.float_):
-            compare.numeric(col, columns[idx], label=columns[idx], method='gauss', scale=5)
-        elif transformed[col].dtype in (np.object_, np.str_):
-            compare.string(col, columns[idx], label=columns[idx], method='levenshtein')
-        else:
-            compare.date(col, columns[idx], label=columns[idx])
+        compare.numeric(col, columns[idx], label=columns[idx], method='gauss')
 
     comparisons = compare.compute(candidates, transformed, original)
     potential_matches = comparisons[comparisons.sum(axis=1) > 1].reset_index()
-    potential_matches['Score'] = potential_matches.iloc[:, 2:-1].sum(axis=1)
+    potential_matches['Score'] = potential_matches.iloc[:, 2:].sum(axis=1)
 
     return potential_matches

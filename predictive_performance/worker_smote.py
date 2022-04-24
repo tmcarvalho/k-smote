@@ -76,12 +76,12 @@ for idx, key_vars in enumerate(set_key_vars):
             oversample = oversample.drop(dt[dt['single_out']==1].index).reset_index(drop=True)
             # save oversampled data
             oversample.to_csv(f'{getcwd()}{sep}output{sep}oversampled_data{sep}oversample_QI{idx}_\
-                knn{nn}_per{p}.csv', index=False)
+                knn{nn}_per{ratio}.csv', index=False)
             percentage, percentage_100 = apply_record_linkage(
                 oversample,
                 dt,
                 key_vars,
-                [idx, nn, p])
+                [idx, nn, ratio])
 
             # prepare data to modeling
             X, y = dt.iloc[:2500, :-2], dt.iloc[:2500, -2]
@@ -96,8 +96,8 @@ for idx, key_vars in enumerate(set_key_vars):
             # save validation and test results
             np.save(
                 f'{getcwd()}{sep}output{sep}modeling{sep}oversampled{sep}\
-                    validation{sep}validation_QI{idx}_knn{nn}_per{p}.npy', validation)
+                    validation{sep}validation_QI{idx}_knn{nn}_per{ratio}.npy', validation)
             np.save(
                 f'{getcwd()}{sep}output{sep}modeling{sep}oversampled{sep}\
-                    test{sep}test_QI{idx}_knn{nn}_per{p}.npy', test)
+                    test{sep}test_QI{idx}_knn{nn}_per{ratio}.npy', test)
 # %%

@@ -134,9 +134,9 @@ def evaluate_model(
         # Performing cross validation to tune parameters for best model fit
         gs.fit(x_train, y_train)
         # Best params
-        print(f'Best params: {gs.best_params_}')
+        # print(f'Best params: {gs.best_params_}')
         # Best training data accuracy
-        print(f'Best training accuracy: {gs.best_score_}')
+        # print(f'Best training accuracy: {gs.best_score_}')
         # Store results from grid search
         validation['cv_results_' + str(grid_dict[idx])] = gs.cv_results_
         validation['cv_results_' + str(grid_dict[idx])]['neirest_neighbours']\

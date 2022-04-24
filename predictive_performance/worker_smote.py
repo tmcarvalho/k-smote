@@ -7,13 +7,9 @@ from imblearn.over_sampling import SMOTE
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
-from kanon import single_outs
-from record_linkage import record_linkage
-from modeling import evaluate_model
-
-# %%
-data = pd.read_csv(f'{getcwd()}{sep}dataset.csv')
-set_data, set_key_vars = single_outs(data)
+from privacy.kanon import single_outs
+from privacy.record_linkage import record_linkage
+from predictive_performance.modeling import evaluate_model
 
 # %%
 def apply_record_linkage(oversample_data, original_data, keys, args):
@@ -51,18 +47,23 @@ def apply_record_linkage(oversample_data, original_data, keys, args):
 
     return per, per_100
 # %%
+# %%
+data = pd.read_csv(f'{getcwd()}{sep}dataset.csv')
+set_data, set_key_vars = single_outs(data)
+
 # key_vars_idx = [data.columns.get_loc(c) for c in key_vars if c in data]
 knn = [1, 2, 3, 4, 5]
-percentages = [0.1, 0.2, 0.3, 0.5, 0.7]
+# percentage of majority class
+ratios = [0.1, 0.2, 0.3, 0.5, 0.7]
 
 for idx, key_vars in enumerate(set_key_vars):
     # apply LabelEncoder beacause of smote
     dt = set_data[idx].apply(LabelEncoder().fit_transform)
     for nn in knn:
-        for p in percentages:
+        for ratio in ratios:
             smote = SMOTE(random_state=42,
                         k_neighbors=nn,
-                        sampling_strategy=p)
+                        sampling_strategy=ratio)
             # fit predictor and target variable
             X = dt[dt.columns[:-1]]
             y = dt.iloc[:, -1]
@@ -94,9 +95,9 @@ for idx, key_vars in enumerate(set_key_vars):
 
             # save validation and test results
             np.save(
-                f'{getcwd()}{sep}output{sep}modeling{sep}oversampled{sep}validation{sep}\
-                    validation_QI{idx}_knn{nn}_per{p}.npy', validation)
+                f'{getcwd()}{sep}output{sep}modeling{sep}oversampled{sep}\
+                    validation{sep}validation_QI{idx}_knn{nn}_per{p}.npy', validation)
             np.save(
-                f'{getcwd()}{sep}output{sep}modeling{sep}oversampled{sep}test{sep}\
-                    test_QI{idx}_knn{nn}_per{p}.npy', test)
+                f'{getcwd()}{sep}output{sep}modeling{sep}oversampled{sep}\
+                    test{sep}test_QI{idx}_knn{nn}_per{p}.npy', test)
 # %%

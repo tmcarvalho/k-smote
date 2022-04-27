@@ -23,12 +23,17 @@ def single_outs(data: pd.DataFrame) -> tuple[pd.DataFrame, list]:
     # select 10% of attributes as quasi-identifiers
     random.seed(42)
     for i in range(0, 5):
-        key_vars = random.choices(data.columns[:-1], k=int(0.1*len(data.columns)))
+        # change threshold of selected quasi-identifers based on number of columns
+        key_vars = random.choices(data.columns[:-1], k=int(round(0.25*len(data.columns), 0)))\
+            if len(data.columns) >= 10\
+                else random.choices(data.columns[:-1], k=int(round(0.4*len(data.columns), 0)))
         set_key_vars.append(key_vars)
 
         if (i > 0) & len(set_key_vars) != i+1:
             set_key_vars = [x for x in set_key_vars if x != key_vars]
-            key_vars = random.choices(data.columns, k=int(0.1*len(data.columns)))
+            key_vars = random.choices(data.columns[:-1], k=int(round(0.25*len(data.columns), 0)))\
+                if len(data.columns) >= 10\
+                    else random.choices(data.columns[:-1], k=int(round(0.4*len(data.columns), 0)))
             set_key_vars.append(key_vars)
             i -= 1
 
@@ -40,6 +45,5 @@ def single_outs(data: pd.DataFrame) -> tuple[pd.DataFrame, list]:
         data_copy['single_out'] = np.where(k == 1, 1, 0)
 
         set_data.append(data_copy)
-
 
     return set_data, set_key_vars

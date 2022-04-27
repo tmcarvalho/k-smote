@@ -12,6 +12,7 @@ matplotlib = "*"
 ipython = "*"
 recordlinkage = "*"
 xgboost = "*"
+pika = "*"
 
 [dev-packages]
 ipykernel = "*"

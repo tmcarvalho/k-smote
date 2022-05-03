@@ -16,16 +16,15 @@ def evaluate_model(
     x: pd.DataFrame,
     y: np.int64,
     neirest_neighbours: np.int64,
-    privacy_risk: np.int64,
-    privacy_risk_max: np.int64):
+    privacy_risks: list,
+    key_vars):
     """Evaluatation
 
     Args:
         x (pd.DataFrame): dataframe to train
         y (np.int64): target variable
         neirest_neighbours (np.int64): neirest neighbours from smote
-        privacy_risk (np.int64): record linkage result with 50% score
-        privacy_risk_max (np.int64): record linkage result with 100% score
+        privacy_risk (list): record linkage result with 50%, 75% and 100% score
 
     Returns:
         tuple: dictionary with validation and test results
@@ -141,10 +140,14 @@ def evaluate_model(
         validation['cv_results_' + str(grid_dict[idx])] = gs.cv_results_
         validation['cv_results_' + str(grid_dict[idx])]['neirest_neighbours']\
             = neirest_neighbours
-        validation['cv_results_' + str(grid_dict[idx])]['privacy_risk']\
-            = privacy_risk
-        validation['cv_results_' + str(grid_dict[idx])]['privacy_risk_max']\
-            = privacy_risk_max
+        validation['cv_results_' + str(grid_dict[idx])]['privacy_risk_50']\
+            = privacy_risks[0]
+        validation['cv_results_' + str(grid_dict[idx])]['privacy_risk_75']\
+            = privacy_risks[1]    
+        validation['cv_results_' + str(grid_dict[idx])]['privacy_risk_100']\
+            = privacy_risks[2]
+        validation['cv_results_' + str(grid_dict[idx])]['key_vars']\
+            = key_vars    
 
         # Predict on test data with best params
         y_pred = gs.predict(x_test)
@@ -154,7 +157,9 @@ def evaluate_model(
         # Store results from grid search
         test[str(grid_dict[idx])] = f1_score(y_test, y_pred, average='weighted')
         test['neirest_neighbours'] = neirest_neighbours
-        test['privacy_risk'] = privacy_risk
-        test['privacy_risk_max'] = privacy_risk_max
+        test['privacy_risk_50'] = privacy_risks[0]
+        test['privacy_risk_75'] = privacy_risks[1]
+        test['privacy_risk_100'] = privacy_risks[2]
+        test['key_vars'] = key_vars
 
     return validation, test

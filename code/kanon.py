@@ -4,10 +4,12 @@ correspond to a unique signature.
 Such a variable is similar to a binary target variable, where 1 is a singleout
 and 0 otherwise.
 """
+from multiprocessing.connection import wait
 import random
 import pandas as pd
 import numpy as np
-
+import gc
+import time
 def single_outs(data: pd.DataFrame) -> tuple[pd.DataFrame, list]:
     """It takes a dataframe and returns a new dataframe with a new column called 'single_out'
     that is 1 if the row is a single out and 0 otherwise, based on select quasi-identifiers
@@ -20,24 +22,22 @@ def single_outs(data: pd.DataFrame) -> tuple[pd.DataFrame, list]:
     """
     set_data = []
     set_key_vars = []
+    key_vars_wrep = []
     # select 10% of attributes as quasi-identifiers
     random.seed(42)
-    for i in range(0, 5):
+    for i in range(0, 7):
         # change threshold of selected quasi-identifers based on number of columns
-        key_vars = random.choices(data.columns[:-1], k=int(round(0.25*len(data.columns), 0)))\
+        key_vars = random.sample(sorted(data.columns[:-1]), k=int(round(0.25*len(data.columns), 0)))\
             if len(data.columns) >= 10\
-                else random.choices(data.columns[:-1], k=int(round(0.4*len(data.columns), 0)))
+                else random.sample(sorted(data.columns[:-1]), k=int(round(0.4*len(data.columns), 0)))
+
         set_key_vars.append(key_vars)
+        [key_vars_wrep.append(x) for x in set_key_vars if x not in key_vars_wrep]
+         
+    if len(key_vars_wrep) > 5:
+        key_vars_wrep = key_vars_wrep[:5]
 
-        if (i > 0) & len(set_key_vars) != i+1:
-            set_key_vars = [x for x in set_key_vars if x != key_vars]
-            key_vars = random.choices(data.columns[:-1], k=int(round(0.25*len(data.columns), 0)))\
-                if len(data.columns) >= 10\
-                    else random.choices(data.columns[:-1], k=int(round(0.4*len(data.columns), 0)))
-            set_key_vars.append(key_vars)
-            i -= 1
-
-    for key_vars in set_key_vars:
+    for key_vars in key_vars_wrep:
         k = data.groupby(key_vars)[key_vars[0]].transform(len)
 
         data_copy = data.copy()
@@ -45,5 +45,5 @@ def single_outs(data: pd.DataFrame) -> tuple[pd.DataFrame, list]:
         data_copy['single_out'] = np.where(k == 1, 1, 0)
 
         set_data.append(data_copy)
-
-    return set_data, set_key_vars
+ 
+    return set_data, key_vars_wrep

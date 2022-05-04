@@ -22,32 +22,32 @@ def transform_npy_to_csv():
         _, _, performance_files = next(walk(f'{folder_validation}/{folder}/'))
         performance_files.sort()
         for file in performance_files:
-            result = np.load(f'{folder_validation}/{folder}/{file}', allow_pickle='TRUE').item()
+            if '.npy' in file:
+                result = np.load(f'{folder_validation}/{folder}/{file}', allow_pickle='TRUE').item()
 
-            result_rf = pd.DataFrame.from_dict(
-                {key:pd.Series(value) for key, value in result['cv_results_Random Forest'].items()})
-            result_bag = pd.DataFrame.from_dict(
-                {key:pd.Series(value) for key, value in result['cv_results_Bagging'].items()})
-            result_xgb = pd.DataFrame.from_dict(
-                {key:pd.Series(value) for key, value in result['cv_results_Boosting'].items()})
-            result_logr = pd.DataFrame.from_dict(
-                {key:pd.Series(value) for key,
-                value in result['cv_results_Logistic Regression'].items()})
-            result_nn = pd.DataFrame.from_dict(
-                {key:pd.Series(value) for key,
-                value in result['cv_results_Neural Network'].items()})
+                result_rf = pd.DataFrame.from_dict(
+                    {key:pd.Series(value) for key, value in result['cv_results_Random Forest'].items()})
+                result_bag = pd.DataFrame.from_dict(
+                    {key:pd.Series(value) for key, value in result['cv_results_Bagging'].items()})
+                result_xgb = pd.DataFrame.from_dict(
+                    {key:pd.Series(value) for key, value in result['cv_results_Boosting'].items()})
+                result_logr = pd.DataFrame.from_dict(
+                    {key:pd.Series(value) for key,
+                    value in result['cv_results_Logistic Regression'].items()})
+                result_nn = pd.DataFrame.from_dict(
+                    {key:pd.Series(value) for key,
+                    value in result['cv_results_Neural Network'].items()})
 
-            # add attribute with model's name
-            result_rf['model'] = 'Random Forest'
-            result_bag['model'] = 'Bagging'
-            result_xgb['model'] = 'XGBoost'
-            result_logr['model'] = 'Logistic Regression'
-            result_nn['model'] = 'Neural Network'
+                # add attribute with model's name
+                result_rf['model'] = 'Random Forest'
+                result_bag['model'] = 'Bagging'
+                result_xgb['model'] = 'XGBoost'
+                result_logr['model'] = 'Logistic Regression'
+                result_nn['model'] = 'Neural Network'
 
-            # save csv with the 5 algorithms
-            res = pd.concat([result_rf, result_bag, result_xgb, result_logr, result_nn])
-            res.to_csv(f'{folder_validation}/{folder}/{file.replace(".npy", ".csv")}', index=False)
-            # result_rf.to_csv(f'{folder}/{file.replace(".npy", ".csv")}', index=False)
+                # save csv with the 5 algorithms
+                res = pd.concat([result_rf, result_bag, result_xgb, result_logr, result_nn])
+                res.to_csv(f'{folder_validation}/{folder}/{file.replace(".npy", ".csv")}', index=False)
 
 # %%
 
@@ -64,9 +64,8 @@ def concat_all_results():
         _, _, performance_files = next(walk(f'{folder_validation}/{folder}/'))
         performance_files.sort()
         performance_files = [file for file in performance_files if '.csv' in file]
-        #print(performance_files)
+
         for _, file in enumerate(performance_files):
-            # print(file)
             result = pd.read_csv(f'{folder_validation}/{folder}/{file}')
             quasi_id_int = file.split('_')[1]
             quasi_id_int = list(map(int, re.findall(r'\d+', quasi_id_int)))[0]
@@ -86,8 +85,7 @@ def concat_all_results():
             result['privacy_risk_100'] = result.groupby(
                 ['knn','per'], sort=False)['privacy_risk_100'].apply(lambda x: x.ffill().bfill())
             result['ds'] = folder
-            print(result['ds'].unique())
-            print(result['qi'].unique())
+
             results.append(result)
 
     concat_results = pd.concat(results)
@@ -95,7 +93,7 @@ def concat_all_results():
     return concat_results
 
 # %%
-# transform_npy_to_csv()
+transform_npy_to_csv()
 # %%
 all_results = concat_all_results()
 # %%
@@ -108,7 +106,7 @@ for name, grp in grp_dataset:
     g = sns.FacetGrid(grp,row='qi', height=8, aspect=1.5)
     g.map(sns.boxplot, "knn", "mean_test_f1_weighted",
     "per", palette='muted').add_legend(title='Ratio \n sampling')
-    g.set_axis_labels("KNN", "Fscore")
+    g.set_axis_labels("Nearest Neighbours", "Fscore")
     g.set_titles("{row_name}")
     g.savefig(
         f'{os.path.dirname(os.getcwd())}/output/plots/each/fscore/{name}_fscore.pdf',
@@ -118,13 +116,13 @@ for name, grp in grp_dataset:
     sns.set_style('darkgrid')
     sns.set(font_scale=1.5)
     gg = sns.FacetGrid(grp,row='qi', height=8, aspect=1.5)
-    gg.map(sns.barplot, "knn", "privacy_risk_75", "per",
+    gg.map(sns.barplot, "knn", "privacy_risk_50", "per",
     palette='muted').add_legend(title='Ratio \n sampling')
-    gg.set_axis_labels("KNN", "Privacy Risk")
+    gg.set_axis_labels("Nearest Neighbours", "Privacy Risk")
     gg.set_titles("{row_name}")
-    # gg.savefig(
-    # f'{os.path.dirname(os.getcwd())}/output/plots/each/risk/{name}_risk.pdf',
-    # bbox_inches='tight')
+    gg.savefig(
+    f'{os.path.dirname(os.getcwd())}/output/plots/each/risk_at50%/{name}_risk.pdf',
+    bbox_inches='tight')
 
 # %%
 mean_ds_fscore = all_results.groupby(
@@ -137,7 +135,7 @@ ax.set(ylim=(0, 140))
 sns.set(font_scale=2)
 plt.xticks(rotation=45)
 plt.xlabel("")
-plt.ylabel("Rank of Predicted Performance (Fscore)")
+plt.ylabel("Rank of Predictive Performance (Fscore)")
 plt.show()
 figure = ax.get_figure()
 figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/fscore_rank.pdf', bbox_inches='tight')
@@ -153,7 +151,7 @@ ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1), ncol=5, title='Ratio samp
 # ax.set(ylim=(0, 30))
 sns.set(font_scale=2)
 plt.xlabel("Nearest Neighbours")
-plt.ylabel("Rank of Predicted Performance (Fscore)")
+plt.ylabel("Rank of Predictive Performance (Fscore)")
 plt.show()
 figure = ax.get_figure()
 figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/knn_rank.pdf', bbox_inches='tight')
@@ -179,7 +177,6 @@ privacy_risk['privacy'] = privacy_risk.loc[
     lambda x: ''.join(x.dropna().astype('float64').astype('str')), 1)
 # %%
 privacy_risk['privacy'] = privacy_risk['privacy'].astype('float64')
-# %%
 # %%
 privacy_risk['rank'] = privacy_risk.groupby(
     ['ds', 'privacy_thr'])['privacy'].transform('rank', method='dense')

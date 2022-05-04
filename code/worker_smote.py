@@ -23,6 +23,13 @@ parser.add_argument('--input_folder', type=str, help='Input folder', default="./
 args = parser.parse_args()
 
 def ack_message(ch, delivery_tag, work_sucess):
+    """Acknowledge message
+
+    Args:
+        ch (_type_): channel of the queue
+        delivery_tag (_type_): _description_
+        work_sucess (_type_): _description_
+    """
     if ch.is_open:
         if work_sucess:
             print("[x] Done")
@@ -46,7 +53,7 @@ def apply_record_linkage(oversample_data, original_data, keys):
 
     Returns:
         tuple(pd.Dataframe, list): dataframe with all potential matches,
-        list with percentages of re-identification for 50%, 75% and 100% matches 
+        list with percentages of re-identification for 50%, 75% and 100% matches
     """
     oversample_singleouts = oversample_data[oversample_data['single_out']==1]
     original_singleouts = original_data[original_data['single_out']==1]
@@ -74,6 +81,16 @@ def apply_record_linkage(oversample_data, original_data, keys):
 
 
 def all_work(file):
+    """Apply smote, record linkage and predictive performance
+
+    Args:
+        file (string): file name
+
+    Raises:
+        Exception: failed to apply smote when single outs
+        class is great than non single outs.
+        exc: failed to writing the results.
+    """
     print(f'{args.input_folder}/{file}')
     data = pd.read_csv(f'{args.input_folder}/{file}')
     data = data.apply(lambda x: round(x, 2) if x.dtype=='float64' else x)
@@ -89,87 +106,91 @@ def all_work(file):
         print(f'QIS ITERATIONS: {idx}')
         if len(set_key_vars) > 5:
             raise Exception("ARDEU!!!!!")
-        
+
         # interpolation of cases where nr of single outs is less than 40%
         thr_condition = len(dt[dt['single_out']==1]) <= 0.3 * len(dt)
-        if (thr_condition) and (len(dt[dt['single_out']==1])>=10) and (len(dt[dt['single_out']!=0])):
+        if (thr_condition) and\
+            (len(dt[dt['single_out']==1])>=10) and\
+                (len(dt[dt['single_out']!=0])):
             for nn in knn:
                 print(f'NUMBER OF KNN: {nn}')
                 for ratio in ratios:
                     print(f'NUMER OF RATIO: {ratio}')
-                    if idx==0 and nn==1 and ratio<0.5:
-                        try:
-                            smote = SMOTE(random_state=42,
-                                        k_neighbors=nn,
-                                        sampling_strategy=ratio)
-                            # fit predictor and target variable
-                            X = dt[dt.columns[:-1]]
-                            y = dt.iloc[:, -1]
-                            x_smote, y_smote = smote.fit_resample(X, y)
-                
-                            # add single out to apply record linkage
-                            x_smote['single_out'] = y_smote
-                            # remove original single outs from oversample
-                            oversample = x_smote.copy()
-                            oversample = oversample.drop(dt[dt['single_out']==1].index).reset_index(drop=True)
+                    try:
+                        smote = SMOTE(random_state=42,
+                                    k_neighbors=nn,
+                                    sampling_strategy=ratio)
+                        # fit predictor and target variable
+                        X = dt[dt.columns[:-1]]
+                        y = dt.iloc[:, -1]
+                        x_smote, y_smote = smote.fit_resample(X, y)
 
-                            matches, percentages = apply_record_linkage(
-                                oversample,
-                                dt,
-                                key_vars)
+                        # add single out to apply record linkage
+                        x_smote['single_out'] = y_smote
+                        # remove original single outs from oversample
+                        oversample = x_smote.copy()
+                        oversample = oversample.drop(
+                            dt[dt['single_out']==1].index).reset_index(drop=True)
 
-                            # prepare data to modeling
-                            X, y = oversample.iloc[:, :-2], oversample.iloc[:, -2]
-                            # predictive performance
-                            validation, test = evaluate_model(
-                                X,
-                                y,
-                                nn,
-                                percentages,
-                                key_vars)
+                        matches, percentages = apply_record_linkage(
+                            oversample,
+                            dt,
+                            key_vars)
 
-                        except:
-                            continue
+                        # prepare data to modeling
+                        X, y = oversample.iloc[:, :-2], oversample.iloc[:, -2]
+                        # predictive performance
+                        validation, test = evaluate_model(
+                            X,
+                            y,
+                            nn,
+                            percentages,
+                            key_vars)
 
-                        # save oversample, potential matches, validation and test results
-                        try:
-                            output_folder_ov = (
-                                f'{os.path.dirname(os.getcwd())}{sep}code{sep}output{sep}'
-                                f'oversampled{sep}{file.split(".")[0]}')
-                            print(output_folder_ov)
-                            output_folder_rl = (
-                                f'{os.path.dirname(os.getcwd())}{sep}code{sep}output{sep}'
-                                f'record_linkage{sep}{file.split(".")[0]}')
-                            output_folder_val = (
-                                f'{os.path.dirname(os.getcwd())}{sep}code{sep}output{sep}modeling'
-                                f'{sep}oversampled{sep}validation{sep}{file.split(".")[0]}')
-                            output_folder_test = (
-                                f'{os.path.dirname(os.getcwd())}{sep}code{sep}output{sep}modeling{sep}'
-                                f'oversampled{sep}test{sep}{file.split(".")[0]}')
-                            if not os.path.exists(output_folder_ov) | os.path.exists(output_folder_rl) | \
-                                os.path.exists(output_folder_val) | os.path.exists(output_folder_test):
-                                os.makedirs(output_folder_ov)
-                                os.makedirs(output_folder_rl)
-                                os.makedirs(output_folder_val)
-                                os.makedirs(output_folder_test)
+                    except:
+                        continue
 
-                            # save oversampled data
-                            oversample.to_csv(
-                                f'{output_folder_ov}{sep}oversample_QI{idx}_knn{nn}_per{ratio}.csv',
-                                index=False)
-                            # save record linkage results
-                            matches.to_csv(
-                                f'{output_folder_rl}{sep}potential_matches_QI{idx}_knn{nn}_per{ratio}.csv',
-                                index=False)
+                    # save oversample, potential matches, validation and test results
+                    try:
+                        output_folder_ov = (
+                            f'{os.path.dirname(os.getcwd())}{sep}code{sep}output{sep}'
+                            f'oversampled{sep}{file.split(".")[0]}')
+                        print(output_folder_ov)
+                        output_folder_rl = (
+                            f'{os.path.dirname(os.getcwd())}{sep}code{sep}output{sep}'
+                            f'record_linkage{sep}{file.split(".")[0]}')
+                        output_folder_val = (
+                            f'{os.path.dirname(os.getcwd())}{sep}code{sep}output{sep}modeling'
+                            f'{sep}oversampled{sep}validation{sep}{file.split(".")[0]}')
+                        output_folder_test = (
+                            f'{os.path.dirname(os.getcwd())}{sep}code{sep}output{sep}modeling{sep}'
+                            f'oversampled{sep}test{sep}{file.split(".")[0]}')
+                        if not os.path.exists(output_folder_ov) |\
+                            os.path.exists(output_folder_rl) |\
+                            os.path.exists(output_folder_val) |\
+                                os.path.exists(output_folder_test):
+                            os.makedirs(output_folder_ov)
+                            os.makedirs(output_folder_rl)
+                            os.makedirs(output_folder_val)
+                            os.makedirs(output_folder_test)
 
-                            np.save(
-                                f'{output_folder_val}{sep}validation_QI{idx}_knn{nn}_per{ratio}.npy',
-                                    validation)
-                            np.save(
-                                f'{output_folder_test}{sep}test_QI{idx}_knn{nn}_per{ratio}.npy', test)
+                        # save oversampled data
+                        oversample.to_csv(
+                            f'{output_folder_ov}{sep}oversample_QI{idx}_knn{nn}_per{ratio}.csv',
+                            index=False)
+                        # save record linkage results
+                        matches.to_csv(
+                            f'{output_folder_rl}{sep}potential_matches_QI{idx}_knn{nn}_per{ratio}.csv',
+                            index=False)
 
-                        except Exception as exc:
-                            raise exc
+                        np.save(
+                            f'{output_folder_val}{sep}validation_QI{idx}_knn{nn}_per{ratio}.npy',
+                                validation)
+                        np.save(
+                            f'{output_folder_test}{sep}test_QI{idx}_knn{nn}_per{ratio}.npy', test)
+
+                    except Exception as exc:
+                        raise exc
 
 # %%
 def do_work(conn, ch, delivery_tag, body):

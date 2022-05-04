@@ -143,11 +143,11 @@ def evaluate_model(
         validation['cv_results_' + str(grid_dict[idx])]['privacy_risk_50']\
             = privacy_risks[0]
         validation['cv_results_' + str(grid_dict[idx])]['privacy_risk_75']\
-            = privacy_risks[1]    
+            = privacy_risks[1]
         validation['cv_results_' + str(grid_dict[idx])]['privacy_risk_100']\
             = privacy_risks[2]
         validation['cv_results_' + str(grid_dict[idx])]['key_vars']\
-            = key_vars    
+            = key_vars
 
         # Predict on test data with best params
         y_pred = gs.predict(x_test)

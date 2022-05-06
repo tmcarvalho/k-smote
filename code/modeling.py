@@ -35,35 +35,20 @@ def evaluate_model(
 
     seed = np.random.seed(1234)
 
-    n_feat = x_train.shape[1]
-
     # set parameters
     param_grid_rf = {
         'n_estimators': [100, 250, 500],
-        'max_depth': [4, 6, 8, 10]
-    }
-    param_grid_bc = {
-        'n_estimators': [100, 250, 500],
-        'max_features': [0.7]
+        'max_depth': [4, 7, 10]
     }
     param_grid_xgb = {
         'n_estimators': [100, 250, 500],
-        'max_depth': [4, 6, 8, 10],
-        'learning_rate': [0.01, 0.001, 0.0001]
+        'max_depth': [4, 7, 10],
+        'learning_rate': [0.01, 0.0001]
     }
     param_grid_lreg = {'C': np.logspace(-4, 4, 3),
                        'max_iter': [10000, 100000]
                        }
-    param_grid_nnet = {'hidden_layer_sizes': [[n_feat], [n_feat // 2],
-                                            [int(n_feat * (2 / 3))],
-                                            [n_feat, n_feat // 2],
-                                            [n_feat, int(n_feat * (2 / 3))],
-                                            [n_feat // 2, int(n_feat * (2 / 3))],
-                                            [n_feat, n_feat // 2, int(n_feat * (2 / 3))]
-                                            ],
-                       'alpha': [1e-3, 1e-4],
-                       'max_iter': [10000, 100000]
-                       }
+
     # define metric functions
     scoring = {
         'gmean': make_scorer(geometric_mean_score),
@@ -80,13 +65,7 @@ def evaluate_model(
         scoring=scoring,
         refit='f1_weighted',
         return_train_score=True)
-    gs_bc = GridSearchCV(
-        estimator=BaggingClassifier(random_state=seed),
-        param_grid=param_grid_bc,
-        cv=RepeatedKFold(n_splits=5, n_repeats=2),
-        scoring=scoring,
-        refit='f1_weighted',
-        return_train_score=True)
+
     gs_xgb = GridSearchCV(
         estimator=XGBClassifier(
             objective='binary:logistic',
@@ -98,6 +77,7 @@ def evaluate_model(
         scoring=scoring,
         refit='f1_weighted',
         return_train_score=True)
+
     gs_lreg = GridSearchCV(
         estimator=LogisticRegression(random_state=seed),
         param_grid=param_grid_lreg,
@@ -105,24 +85,15 @@ def evaluate_model(
         scoring=scoring,
         refit='f1_weighted',
         return_train_score=True)
-    gs_nnet = GridSearchCV(
-        estimator=MLPClassifier(random_state=seed),
-        param_grid=param_grid_nnet,
-        cv=RepeatedKFold(n_splits=5, n_repeats=2),
-        scoring=scoring,
-        refit='f1_weighted',
-        return_train_score=True)
 
     # List of pipelines for ease of iteration
-    grids = [gs_rf, gs_bc, gs_xgb, gs_lreg, gs_nnet]
+    grids = [gs_rf, gs_xgb, gs_lreg]
 
     # Dictionary of pipelines and classifier types for ease of reference
     grid_dict = {
         0: 'Random Forest',
-        1: 'Bagging',
-        2: 'Boosting',
-        3: 'Logistic Regression',
-        4: 'Neural Network'}
+        1: 'Boosting',
+        2: 'Logistic Regression'}
 
     # Fit the grid search objects
     # print('Performing model optimizations...')

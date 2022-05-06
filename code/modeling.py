@@ -3,12 +3,11 @@ This script will test the predictive performance of the data sets.
 """
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier, BaggingClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import make_scorer, f1_score
 from imblearn.metrics import geometric_mean_score
 from sklearn.model_selection import train_test_split, GridSearchCV, RepeatedKFold
 from sklearn.linear_model import LogisticRegression
-from sklearn.neural_network import MLPClassifier
 from xgboost import XGBClassifier
 
 # %% evaluate a model
@@ -55,7 +54,9 @@ def evaluate_model(
         'acc': 'accuracy',
         'bal_acc': 'balanced_accuracy',
         'f1': 'f1',
-        'f1_weighted': 'f1_weighted'}
+        'f1_weighted': 'f1_weighted',
+        'roc_auc_curve': 'roc_auc_curve',
+        'roc_curve': 'roc_curve'}
 
     # create the parameter grid
     gs_rf = GridSearchCV(

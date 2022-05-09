@@ -4,27 +4,20 @@ This script will test the predictive performance of the data sets.
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import make_scorer, f1_score
+from sklearn.metrics import make_scorer, f1_score, roc_auc_score
 from imblearn.metrics import geometric_mean_score
 from sklearn.model_selection import train_test_split, GridSearchCV, RepeatedKFold
 from sklearn.linear_model import LogisticRegression
 from xgboost import XGBClassifier
-
 # %% evaluate a model
 def evaluate_model(
     x: pd.DataFrame,
-    y: np.int64,
-    neirest_neighbours: np.int64,
-    privacy_risks: list,
-    key_vars):
+    y: np.int64):
     """Evaluatation
 
     Args:
         x (pd.DataFrame): dataframe to train
         y (np.int64): target variable
-        neirest_neighbours (np.int64): neirest neighbours from smote
-        privacy_risk (list): record linkage result with 50%, 75% and 100% score
-
     Returns:
         tuple: dictionary with validation and test results
     """
@@ -42,7 +35,7 @@ def evaluate_model(
     param_grid_xgb = {
         'n_estimators': [100, 250, 500],
         'max_depth': [4, 7, 10],
-        'learning_rate': [0.01, 0.0001]
+        'learning_rate': [0.1, 0.01]
     }
     param_grid_lreg = {'C': np.logspace(-4, 4, 3),
                        'max_iter': [10000, 100000]
@@ -55,8 +48,8 @@ def evaluate_model(
         'bal_acc': 'balanced_accuracy',
         'f1': 'f1',
         'f1_weighted': 'f1_weighted',
-        'roc_auc_curve': 'roc_auc_curve',
-        'roc_curve': 'roc_curve'}
+        'roc_auc_curve': make_scorer(roc_auc_score, max_fpr=0.001, needs_proba=True),
+        }
 
     # create the parameter grid
     gs_rf = GridSearchCV(
@@ -110,17 +103,6 @@ def evaluate_model(
         # print(f'Best training accuracy: {gs.best_score_}')
         # Store results from grid search
         validation['cv_results_' + str(grid_dict[idx])] = gs.cv_results_
-        validation['cv_results_' + str(grid_dict[idx])]['neirest_neighbours']\
-            = neirest_neighbours
-        validation['cv_results_' + str(grid_dict[idx])]['privacy_risk_50']\
-            = privacy_risks[0]
-        validation['cv_results_' + str(grid_dict[idx])]['privacy_risk_75']\
-            = privacy_risks[1]
-        validation['cv_results_' + str(grid_dict[idx])]['privacy_risk_100']\
-            = privacy_risks[2]
-        validation['cv_results_' + str(grid_dict[idx])]['key_vars']\
-            = key_vars
-
         # Predict on test data with best params
         y_pred = gs.predict(x_test)
         # Test data accuracy of model with best params
@@ -128,10 +110,5 @@ def evaluate_model(
         # {f1_score(y_test, y_pred, average='weighted')}')
         # Store results from grid search
         test[str(grid_dict[idx])] = f1_score(y_test, y_pred, average='weighted')
-        test['neirest_neighbours'] = neirest_neighbours
-        test['privacy_risk_50'] = privacy_risks[0]
-        test['privacy_risk_75'] = privacy_risks[1]
-        test['privacy_risk_100'] = privacy_risks[2]
-        test['key_vars'] = key_vars
 
     return validation, test

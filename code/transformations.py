@@ -43,7 +43,6 @@ def parameters(obj, key_vars):
     if len(gen_vars) != 0:
         for col in gen_vars:
             sigma = np.std(obj[col])
-            print(f'sigma: {sigma}')
             if sigma!=0:
                 gen_parameters = [0.5, 1.5 ,3]
 
@@ -128,7 +127,7 @@ def globalRecoding(obj, key_vars, std_magnitude=1):
     for col in gen_vars:
         sigma = np.std(obj[col])
         mg = int(sigma * std_magnitude)
-        if sigma!=0:
+        if sigma!=0 and mg!=0:
             bins = list(range(min(df_gen[col]), max(df_gen[col]) + mg, mg))
             labels = ['%d' % bins[i] for i in range(0, len(bins) - 1)]
             df_gen[col] = pd.cut(obj[col], bins=bins, labels=labels, include_lowest=True).astype(int)

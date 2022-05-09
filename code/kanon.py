@@ -1,15 +1,13 @@
 """Find singleouts to synthetise
-This script will create a new varible indicating which observations
-correspond to a unique signature.
-Such a variable is similar to a binary target variable, where 1 is a singleout
-and 0 otherwise.
+This script will evaluate the single out cases.
 """
 
 import random
 import pandas as pd
 import numpy as np
+from collections import Counter
 
-def single_outs(data: pd.DataFrame) -> tuple[pd.DataFrame, list]:
+def single_outs_sets(data: pd.DataFrame) -> tuple[pd.DataFrame, list]:
     """It takes a dataframe and returns a new dataframe with a new column called 'single_out'
     that is 1 if the row is a single out and 0 otherwise, based on select quasi-identifiers
 
@@ -33,7 +31,7 @@ def single_outs(data: pd.DataFrame) -> tuple[pd.DataFrame, list]:
                 else random.sample(sorted(
                     data.columns[:-1]),
                     k=int(round(0.4*len(data.columns), 0)))
-
+        key_vars.sort()
         set_key_vars.append(key_vars)
         [key_vars_wrep.append(x) for x in set_key_vars if x not in key_vars_wrep]
 
@@ -50,3 +48,19 @@ def single_outs(data: pd.DataFrame) -> tuple[pd.DataFrame, list]:
         set_data.append(data_copy)
 
     return set_data, key_vars_wrep
+
+
+def kanonymity(obj):
+    """
+    Measure the individual risk base on the frequency of the equivalence classes.
+    :param obj: input data set.
+    :return: frequencies of equivalence classes.
+    """
+
+    keyVars = list(obj.columns.values)
+    # get the frequencies of equivalence classes for each observation
+    fk = obj.groupby(keyVars).size()
+    # group the frequencies
+    fk_grp = Counter(fk)
+
+    return fk_grp

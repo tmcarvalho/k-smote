@@ -8,6 +8,7 @@ from sklearn.preprocessing import LabelEncoder
 from imblearn.under_sampling import RandomUnderSampler
 from imblearn.over_sampling import SMOTE, RandomOverSampler
 from record_linkage import apply_record_linkage
+import gc
 
 
 def interpolation(original_folder, file):
@@ -21,21 +22,20 @@ def interpolation(original_folder, file):
     # key_vars_idx = [data.columns.get_loc(c) for c in key_vars if c in data]
     knn = [1, 3, 5]
     # percentage of majority and minority class
-    ratios_smote = [0.5, 1, 2]
-    ratios_over = [0.5, 1, 2]
-    ratios_under = [0.1, 0.25, 0.5, 0.75, 1]
+    ratios_smote = [0.5, 0.75, 1]
+    ratios_over = [0.5, 0.75, 1]
+    ratios_under = [0.25, 0.5, 0.75, 1]
     for idx, key_vars in enumerate(set_key_vars):
         print(f'QIS ITERATIONS: {idx}')
-
         for nn in knn:
             for smote in ratios_smote:
-                smote = SMOTE(random_state=42,
+                smote_samp = SMOTE(random_state=42,
                             k_neighbors=nn,
                             sampling_strategy=smote)
                 # fit predictor and target variable
                 X = data[data.columns[:-1]]
                 y = data.iloc[:, -1]
-                x_smote, y_smote = smote.fit_resample(X, y)
+                x_smote, y_smote = smote_samp.fit_resample(X, y)
 
                 # add target
                 x_smote[data.columns[-1]] = y_smote
@@ -46,62 +46,62 @@ def interpolation(original_folder, file):
                     data,
                     key_vars)
                 dict_per = {'privacy_risk_50': percentages[0], 'privacy_risk_75': percentages[1], 'privacy_risk_100': percentages[2]}  
-                risk = pd.DataFrame(dict_per)     
-                matches.to_csv(f'{output_interpolation_folder}/smote_qi{idx}_knn{nn}_per{smote}_{file}')    
-                risk.to_csv(f'{output_rl_folder}/rl_smote_qi{idx}_knn{nn}_per{smote}_{file}')
+                risk = pd.DataFrame(dict_per, index=[0])     
+                matches.to_csv(f'{output_rl_folder}/rl_smote_qi{idx}_knn{nn}_per{smote}_{file}')    
+                risk.to_csv(f'{output_rl_folder}/risk_smote_qi{idx}_knn{nn}_per{smote}_{file}')
+                gc.collect()
 
-            for over in ratios_over:
-                over_samp = RandomOverSampler(random_state=42,
-                            k_neighbors=nn,
-                            sampling_strategy=over)
-                # fit predictor and target variable
-                X = data[data.columns[:-1]]
-                y = data.iloc[:, -1]
-                x_over, y_over = over_samp.fit_resample(X, y)
+        for over in ratios_over:
+            over_samp = RandomOverSampler(random_state=42,
+                        sampling_strategy=over)
+            # fit predictor and target variable
+            X = data[data.columns[:-1]]
+            y = data.iloc[:, -1]
+            x_over, y_over = over_samp.fit_resample(X, y)
 
-                # add target
-                x_over[data.columns[-1]] = y_over
-                x_over.to_csv(f'{output_interpolation_folder}/over_qi{idx}_knn{nn}_per{over}_{file}')
+            # add target
+            x_over[data.columns[-1]] = y_over
+            x_over.to_csv(f'{output_interpolation_folder}/over_qi{idx}_per{over}_{file}')
 
-                matches, percentages = apply_record_linkage(
-                    x_over,
-                    data,
-                    key_vars)
-                dict_per = {'privacy_risk_50': percentages[0], 'privacy_risk_75': percentages[1], 'privacy_risk_100': percentages[2]}  
-                risk = pd.DataFrame(dict_per)     
-                matches.to_csv(f'{output_interpolation_folder}/over_qi{idx}_knn{nn}_per{over}_{file}')    
-                risk.to_csv(f'{output_rl_folder}/rl_over_qi{idx}_knn{nn}_per{over}_{file}')
+            matches, percentages = apply_record_linkage(
+                x_over,
+                data,
+                key_vars)
+            dict_per = {'privacy_risk_50': percentages[0], 'privacy_risk_75': percentages[1], 'privacy_risk_100': percentages[2]}  
+            risk = pd.DataFrame(dict_per, index=[0])     
+            matches.to_csv(f'{output_rl_folder}/rl_over_qi{idx}_per{over}_{file}')    
+            risk.to_csv(f'{output_rl_folder}/risk_over_qi{idx}_per{over}_{file}')
+            gc.collect()
+        
+        for under in ratios_under:
+            under_samp = RandomUnderSampler(random_state=42,
+                        sampling_strategy=under)
+            # fit predictor and target variable
+            X = data[data.columns[:-1]]
+            y = data.iloc[:, -1]
+            x_under, y_under = under_samp.fit_resample(X, y)
 
-            
-            for under in ratios_under:
-                under_samp = RandomUnderSampler(random_state=42,
-                            k_neighbors=nn,
-                            sampling_strategy=under)
-                # fit predictor and target variable
-                X = data[data.columns[:-1]]
-                y = data.iloc[:, -1]
-                x_under, y_under = under_samp.fit_resample(X, y)
+            # add target
+            x_under[data.columns[-1]] = y_under
+            x_under.to_csv(f'{output_interpolation_folder}/under_qi{idx}_per{under}_{file}')
 
-                # add target
-                x_under[data.columns[-1]] = y_under
-                x_under.to_csv(f'{output_interpolation_folder}/under_qi{idx}_knn{nn}_per{under}_{file}')
-
-                matches, percentages = apply_record_linkage(
-                    x_under,
-                    data,
-                    key_vars)
-                dict_per = {'privacy_risk_50': percentages[0], 'privacy_risk_75': percentages[1], 'privacy_risk_100': percentages[2]}  
-                risk = pd.DataFrame(dict_per)     
-                matches.to_csv(f'{output_interpolation_folder}/under_qi{idx}_knn{nn}_per{under}_{file}')    
-                risk.to_csv(f'{output_rl_folder}/rl_under_qi{idx}_knn{nn}_per{under}_{file}')
-
+            matches, percentages = apply_record_linkage(
+                x_under,
+                data,
+                key_vars)
+            dict_per = {'privacy_risk_50': percentages[0], 'privacy_risk_75': percentages[1], 'privacy_risk_100': percentages[2]}  
+            risk = pd.DataFrame(dict_per, index=[0])     
+            matches.to_csv(f'{output_rl_folder}/rl_under_qi{idx}_per{under}_{file}')    
+            risk.to_csv(f'{output_rl_folder}/risk_under_qi{idx}_per{under}_{file}')
+            gc.collect()
 
 # %%
-
 original_folder = '../original'
 _, _, input_files = next(walk(f'{original_folder}'))
 
-for file in input_files:
-    interpolation(original_folder, file)
+for idx,file in enumerate(input_files):
+    print(idx)
+    if idx>0:
+        interpolation(original_folder, file)
 
 # %%

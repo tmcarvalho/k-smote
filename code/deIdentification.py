@@ -70,7 +70,7 @@ def process_transformations(df, key_vars):
 # path to input data
 input_folder = '../original/'
 transformed_folder = '../PPT'
-risk_folder = '..output/record_linkage/PPT'
+risk_folder = '../output/record_linkage/PPT'
 
 _, _, input_files = next(walk(f'{input_folder}'))
 
@@ -82,16 +82,17 @@ for idx, file in enumerate(input_files):
     idx = int(file.split('.')[0])
     data = df.apply(LabelEncoder().fit_transform)
     _, set_key_vars = single_outs_sets(data)
-    # apply de-identification to one set of key vars    
-    result = process_transformations(df, set_key_vars[0])
-    # transform dict to dataframe
-    res_df = pd.DataFrame(result)
+    for j, key_vars in enumerate(set_key_vars):
+        # apply de-identification to the set of key vars    
+        result = process_transformations(data, key_vars)
+        # transform dict to dataframe
+        res_df = pd.DataFrame(result)
 
-    for i in range(len(res_df)):
-        res_df['transformedDS'][i].to_csv(f'{transformed_folder}{sep}ds{str(idx)}_transf{str(i)}.csv')
-        potential_matches, risk = record_linkage.apply_record_linkage(res_df['transformedDS'][i], data, set_key_vars[0])
-        res_df['privacy_risk_50'] = risk[0]
-        res_df['privacy_risk_75'] = risk[1]
-        res_df['privacy_risk_100'] = risk[2]
-        potential_matches.to_csv(f'{risk_folder}{sep}ds{str(idx)}_transf{str(i)}_rl.csv')
+        for i in range(len(res_df)):
+            res_df['transformedDS'][i].to_csv(f'{transformed_folder}{sep}ds{str(idx)}_transf{str(i)}_qi{j}.csv')
+            potential_matches, risk = record_linkage.apply_record_linkage(res_df['transformedDS'][i], data, key_vars)
+            res_df['privacy_risk_50'] = risk[0]
+            res_df['privacy_risk_75'] = risk[1]
+            res_df['privacy_risk_100'] = risk[2]
+            potential_matches.to_csv(f'{risk_folder}{sep}ds{str(idx)}_transf{str(i)}_rl_qi{j}.csv')
 # %%

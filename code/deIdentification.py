@@ -1,6 +1,6 @@
 """Data de-identification
 This script will de-identify the data and 
-calculate the single outs for each transformed variant.
+calculate the privacy risk for each transformed variant.
 """
 # %%
 import pandas as pd
@@ -9,15 +9,20 @@ from os import sep, walk
 from sklearn.preprocessing import LabelEncoder
 from kanon import single_outs_sets
 import record_linkage
-
+import gc
 
 def apply_transformations(obj, key_vars, tech_comb, parameters, result):
-    """
-    Apply transformation techniques to the data set.
-    :param obj: input data set.
-    :param tech_comb: combination of techniques.
-    :param parameters: parameters of the techniques.
-    :return: transformed data set.
+    """Apply transformations
+
+    Args:
+        obj (pd.Dataframe): dataframe for de-identification
+        key_vars (list): list of quasi-identifiers
+        tech_comb (list): combination of techniques
+        parameters (list): parameters of techniques
+        result (dictionary): dictionary to store results
+
+    Returns:
+        tuple: last transformed variant, dictionary of results
     """
 
     if 'sup' in tech_comb:
@@ -44,6 +49,15 @@ def apply_transformations(obj, key_vars, tech_comb, parameters, result):
 
 
 def process_transformations(df, key_vars):
+    """Find combinations, respective parameterisation and apply transformations.
+
+    Args:
+        df (pd.Dataframe): dataframe for de-identification
+        key_vars (list): list of quasi-identifiers
+
+    Returns:
+        dictionary: set transformed variants
+    """
     # data set without target variable to apply transformation techniques
     df_val = df[df.columns[:-1]].copy()
 
@@ -95,4 +109,5 @@ for idx, file in enumerate(input_files):
             res_df['privacy_risk_75'] = risk[1]
             res_df['privacy_risk_100'] = risk[2]
             potential_matches.to_csv(f'{risk_folder}{sep}ds{str(idx)}_transf{str(i)}_rl_qi{j}.csv')
+            gc.collect() 
 # %%

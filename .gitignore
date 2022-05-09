@@ -2,7 +2,5 @@
 .DS_Store
 output
 datasets.npy
-data
-input
-output5All
-output.zip
+original
+PPT

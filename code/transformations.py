@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import itertools
+import math
+
 
 def tuckey_method(obj, column, outlier):
     # outliers detection with Tukey's method
@@ -30,8 +32,10 @@ def parameters(obj, key_vars):
 
     # for suppression
     uniques_per = obj[key_vars].apply(lambda col: col.nunique() / len(obj))
+    uniques_per = list(uniques_per)
+    uniques_per = [math.floor(i*10)/10 for i in uniques_per]
     # define maximum percentage
-    sup_parameters = [uniques_per[uniques_per > i] for i in [0.7, 0.8, 0.9] if len(uniques_per[uniques_per > i])!=0]
+    sup_parameters = [j for i in [0.7, 0.8, 0.9] for j in uniques_per if j == i and len(uniques_per)!=0]
 
     # for rounding
     round_vars = obj[key_vars].select_dtypes(include=np.float64).columns

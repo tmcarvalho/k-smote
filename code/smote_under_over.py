@@ -1,4 +1,5 @@
-"""_summary_
+""" Apply smote, under and over
+This script interpolate data using smote, under and over techniques.
 """
 # %%
 from os import walk
@@ -12,6 +13,12 @@ import gc
 
 
 def interpolation(original_folder, file):
+    """Generate several interpolated data sets.
+
+    Args:
+        original_folder (string): path of original folder
+        file (string): name of file
+    """
     output_interpolation_folder = '../output/oversampled/smote_under_over'
     # output_rl_folder = '../output/record_linkage/smote_under_over'
     

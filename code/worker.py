@@ -7,11 +7,10 @@ import functools
 import threading
 import argparse
 import pika
-from apply_models import original_and_ppt_files
+from apply_models import simple_modeling
 
 #%%
 parser = argparse.ArgumentParser(description='Master Example')
-parser.add_argument('--type', type=str, help='Modeling type', default="original")
 parser.add_argument('--input_folder', type=str, help='Input folder', default="./input")
 parser.add_argument('--output_folder', type=str, help='Output folder', default="./output")
 args = parser.parse_args()
@@ -38,8 +37,7 @@ def ack_message(ch, delivery_tag, work_sucess):
 
 
 def modeling(file):
-    if args.type == 'original' or args.type == 'ppt':
-        original_and_ppt_files(file, args)
+    simple_modeling(file, args)
 
 # %%
 def do_work(conn, ch, delivery_tag, body):
@@ -82,6 +80,6 @@ connection.close()
 
 
 # find . -name ".DS_Store" -delete
-# python3 code/task.py  --input_folder "original"
-# python3 code/worker.py --type "original" --input_folder "original" --output_folder "output/modeling/original"
+# python3 code/task.py  --input_folder "output/oversampled/smote_under_over"
+# python3 code/worker.py --input_folder "output/oversampled/smote_under_over" --output_folder "output/modeling/smote_under_over"
 

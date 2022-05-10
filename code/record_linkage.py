@@ -22,7 +22,11 @@ def record_linkage(transformed: pd.DataFrame,
     print(len(candidates))
     compare = recordlinkage.Compare()
     for idx, col in enumerate(columns):
-        compare.numeric(col, columns[idx], label=columns[idx], method='gauss')
+        if transformed[col].dtype == 'object':
+            original[col] = original[col].astype(str)
+            compare.string(col, columns[idx], label=columns[idx], method='levenshtein')    
+        else:
+            compare.numeric(col, columns[idx], label=columns[idx], method='gauss')
 
     comparisons = compare.compute(candidates, transformed, original)
     potential_matches = comparisons[comparisons.sum(axis=1) > 1].reset_index()
@@ -31,7 +35,7 @@ def record_linkage(transformed: pd.DataFrame,
     return potential_matches
 
 
-def apply_record_linkage(transformed_data, original_data, keys):
+def threshold_record_linkage(transformed_data, original_data, keys):
     """Apply record linkage and calculate the percentage of re-identification
 
     Args:

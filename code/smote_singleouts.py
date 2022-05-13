@@ -40,33 +40,34 @@ def interpolation_singleouts(original_folder, file):
 
                 mijority_class = np.argmax(y.value_counts().sort_index(ascending=True))
                 minority_class = np.argmin(y.value_counts().sort_index(ascending=True))
+                try:
+                    smote = SMOTE(random_state=42,
+                                k_neighbors=3,
+                                sampling_strategy={
+                                    minority_class: int(ratio*len(y[y==mijority_class])),
+                                    mijority_class: 2*len(y[y==mijority_class])})
+                    
+                    # fit predictor and target variable
+                    x_smote, y_smote = smote.fit_resample(X, y)
+                    # add target variable
+                    x_smote[dt.columns[-2]] = y_smote
 
-                smote = SMOTE(random_state=42,
-                            k_neighbors=3,
-                            sampling_strategy={
-                                minority_class: int(ratio*len(y[y==mijority_class])),
-                                mijority_class: 2*len(y[y==mijority_class])})
-                
-                # fit predictor and target variable
-                x_smote, y_smote = smote.fit_resample(X, y)
-                # add target variable
-                x_smote[dt.columns[-2]] = y_smote
-
-                # add single out to further apply record linkage
-                x_smote[dt.columns[-1]] = 1
-                x_smote = pd.concat([x_smote, dt[dt['single_out']==0]])
-                
-                print(len(dt_singleouts))    
-                # remove original single outs from oversample
-                oversample = x_smote.copy()
-                oversample = oversample.drop(
-                    dt_singleouts.index).reset_index(drop=True)
-  
-                # save oversampled data
-                oversample.to_csv(
-                    f'{output_interpolation_folder}{sep}ds{file.split(".csv")[0]}_smote_QI{idx}_knn{nn}_per{ratio}.csv',
-                    index=False)    
+                    # add single out to further apply record linkage
+                    x_smote[dt.columns[-1]] = 1
+                    x_smote = pd.concat([x_smote, dt[dt['single_out']==0]])
+                      
+                    # remove original single outs from oversample
+                    oversample = x_smote.copy()
+                    oversample = oversample.drop(
+                        dt_singleouts.index).reset_index(drop=True)
     
+                    # save oversampled data
+                    oversample.to_csv(
+                        f'{output_interpolation_folder}{sep}ds{file.split(".csv")[0]}_smote_QI{idx}_knn{nn}_per{ratio}.csv',
+                        index=False)    
+
+                except:
+                    pass
                                         
 
 # %%

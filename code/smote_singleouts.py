@@ -3,8 +3,8 @@ This script will apply SMOTE technique in the single out cases.
 """
 # %%
 from os import sep, walk
-from pickle import TRUE
 import pandas as pd
+import numpy as np
 from imblearn.over_sampling import SMOTE
 from sklearn.preprocessing import LabelEncoder
 from kanon import single_outs_sets
@@ -26,41 +26,39 @@ def interpolation_singleouts(original_folder, file):
 
     knn = [1, 3, 5]
     # percentage of majority class
-    ratios = [0.5, 0.75, 1]
+    ratios = [2, 3, 4]
     for idx, dt in enumerate(set_data):
         for nn in knn:
-            print(f'NUMBER OF KNN: {nn}')
             for ratio in ratios:
-                print(f'NUMER OF RATIO: {ratio}')
                 dt = set_data[idx]
                 dt_singleouts = dt.loc[dt['single_out']==1, :].reset_index(drop=True)
-
+                
                 X = dt_singleouts.loc[:, dt_singleouts.columns[:-2]]
                 y = dt_singleouts.loc[:, dt_singleouts.columns[-2]]
 
-                mijority_class = np.argmax(y.value_counts().sort_index(ascending=True))
-                minority_class = np.argmin(y.value_counts().sort_index(ascending=True))
                 try:
+                    mijority_class = np.argmax(y.value_counts().sort_index(ascending=True))
+                    minority_class = np.argmin(y.value_counts().sort_index(ascending=True))
                     smote = SMOTE(random_state=42,
                                 k_neighbors=3,
                                 sampling_strategy={
-                                    minority_class: int(ratio*len(y[y==mijority_class])),
-                                    mijority_class: 2*len(y[y==mijority_class])})
+                                    minority_class: int(ratio*len(y[y==minority_class])),
+                                    mijority_class: int(ratio*len(y[y==mijority_class]))})
                     
                     # fit predictor and target variable
                     x_smote, y_smote = smote.fit_resample(X, y)
                     # add target variable
+
                     x_smote[dt.columns[-2]] = y_smote
 
                     # add single out to further apply record linkage
                     x_smote[dt.columns[-1]] = 1
-                    x_smote = pd.concat([x_smote, dt[dt['single_out']==0]])
-                      
+
                     # remove original single outs from oversample
                     oversample = x_smote.copy()
-                    oversample = oversample.drop(
-                        dt_singleouts.index).reset_index(drop=True)
-    
+                    oversample = oversample.drop(dt_singleouts.index)
+                    oversample = pd.concat([oversample, dt[dt['single_out']==0]]).reset_index(drop=True)   
+
                     # save oversampled data
                     oversample.to_csv(
                         f'{output_interpolation_folder}{sep}ds{file.split(".csv")[0]}_smote_QI{idx}_knn{nn}_per{ratio}.csv',
@@ -121,7 +119,7 @@ def plot_resampling(X, y, sampler, ax, title=None):
         title = f"Resampling with {sampler.__class__.__name__}"
     ax.set_title(title)
     sns.despine(ax=ax, offset=10)
-    ax.get
+    #ax.get
 
 fig, axs = plt.subplots(nrows=1,ncols=2, figsize=(15, 10))
 
@@ -138,4 +136,10 @@ for ax, sampler in zip(axs.ravel(), samplers):
     title = "Original dataset" if isinstance(sampler, FunctionSampler) else None
     plot_resampling(X, y, sampler, ax, title=title)
 fig.tight_layout()
+
+
+"""In this casse study it is verified that smote from imblearn creates minority cases from minority neighbours.
+Therefore, we need to implement smote from scratch to create cases based on two classes.
+"""
 # %%
+#################### SMOTE FROM SCRATCH #######################

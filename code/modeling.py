@@ -38,7 +38,7 @@ def evaluate_model(
         'learning_rate': [0.1, 0.01]
     }
     param_grid_lreg = {'C': np.logspace(-4, 4, 3),
-                       'max_iter': [100000, 1000000, 10000000]
+                       'max_iter': [1000000, 10000000]
                        }
 
     # define metric functions

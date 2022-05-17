@@ -62,3 +62,34 @@ def simple_modeling(file, args):
         raise exc
 
 
+def modeling_singleouts(file, args):
+    """Apply predictive performance.
+
+    Args:
+        file (string): input file
+
+    Raises:
+        Exception: failed to apply smote when single outs
+        class is great than non single outs.
+        exc: failed to writing the results.
+    """
+    print(f'{args.input_folder}/{file}')
+    data = pd.read_csv(f'{args.input_folder}/{file}')
+    data = data.apply(LabelEncoder().fit_transform)
+    # prepare data to modeling
+    X, y = data.iloc[:, :-2], data.iloc[:, -2]
+    if y.value_counts().nunique() != 1:
+        # predictive performance
+        validation, test = evaluate_model(X, y)
+        # save validation and test results
+        try:
+            if validation:
+                save_results(file, args, validation, test)
+
+        except Exception as exc:
+            raise exc
+
+
+    
+
+

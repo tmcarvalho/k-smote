@@ -7,10 +7,11 @@ import functools
 import threading
 import argparse
 import pika
-from apply_models import simple_modeling
+from apply_models import simple_modeling, modeling_singleouts
 
 #%%
 parser = argparse.ArgumentParser(description='Master Example')
+parser.add_argument('--type', type=str, help='Strategy type', default="simple")
 parser.add_argument('--input_folder', type=str, help='Input folder', default="./input")
 parser.add_argument('--output_folder', type=str, help='Output folder', default="./output")
 args = parser.parse_args()
@@ -37,7 +38,10 @@ def ack_message(ch, delivery_tag, work_sucess):
 
 
 def modeling(file):
-    simple_modeling(file, args)
+    if args.type != 'singleouts':
+        simple_modeling(file, args)
+    else:
+        modeling_singleouts(file, args)    
 
 # %%
 def do_work(conn, ch, delivery_tag, body):
@@ -80,6 +84,8 @@ connection.close()
 
 
 # find . -name ".DS_Store" -delete
-# python3 code/task.py  --input_folder "output/oversampled/smote_under_over"
-# python3 code/worker.py --input_folder "output/oversampled/smote_under_over" --output_folder "output/modeling/smote_under_over"
+# python3 code/task.py  --input_folder "output/oversampled/smote_singleouts"
+# python3 code/worker.py --input_folder "output/oversampled/smote_singleouts" --output_folder "output/modeling/smote_singleouts"
 
+# python3 code/worker.py --type "singleouts" --input_folder "output/oversampled/smote_singleouts" --output_folder "output/modeling/smote_singleouts"
+# ds34_smote_QI4_knn5_per0.5.csv

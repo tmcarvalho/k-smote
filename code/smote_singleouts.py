@@ -8,8 +8,11 @@ import numpy as np
 from imblearn.over_sampling import SMOTE
 from sklearn.preprocessing import LabelEncoder
 from kanon import single_outs_sets
-
-
+import random
+from sklearn.neighbors import NearestNeighbors
+import seaborn as sns
+from matplotlib import pyplot as plt
+# %%
 def interpolation_singleouts(original_folder, file):
     """Generate several interpolated data sets.
 
@@ -48,16 +51,14 @@ def interpolation_singleouts(original_folder, file):
                     # fit predictor and target variable
                     x_smote, y_smote = smote.fit_resample(X, y)
                     # add target variable
-
                     x_smote[dt.columns[-2]] = y_smote
-
                     # add single out to further apply record linkage
                     x_smote[dt.columns[-1]] = 1
 
                     # remove original single outs from oversample
                     oversample = x_smote.copy()
                     oversample = oversample.drop(dt_singleouts.index)
-                    oversample = pd.concat([oversample, dt[dt['single_out']==0]]).reset_index(drop=True)   
+                    oversample = pd.concat([oversample, dt.loc[dt['single_out']==0,:]]).reset_index(drop=True)   
 
                     # save oversampled data
                     oversample.to_csv(
@@ -72,19 +73,19 @@ def interpolation_singleouts(original_folder, file):
 original_folder = '../original'
 _, _, input_files = next(walk(f'{original_folder}'))
 
-not_considered_files = [0,1,3,13,23,28,32,36,40,48,54,66,87]
+not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87]
 for idx,file in enumerate(input_files):
     if int(file.split(".csv")[0]) not in not_considered_files:
         print(idx)
-        interpolation_singleouts(original_folder, file)
+        if file=='32.csv':
+            interpolation_singleouts(original_folder, file)
 
-
-
+""" NOTE
+Smote from imblearn doesn't work when number of minority class is equal to majority class (e.g. dataset 34.csv)
+The minimum to duplicate cases is per=2, if per=1, Smote doesn't create new instances
+"""
 # %%
 #################### CASE STUDY SMOTE ######################
-from matplotlib import pyplot as plt
-import numpy as np
-import seaborn as sns
 from imblearn import FunctionSampler
 from sklearn.datasets import make_classification
 
@@ -138,8 +139,149 @@ for ax, sampler in zip(axs.ravel(), samplers):
 fig.tight_layout()
 
 
-"""In this casse study it is verified that smote from imblearn creates minority cases from minority neighbours.
+""" NOTE
+In this casse study it is verified that smote from imblearn creates minority cases from minority neighbours.
 Therefore, we need to implement smote from scratch to create cases based on two classes.
 """
 # %%
 #################### SMOTE FROM SCRATCH #######################
+import random
+from random import randrange
+from sklearn.neighbors import NearestNeighbors
+
+class Smote:
+    def __init__(self,samples,y,N,k):
+        """Initiate arguments
+
+        Args:
+            samples (array): training samples
+            y (1D array): target sample
+            N (int): number of interpolations per observation
+            k (int): number of nearest neighbours
+        """
+        self.n_samples = samples.shape[0]
+        self.n_attrs=samples.shape[1]
+        self.y=y
+        self.N=N
+        self.k=k
+        self.samples=samples
+        self.newindex=0
+
+    def over_sampling(self):
+        N=int(self.N)
+        self.synthetic = np.zeros((self.n_samples * N, self.n_attrs+1))
+        neighbors=NearestNeighbors(n_neighbors=self.k+1).fit(self.samples)
+
+        # for each observation find nearest neighbours
+        for i in range(len(self.samples)):
+            nnarray=neighbors.kneighbors(self.samples[i].reshape(1,-1),return_distance=False)[0]
+            self._populate(N,i,nnarray)
+
+        return self.synthetic
+
+    def _populate(self,N,i,nnarray):
+        # populate N times
+        for j in range(N):
+            # find index of nearest neighbour excluding the observation in comparison
+            neighbour = randrange(1, self.k+1)
+
+            difference = abs(self.samples[i]-self.samples[nnarray[neighbour]])
+            # multiply with a weight
+            weight = random.uniform(0, 1)
+            additive = np.multiply(difference,weight)
+
+            # assign interpolated values
+            self.synthetic[self.newindex, 0:len(self.synthetic[self.newindex])-1] = self.samples[i]+additive
+            # assign intact target variable
+            self.synthetic[self.newindex, len(self.synthetic[self.newindex])-1] = self.y[i]
+            self.newindex+=1
+
+# %%
+def interpolation_singleouts_scratch(original_folder, file):
+    """Generate several interpolated data sets considering all classes.
+
+    Args:
+        original_folder (string): path of original folder
+        file (string): name of file
+    """
+
+    output_interpolation_folder = '../output/oversampled/smote_singleouts_scratch/'
+    data = pd.read_csv(f'{original_folder}/{file}')
+
+    # apply LabelEncoder beacause of smote
+    data = data.apply(LabelEncoder().fit_transform)
+    set_data, _ = single_outs_sets(data)
+
+    for idx, dt in enumerate(set_data):
+        X_train = dt.loc[dt['single_out']==1, dt.columns[:-2]]
+        Y_train = dt.loc[dt['single_out']==1, dt.columns[-1]]
+        y = dt.loc[dt['single_out']==1, dt.columns[-2]]
+
+        # getting the number of singleouts in training set
+        singleouts = Y_train.shape[0]
+
+        # storing the singleouts instances separately
+        x1 = np.ones((singleouts, X_train.shape[1]))
+        x1=[X_train.iloc[i] for i, v in enumerate(Y_train) if v==1.0]
+        x1=np.array(x1)
+
+        y=np.array(y)
+
+        knn = [1,3,5]
+        per = [1,2,3]
+        for k in knn:
+            for p in per:
+                try:
+                    new = Smote(x1, y, p, k).over_sampling()
+                    newDf = pd.DataFrame(new)
+                    # restore feature name 
+                    newDf.columns = dt.columns[:-1]
+                    # assign singleout
+                    newDf[dt.columns[-1]] = 1
+                    # add non single outs
+                    newDf = pd.concat([newDf, dt.loc[dt['single_out']==0]])
+                    for col in newDf.columns:
+                        if dt[col].dtype == np.int64:
+                            newDf[col] = round(newDf[col], 0).astype(int)
+                        else:    
+                            newDf[col] = newDf[col].astype(dt[col].dtype)
+
+                    # save oversampled data
+                    newDf.to_csv(
+                        f'{output_interpolation_folder}{sep}ds{file.split(".csv")[0]}_smote_QI{idx}_knn{k}_per{p}.csv',
+                        index=False)
+
+                except:
+                    pass
+# %%
+original_folder = '../original'
+_, _, input_files = next(walk(f'{original_folder}'))
+
+not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87]
+for idx,file in enumerate(input_files):
+    if int(file.split(".csv")[0]) not in not_considered_files:
+        print(idx)
+        if int(file.split(".csv")[0]) in [2,4,5,8,10,14,16,32]:
+            print(file)
+            if idx >= 30:
+                interpolation_singleouts_scratch(original_folder, file)
+
+# %%
+################ EXAMPLE ORIGINAL VS ONE CLASSS VS TWO CLASSES
+original_32 = pd.read_csv("../original/32.csv")
+package_32 = pd.read_csv("../output/oversampled/smote_singleouts/ds32_smote_QI4_knn3_per2.csv")
+scratch_32 = pd.read_csv("../output/oversampled/smote_singleouts_scratch/ds32_smote_QI4_knn3_per1.csv")
+# %%
+idx=scratch_32[scratch_32['single_out']==1].index
+fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(10,10))
+sns.scatterplot(data=original_32.loc[idx, :], x='age', y='hoursPerWeek', hue='label', palette="deep",s=14, ax=axs[0,0], legend=False).set_title("Original")
+sns.scatterplot(data=package_32[package_32['single_out']==1], x='age', y='hoursPerWeek', hue='label', palette="deep", s=14, ax=axs[0,1], legend=False).set_title("One class")
+sns.scatterplot(data=original_32, x='age', y='hoursPerWeek', hue='label', palette="deep", s=14, ax=axs[1,0], legend=False).set_title("Original")
+sns.scatterplot(data=scratch_32[scratch_32['single_out']==1], x='age', y='hoursPerWeek', hue='label', palette="deep", s=14, ax=axs[1,1], legend=False).set_title("Both classes")
+axs[0,0].set(xlim=(0,100))
+axs[0,1].set(xlim=(0,100))
+axs[1,0].set(xlim=(0,100))
+axs[1,1].set(xlim=(0,100))
+
+fig.savefig('../output/plots/smote_case_study.png',bbox_inches='tight')
+# %%

@@ -4,12 +4,9 @@ This script interpolate data using smote, under and over techniques.
 # %%
 from os import walk
 import pandas as pd
-from kanon import single_outs_sets
 from sklearn.preprocessing import LabelEncoder
 from imblearn.under_sampling import RandomUnderSampler
 from imblearn.over_sampling import SMOTE, RandomOverSampler
-from record_linkage import apply_record_linkage
-import gc
 
 
 def interpolation(original_folder, file):
@@ -20,8 +17,7 @@ def interpolation(original_folder, file):
         file (string): name of file
     """
     output_interpolation_folder = '../output/oversampled/smote_under_over'
-    # output_rl_folder = '../output/record_linkage/smote_under_over'
-    
+
     print(f'{original_folder}/{file}')
     data = pd.read_csv(f'{original_folder}/{file}')
     data = data.apply(LabelEncoder().fit_transform)
@@ -43,17 +39,8 @@ def interpolation(original_folder, file):
 
                 # add target
                 x_smote[data.columns[-1]] = y_smote
-                x_smote.to_csv(f'{output_interpolation_folder}/ds{file.split(".csv")[0]}_smote_knn{nn}_per{smote}.csv')
+                x_smote.to_csv(f'{output_interpolation_folder}/ds{file.split(".csv")[0]}_smote_knn{nn}_per{smote}.csv', index=False)
 
-                # matches, percentages = apply_record_linkage(
-                #     x_smote,
-                #     data,
-                #     key_vars)
-                # dict_per = {'privacy_risk_50': percentages[0], 'privacy_risk_75': percentages[1], 'privacy_risk_100': percentages[2]}  
-                # risk = pd.DataFrame(dict_per, index=[0])     
-                # matches.to_csv(f'{output_rl_folder}/rl_smote_qi{idx}_knn{nn}_per{smote}_{file}')    
-                # risk.to_csv(f'{output_rl_folder}/risk_smote_qi{idx}_knn{nn}_per{smote}_{file}')
-                # gc.collect()
             except: pass        
 
     for over in ratios_over:
@@ -67,17 +54,8 @@ def interpolation(original_folder, file):
 
             # add target
             x_over[data.columns[-1]] = y_over
-            x_over.to_csv(f'{output_interpolation_folder}/ds{file.split(".csv")[0]}_over_per{over}.csv')
+            x_over.to_csv(f'{output_interpolation_folder}/ds{file.split(".csv")[0]}_over_per{over}.csv', index=False)
 
-            # matches, percentages = apply_record_linkage(
-            #     x_over,
-            #     data,
-            #     key_vars)
-            # dict_per = {'privacy_risk_50': percentages[0], 'privacy_risk_75': percentages[1], 'privacy_risk_100': percentages[2]}  
-            # risk = pd.DataFrame(dict_per, index=[0])     
-            # matches.to_csv(f'{output_rl_folder}/rl_over_qi{idx}_per{over}_{file}')    
-            # risk.to_csv(f'{output_rl_folder}/risk_over_qi{idx}_per{over}_{file}')
-            # gc.collect()
         except: pass    
     
     for under in ratios_under:
@@ -91,24 +69,14 @@ def interpolation(original_folder, file):
 
             # add target
             x_under[data.columns[-1]] = y_under
-            x_under.to_csv(f'{output_interpolation_folder}/ds{file.split(".csv")[0]}_under_per{under}.csv')
-
-            # matches, percentages = apply_record_linkage(
-            #     x_under,
-            #     data,
-            #     key_vars)
-            # dict_per = {'privacy_risk_50': percentages[0], 'privacy_risk_75': percentages[1], 'privacy_risk_100': percentages[2]}  
-            # risk = pd.DataFrame(dict_per, index=[0])     
-            # matches.to_csv(f'{output_rl_folder}/rl_under_qi{idx}_per{under}_{file}')    
-            # risk.to_csv(f'{output_rl_folder}/risk_under_qi{idx}_per{under}_{file}')
-            # gc.collect()
+            x_under.to_csv(f'{output_interpolation_folder}/ds{file.split(".csv")[0]}_under_per{under}.csv', index=False)
         except: pass    
 
 # %%
 original_folder = '../original'
 _, _, input_files = next(walk(f'{original_folder}'))
 
-not_considered_files = [0,1,3,13,23,28,32,36,40,48,54,66,87]
+not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87]
 for idx,file in enumerate(input_files):
     if int(file.split(".csv")[0]) not in not_considered_files:
         print(idx)

@@ -8,8 +8,6 @@ import transformations
 from os import sep, walk
 from sklearn.preprocessing import LabelEncoder
 from kanon import single_outs_sets
-import record_linkage
-import gc
 
 def apply_transformations(obj, key_vars, tech_comb, parameters, result):
     """Apply transformations
@@ -88,20 +86,23 @@ risk_folder = '../output/record_linkage/PPT'
 
 _, _, input_files = next(walk(f'{input_folder}'))
 
-not_considered_files = [0,1,3,13,23,28,32,36,40,48,54,66,87]
+not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87]
 set_qis = {'ds':[], 'set_key_vars':[]}
+
 for idx, file in enumerate(input_files):
-    # idx = int(input_files[0].split('.')[0])
+    
     if int(file.split(".csv")[0]) not in not_considered_files:
         df =  pd.read_csv(f'{input_folder}/{file}')
         # get index
         file_idx = int(file.split('.')[0])
         data = df.apply(LabelEncoder().fit_transform)
         _, set_key_vars = single_outs_sets(data)
+        
         if len(set_key_vars) == 5:
             print(idx)
             set_qis['ds'].append(file_idx)
             set_qis['set_key_vars'].append(set_key_vars)
+            
             for j, key_vars in enumerate(set_key_vars):
                 # apply de-identification to the set of key vars    
                 result = process_transformations(data, key_vars)
@@ -109,13 +110,8 @@ for idx, file in enumerate(input_files):
                 res_df = pd.DataFrame(result)
 
                 for i in range(len(res_df)):
-                    res_df['transformedDS'][i].to_csv(f'{transformed_folder}{sep}ds{str(file_idx)}_transf{str(i)}_qi{j}.csv')
-            #         potential_matches, risk = record_linkage.apply_record_linkage(res_df['transformedDS'][i], data, key_vars)
-            #         res_df['privacy_risk_50'] = risk[0]
-            #         res_df['privacy_risk_75'] = risk[1]
-            #         res_df['privacy_risk_100'] = risk[2]
-            #         potential_matches.to_csv(f'{risk_folder}{sep}ds{str(idx)}_transf{str(i)}_rl_qi{j}.csv')
-            # # gc.collect() 
+                    res_df['transformedDS'][i].to_csv(f'{transformed_folder}{sep}ds{str(file_idx)}_transf{str(i)}_qi{j}.csv', index=False)
+
 # %%
 set_qis_df = pd.DataFrame(set_qis)
 set_qis_df.to_csv(f'{transformed_folder}{sep}list_key_vars.csv', index=False)

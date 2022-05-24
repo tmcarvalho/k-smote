@@ -1,12 +1,10 @@
 """Data de-identification
-This script will de-identify the data and 
-calculate the privacy risk for each transformed variant.
+This script will de-identify the data for 5 set of quasi-identifiers.
 """
 # %%
 import pandas as pd
 import transformations
 from os import sep, walk
-from sklearn.preprocessing import LabelEncoder
 from kanon import single_outs_sets
 
 def apply_transformations(obj, key_vars, tech_comb, parameters, result):
@@ -95,8 +93,7 @@ for idx, file in enumerate(input_files):
         df =  pd.read_csv(f'{input_folder}/{file}')
         # get index
         file_idx = int(file.split('.')[0])
-        data = df.apply(LabelEncoder().fit_transform)
-        _, set_key_vars = single_outs_sets(data)
+        _, set_key_vars = single_outs_sets(df)
         
         if len(set_key_vars) == 5:
             print(idx)
@@ -105,7 +102,7 @@ for idx, file in enumerate(input_files):
             
             for j, key_vars in enumerate(set_key_vars):
                 # apply de-identification to the set of key vars    
-                result = process_transformations(data, key_vars)
+                result = process_transformations(df, key_vars)
                 # transform dict to dataframe
                 res_df = pd.DataFrame(result)
 

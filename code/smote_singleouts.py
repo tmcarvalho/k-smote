@@ -6,12 +6,14 @@ from os import sep, walk
 import pandas as pd
 import numpy as np
 from imblearn.over_sampling import SMOTE
+from collections import defaultdict
 from sklearn.preprocessing import LabelEncoder
 from kanon import single_outs_sets
 import random
 from sklearn.neighbors import NearestNeighbors
 import seaborn as sns
 from matplotlib import pyplot as plt
+
 # %%
 def interpolation_singleouts(original_folder, file):
     """Generate several interpolated data sets.
@@ -23,9 +25,19 @@ def interpolation_singleouts(original_folder, file):
     output_interpolation_folder = '../output/oversampled/smote_singleouts/'
     data = pd.read_csv(f'{original_folder}/{file}')
 
-    # apply LabelEncoder beacause of smote
-    data = data.apply(LabelEncoder().fit_transform)
-    set_data, _ = single_outs_sets(data)
+    # apply LabelEncoder because of smote
+    label_encoder_dict = defaultdict(LabelEncoder)
+    data_encoded = data.apply(lambda x: label_encoder_dict[x.name].fit_transform(x))
+    map_dict = dict()
+    
+    for k in data.columns:
+        if data[k].dtype=='object':
+            keys = data[k]
+            values = data_encoded[k]
+            sub_dict = dict(zip(keys, values))
+            map_dict[k] = sub_dict
+
+    set_data, _ = single_outs_sets(data_encoded)
 
     knn = [1, 3, 5]
     # percentage of majority class
@@ -60,13 +72,17 @@ def interpolation_singleouts(original_folder, file):
                     oversample = oversample.drop(dt_singleouts.index)
                     oversample = pd.concat([oversample, dt.loc[dt['single_out']==0,:]]).reset_index(drop=True)   
 
+                    # decoded
+                    for key in map_dict.keys():
+                        d = dict(map(reversed, map_dict[key].items()))
+                        oversample[key] = oversample[key].map(d)
+
                     # save oversampled data
                     oversample.to_csv(
                         f'{output_interpolation_folder}{sep}ds{file.split(".csv")[0]}_smote_QI{idx}_knn{nn}_per{ratio}.csv',
                         index=False)    
 
-                except:
-                    pass
+                except: pass
                                         
 
 # %%
@@ -77,8 +93,8 @@ not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87]
 for idx,file in enumerate(input_files):
     if int(file.split(".csv")[0]) not in not_considered_files:
         print(idx)
-        if file=='32.csv':
-            interpolation_singleouts(original_folder, file)
+        print(file)
+        interpolation_singleouts(original_folder, file)
 
 """ NOTE
 Smote from imblearn doesn't work when number of minority class is equal to majority class (e.g. dataset 34.csv)
@@ -209,8 +225,18 @@ def interpolation_singleouts_scratch(original_folder, file):
     data = pd.read_csv(f'{original_folder}/{file}')
 
     # apply LabelEncoder beacause of smote
-    data = data.apply(LabelEncoder().fit_transform)
-    set_data, _ = single_outs_sets(data)
+    label_encoder_dict = defaultdict(LabelEncoder)
+    data_encoded = data.apply(lambda x: label_encoder_dict[x.name].fit_transform(x))
+    map_dict = dict()
+    
+    for k in data.columns:
+        if data[k].dtype=='object':
+            keys = data[k]
+            values = data_encoded[k]
+            sub_dict = dict(zip(keys, values))
+            map_dict[k] = sub_dict
+
+    set_data, _ = single_outs_sets(data_encoded)
 
     for idx, dt in enumerate(set_data):
         X_train = dt.loc[dt['single_out']==1, dt.columns[:-2]]
@@ -245,6 +271,11 @@ def interpolation_singleouts_scratch(original_folder, file):
                             newDf[col] = round(newDf[col], 0).astype(int)
                         else:    
                             newDf[col] = newDf[col].astype(dt[col].dtype)
+                    
+                    # decoded
+                    for key in map_dict.keys():
+                        d = dict(map(reversed, map_dict[key].items()))
+                        newDf[key] = newDf[key].map(d)
 
                     # save oversampled data
                     newDf.to_csv(
@@ -261,10 +292,8 @@ not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87]
 for idx,file in enumerate(input_files):
     if int(file.split(".csv")[0]) not in not_considered_files:
         print(idx)
-        if int(file.split(".csv")[0]) in [2,4,5,8,10,14,16,32]:
-            print(file)
-            if idx >= 30:
-                interpolation_singleouts_scratch(original_folder, file)
+        print(file)
+        interpolation_singleouts_scratch(original_folder, file)
 
 # %%
 ################ EXAMPLE ORIGINAL VS ONE CLASSS VS TWO CLASSES

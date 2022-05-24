@@ -53,6 +53,7 @@ def parameters(obj, key_vars):
     # for top and bottom
     topbot_vars = obj[key_vars].select_dtypes(include=np.number).columns
     topbot_parameters = []
+    outliers_prob = []
     for outlier in [1.5, 3]:
         for col in topbot_vars:
             outliers_prob, _, _ = tuckey_method(obj, col, outlier)   

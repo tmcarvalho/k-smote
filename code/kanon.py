@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from collections import Counter
 
-def single_outs_sets(data: pd.DataFrame) -> tuple[pd.DataFrame, list]:
+def single_outs_sets(data):
     """It takes a dataframe and returns a new dataframe with a new column called 'single_out'
     that is 1 if the row is a single out and 0 otherwise, based on select quasi-identifiers
 

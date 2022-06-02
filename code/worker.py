@@ -7,11 +7,11 @@ import functools
 import threading
 import argparse
 import pika
-from apply_models import simple_modeling, modeling_singleouts
+from apply_models import modeling_ppt, modeling_singleouts, modeling_smote_under_over
 
 #%%
 parser = argparse.ArgumentParser(description='Master Example')
-parser.add_argument('--type', type=str, help='Strategy type', default="simple")
+parser.add_argument('--type', type=str, help='Strategy type', default="ppt")
 parser.add_argument('--input_folder', type=str, help='Input folder', default="./input")
 parser.add_argument('--output_folder', type=str, help='Output folder', default="./output")
 args = parser.parse_args()
@@ -38,9 +38,11 @@ def ack_message(ch, delivery_tag, work_sucess):
 
 
 def modeling(file):
-    if args.type != 'singleouts':
-        simple_modeling(file, args)
-    else:
+    if args.type == 'ppt':
+        modeling_ppt(file, args)
+    if args.type == 'smote_under_over':
+        modeling_smote_under_over(file, args)
+    if args.type == 'singleouts':
         modeling_singleouts(file, args)    
 
 # %%
@@ -84,8 +86,7 @@ connection.close()
 
 
 # find . -name ".DS_Store" -delete
-# python3 code/task.py  --input_folder "output/oversampled/smote_singleouts"
-# python3 code/worker.py --input_folder "output/oversampled/smote_singleouts" --output_folder "output/modeling/smote_singleouts"
-
-# python3 code/worker.py --type "singleouts" --input_folder "output/oversampled/smote_singleouts" --output_folder "output/modeling/smote_singleouts"
-# ds34_smote_QI4_knn5_per0.5.csv
+# python3 code/task.py  --input_folder "output/oversampled/smote_under_over"
+# python3 code/worker.py --type "ppt" --input_folder "PPT" --output_folder "output/modeling/PPT"
+# python3 code/worker.py --type "smote_under_over" --input_folder "output/oversampled/smote_under_over" --output_folder "output/modeling/smote_under_over"
+# python3 code/worker.py --type "singleouts" --input_folder "output/oversampled/smote_singleouts_scratch" --output_folder "output/modeling/smote_singleouts_scratch"

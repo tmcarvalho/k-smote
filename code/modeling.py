@@ -6,40 +6,50 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import make_scorer, f1_score, roc_auc_score
 from imblearn.metrics import geometric_mean_score
-from sklearn.model_selection import train_test_split, GridSearchCV, RepeatedKFold
+from sklearn.model_selection import GridSearchCV, RepeatedKFold, cross_validate
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 # %% evaluate a model
-def evaluate_model(
-    x: pd.DataFrame,
-    y: np.int64):
+def evaluate_model(x_train, x_test, y_train, y_test):
     """Evaluatation
 
     Args:
-        x (pd.DataFrame): dataframe to train
-        y (np.int64): target variable
+        x_train (pd.DataFrame): dataframe for train
+        x_test (pd.DataFrame): dataframe for test
+        y_train (np.int64): target variable for train
+        y_test (np.int64): target variable for test
     Returns:
-        tuple: dictionary with validation and test results
+        tuple: dictionary with validation, train and test results
     """
-
-    # split data 80/20
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
-
+    
     seed = np.random.seed(1234)
 
-    # set parameters
-    param_grid_rf = {
-        'n_estimators': [100, 250, 500],
-        'max_depth': [4, 7, 10]
-    }
-    param_grid_xgb = {
-        'n_estimators': [100, 250, 500],
-        'max_depth': [4, 7, 10],
-        'learning_rate': [0.1, 0.01]
-    }
-    param_grid_lreg = {'C': np.logspace(-4, 4, 3),
-                       'max_iter': [1000000, 10000000]
-                       }
+    # initiate models
+    rf = RandomForestClassifier(random_state=seed)
+    booster = XGBClassifier(
+            objective='binary:logistic',
+            eval_metric='logloss',
+            use_label_encoder=False,
+            random_state=seed)
+    reg = LogisticRegression(random_state=seed)
+
+    # set parameterisation
+    param1 = {}
+    param1['classifier__n_estimators'] = [100, 250, 500]
+    param1['classifier__max_depth'] = [4, 7, 10]
+    param1['classifier'] = [rf]
+
+    param2 = {}
+    param2['classifier__n_estimators'] = [100, 250, 500]
+    param2['classifier__max_depth'] = [4, 7, 10]
+    param2['classifier__learning_rate'] = [0.1, 0.01]
+    param2['classifier'] = [booster]
+
+    param3 = {}
+    param3['classifier__C'] = np.logspace(-4, 4, 3)
+    param3['classifier__max_iter'] = [1000000, 10000000]
+    param3['classifier'] = [reg]
 
     # define metric functions
     scoring = {
@@ -51,64 +61,39 @@ def evaluate_model(
         'roc_auc_curve': make_scorer(roc_auc_score, max_fpr=0.001, needs_proba=True),
         }
 
-    # create the parameter grid
-    gs_rf = GridSearchCV(
-        estimator=RandomForestClassifier(random_state=seed),
-        param_grid=param_grid_rf,
+    pipeline = Pipeline([('classifier', rf)])
+    params = [param1, param2, param3]
+
+    # Train the grid search model
+    gs = GridSearchCV(
+        pipeline,
+        param_grid=params,
         cv=RepeatedKFold(n_splits=5, n_repeats=2),
         scoring=scoring,
         refit='f1_weighted',
-        return_train_score=True)
+        return_train_score=True,
+        n_jobs=-1).fit(x_train, y_train)
 
-    gs_xgb = GridSearchCV(
-        estimator=XGBClassifier(
-            objective='binary:logistic',
-            eval_metric='logloss',
-            use_label_encoder=False,
-            random_state=seed),
-        param_grid=param_grid_xgb,
-        cv=RepeatedKFold(n_splits=5, n_repeats=2),
-        scoring=scoring,
-        refit='f1_weighted',
-        return_train_score=True)
+    validation = {}
 
-    gs_lreg = GridSearchCV(
-        estimator=LogisticRegression(random_state=seed),
-        param_grid=param_grid_lreg,
-        cv=RepeatedKFold(n_splits=5, n_repeats=2),
-        scoring=scoring,
-        refit='f1_weighted',
-        return_train_score=True)
+    # Store results from grid search
+    validation = gs.cv_results_
 
-    # List of pipelines for ease of iteration
-    grids = [gs_rf, gs_xgb, gs_lreg]
+    score = {
+    'model':[],
+    'test_f1_weighted':[], 'test_gmean':[], 'test_roc_auc':[]
+    }
+    
+    # apply best cv result in all training data (without CV - out of sample)
+    retrain = gs.best_estimator_.named_steps['classifier'].fit(x_train, y_train)
 
-    # Dictionary of pipelines and classifier types for ease of reference
-    grid_dict = {
-        0: 'Random Forest',
-        1: 'Boosting',
-        2: 'Logistic Regression'}
+    score['model'] = {gs.best_estimator_.named_steps["classifier"]}
+    
+    # Predict on test data with best params
+    y_pred = retrain.predict(x_test)
+    # Store predicted results
+    score['test_f1_weighted'] = f1_score(y_test, y_pred, average='weighted')
+    score['test_gmean'] = geometric_mean_score(y_test, y_pred)
+    score['test_roc_auc'] = roc_auc_score(y_test, y_pred)
 
-    # Fit the grid search objects
-    # print('Performing model optimizations...')
-
-    validation = test = {}
-    for idx, gs in enumerate(grids):
-        print(f'\nEstimator: {grid_dict[idx]}')
-        # Performing cross validation to tune parameters for best model fit
-        gs.fit(x_train, y_train)
-        # Best params
-        # print(f'Best params: {gs.best_params_}')
-        # Best training data accuracy
-        # print(f'Best training accuracy: {gs.best_score_}')
-        # Store results from grid search
-        validation['cv_results_' + str(grid_dict[idx])] = gs.cv_results_
-        # Predict on test data with best params
-        y_pred = gs.predict(x_test)
-        # Test data accuracy of model with best params
-        # print(f'Test set accuracy score for best params:
-        # {f1_score(y_test, y_pred, average='weighted')}')
-        # Store results from grid search
-        test[str(grid_dict[idx])] = f1_score(y_test, y_pred, average='weighted')
-
-    return validation, test
+    return validation, score

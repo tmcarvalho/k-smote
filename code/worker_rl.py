@@ -65,7 +65,8 @@ def on_message(ch, method_frame, _header_frame, body, args):
 
 
 #credentials = pika.PlainCredentials('guest', 'guest')
-connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost', heartbeat=30))
+connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost', heartbeat=0
+))
 channel = connection.channel()
 channel.queue_declare(queue='task_queue_rl', durable=True, arguments={"dead-letter-exchange":"dlx"})
 print(' [*] Waiting for messages. To exit press CTRL+C')
@@ -92,4 +93,3 @@ connection.close()
 # python3 code/task_rl.py  --input_folder "output/oversampled/smote_under_over"
 # python3 code/worker_rl.py --input_folder "output/oversampled/smote_singleouts_scratch" --output_folder "output/record_linkage/smote_singleouts_scratch"
 
-# python3 code/worker_rl.py --type "smote_under_over" --input_folder "output/oversampled/smote_under_over" --output_folder "output/record_linkage/smote_under_over"

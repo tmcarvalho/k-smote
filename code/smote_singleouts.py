@@ -55,7 +55,7 @@ def interpolation_singleouts(original_folder, file):
                     mijority_class = np.argmax(y.value_counts().sort_index(ascending=True))
                     minority_class = np.argmin(y.value_counts().sort_index(ascending=True))
                     smote = SMOTE(random_state=42,
-                                k_neighbors=3,
+                                k_neighbors=nn,
                                 sampling_strategy={
                                     minority_class: int(ratio*len(y[y==minority_class])),
                                     mijority_class: int(ratio*len(y[y==mijority_class]))})

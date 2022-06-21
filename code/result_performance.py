@@ -26,14 +26,17 @@ def transform_npy_to_csv(original_foler, folder_validation):
     metrics = ['gmean', 'acc', 'bal_acc', 'f1', 'f1_weighted', 'roc_auc_curve']
 
     for org in orig_file_validation:
-        f = list(map(int, re.findall(r'\d+', org.split('.')[0])))[0]
-        if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87]:
-            if '.npy' in org:
-                org_result = np.load(f'{original_foler}/{org}', allow_pickle='TRUE').item()
-                org_result = pd.DataFrame.from_dict(org_result)
+        o = list(map(int, re.findall(r'\d+', org.split('.')[0])))[0]
+        if o not in [0,1,3,13,23,28,34,36,40,48,54,66,87]:
+            for file in performance_files:
+                if 'npy' in org and 'npy' in file:
+                    org_result = np.load(f'{original_foler}/{org}', allow_pickle='TRUE').item()
+                    org_result = pd.DataFrame.from_dict(org_result)
 
-                for file in performance_files:
-                    if '.npy' in file and str(org.split('.')[0] + '_') in file:
+                    t = list(map(int, re.findall(r'\d+', file.split('.')[0])))[0]
+                    if o==t:
+                        print(org)
+                        print(file)
                         result = np.load(f'{folder_validation}/{file}', allow_pickle='TRUE').item()
                         result = pd.DataFrame.from_dict(result)
                         
@@ -78,7 +81,7 @@ def concat_ppt_results():
 
     for _, file in enumerate(performance_files):
         f = list(map(int, re.findall(r'\d+', file.split('_')[0])))[0]
-        if f in [2,4,5,8,10,14,16,32]:
+        if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87]:
             if '.csv' in file:
                 result = pd.read_csv(f'{folder_validation}/{file}')
                 quasi_id_int = file.split('_')[1]
@@ -111,13 +114,13 @@ def concat_smote_under_over_results():
 
     for _, file in enumerate(performance_files):
         f = list(map(int, re.findall(r'\d+', file.split('_')[0])))[0]
-        if f in [2,4,5,8,10,14,16,32]:
+        if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87]:
             if '.csv' in file:
                 result = pd.read_csv(f'{folder_validation}/{file}')
                 per = file.split('_')[2]
                 per = per.replace(".csv", "")
                 per = list(map(float, re.findall(r'\d+\.\d+', per)))[0] if '.' in per else list(map(float, re.findall(r'\d', per)))[0]
-                result['technique'] = file.split('_')[1]
+                result['technique'] = file.split('_')[1].title()
                 if file.split('_')[1] == 'smote':
                     result['knn'] = list(map(int, re.findall(r'\d+', file.split('_')[2])))[0]
                 result['per'] = per
@@ -147,7 +150,7 @@ def concat_results_smote_singleouts(folder_validation, technique):
 
     for _, file in enumerate(performance_files):
         f = list(map(int, re.findall(r'\d+', file.split('_')[0])))[0]
-        if f in [2,4,5,8,10,14,16,32]:
+        if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87]:
             if '.csv' in file:
                 result = pd.read_csv(f'{folder_validation}/{file}')
                 quasi_id_int = file.split('_')[2]
@@ -175,10 +178,10 @@ ppt_results = concat_ppt_results()
 smote_under_over_results = concat_smote_under_over_results()
 smote_singleouts_oneclass = concat_results_smote_singleouts(
     f'{os.path.dirname(os.getcwd())}/output/modeling/smote_singleouts/validation',
-    'Smote one class')
+    'Synthetisation \n one class')
 smote_singleouts_twoclasses = concat_results_smote_singleouts(
     f'{os.path.dirname(os.getcwd())}/output/modeling/smote_singleouts_scratch/validation',
-    'Smote two classes')
+    'Synthetisation \n two classes')
 
 # %%
 all_results = pd.concat([ppt_results, smote_under_over_results, smote_singleouts_oneclass, smote_singleouts_twoclasses])
@@ -186,83 +189,41 @@ all_results = pd.concat([ppt_results, smote_under_over_results, smote_singleouts
 # %%
 results_max = all_results.groupby(['ds', 'technique'], as_index=False)['mean_test_f1_weighted', 'mean_test_f1_weighted_perdif', 'mean_test_gmean_perdif', 'mean_test_roc_auc_curve_perdif'].max()
 # %%
-plt.figure(figsize=(12,10))
-ax = sns.boxplot(data=results_max, x='technique', y='mean_test_f1_weighted_perdif', palette='muted')
+order = ['PPT', 'Over', 'Under', 'Smote', 'Synthetisation \n one class', 'Synthetisation \n two classes']
+# %%
+sns.set_style("darkgrid")
+plt.figure(figsize=(12,8))
+ax = sns.boxplot(data=results_max, x='technique', y='mean_test_f1_weighted_perdif', palette='Spectral_r', order=order)
 # ax.set(ylim=(0, 30))
 sns.set(font_scale=1.5)
 plt.xticks(rotation=30)
 plt.xlabel("")
 plt.ylabel("Percentage difference of predictive performance (F-score)")
 plt.show()
-#figure = ax.get_figure()
-#figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/8results_technique_testindexes.png', bbox_inches='tight')
+figure = ax.get_figure()
+figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allresults_technique_fscore.pdf', bbox_inches='tight')
 
 # %%
-melted_results = results_max.melt(id_vars=["mean_test_f1_weighted_perdif", "mean_test_gmean_perdif", "mean_test_roc_auc_curve_perdif"], 
+melted_results = results_max.melt(id_vars=['technique'], value_vars=["mean_test_f1_weighted_perdif","mean_test_gmean_perdif", "mean_test_roc_auc_curve_perdif"], 
         var_name="Measure", 
         value_name="Value")
-# %% ###########################################################
-grp_dataset = all_results.groupby('ds')
-for name, grp in grp_dataset:
-    # print(name)
-    # print(grp['qi'].nunique())
-    sns.set_style('darkgrid')
-    sns.set(font_scale=1.5)
-    g = sns.FacetGrid(grp,row='qi', height=8, aspect=1.5)
-    g.map(sns.boxplot, "knn", "mean_test_f1_weighted",
-    "per", palette='muted').add_legend(title='Ratio \n sampling')
-    g.set_axis_labels("Nearest Neighbours", "Fscore")
-    g.set_titles("{row_name}")
-    g.savefig(
-        f'{os.path.dirname(os.getcwd())}/output/plots/each/fscore/{name}_fscore.pdf',
-        bbox_inches='tight')
-# %%
-for name, grp in grp_dataset:
-    sns.set_style('darkgrid')
-    sns.set(font_scale=1.5)
-    gg = sns.FacetGrid(grp,row='qi', height=8, aspect=1.5)
-    gg.map(sns.barplot, "knn", "privacy_risk_50", "per",
-    palette='muted').add_legend(title='Ratio \n sampling')
-    gg.set_axis_labels("Nearest Neighbours", "Privacy Risk")
-    gg.set_titles("{row_name}")
-    gg.savefig(
-    f'{os.path.dirname(os.getcwd())}/output/plots/each/risk_at50%/{name}_risk.pdf',
-    bbox_inches='tight')
 
 # %%
-mean_ds_fscore = all_results.groupby(
-    ['ds', 'model', 'knn', 'per'])['mean_test_f1_weighted'].mean().reset_index(name='mean')
-mean_ds_fscore['rank'] = mean_ds_fscore.groupby(['ds'])['mean'].transform('rank', method='dense')
-# %%
-plt.figure(figsize=(10,7))
-ax = sns.boxplot(data=mean_ds_fscore, x='model', y='rank', palette='muted', width=0.5)
-ax.set(ylim=(0, 140))
-sns.set(font_scale=2)
-plt.xticks(rotation=45)
+plt.figure(figsize=(20,16))
+ax = sns.boxplot(data=melted_results, x='technique', y='Value', hue='Measure', palette='muted', order=order)
+ax.set(yscale='log')
+sns.set(font_scale=1.5)
+plt.ylim(-10**1, 10**3)
+ax.set(ylim=(-10**1, 10**3))
+plt.xticks(rotation=30)
 plt.xlabel("")
-plt.ylabel("Rank of Predictive Performance (Fscore)")
+plt.ylabel("Percentage difference of predictive performance (F-score)")
 plt.show()
-figure = ax.get_figure()
-figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/fscore_rank.pdf', bbox_inches='tight')
+#figure = ax.get_figure()
+#figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allresults_technique.pdf', bbox_inches='tight')
 
-# %%
-mean_ds_knn = all_results.groupby(
-    ['ds', 'knn', 'per'])['mean_test_f1_weighted'].mean().reset_index(name='mean')
-mean_ds_knn['rank'] = mean_ds_knn.groupby(['ds'])['mean'].transform('rank' , method='dense')
-# %%
-plt.figure(figsize=(18,10))
-ax = sns.boxplot(data=mean_ds_knn, x='knn', y='rank', palette='muted', hue='per')
-ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1), ncol=5, title='Ratio sampling')
-# ax.set(ylim=(0, 30))
-sns.set(font_scale=2)
-plt.xlabel("Nearest Neighbours")
-plt.ylabel("Rank of Predictive Performance (Fscore)")
-plt.show()
-figure = ax.get_figure()
-figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/knn_rank.pdf', bbox_inches='tight')
+# %% ###########################################################
 
-
-# %%
 val = np.load('../output/modeling/PPT/validation/ds8_transf2_qi4.npy', allow_pickle=True).item()
 # %%
 val_df = pd.DataFrame.from_dict(val)

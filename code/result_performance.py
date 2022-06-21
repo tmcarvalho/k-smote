@@ -26,35 +26,34 @@ def transform_npy_to_csv(original_foler, folder_validation):
     metrics = ['gmean', 'acc', 'bal_acc', 'f1', 'f1_weighted', 'roc_auc_curve']
 
     for org in orig_file_validation:
-        if '.npy' in org:
-            org_result = np.load(f'{original_foler}/{org}', allow_pickle='TRUE').item()
-            org_result_rf = pd.DataFrame.from_dict(org_result['cv_results_Random Forest'])
-            org_result_xgb = pd.DataFrame.from_dict(org_result['cv_results_Boosting'])
-            org_result_logr = pd.DataFrame.from_dict(org_result['cv_results_Logistic Regression'])
+        f = list(map(int, re.findall(r'\d+', org.split('.')[0])))[0]
+        if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87]:
+            if '.npy' in org:
+                org_result = np.load(f'{original_foler}/{org}', allow_pickle='TRUE').item()
+                org_result = pd.DataFrame.from_dict(org_result)
 
-            for file in performance_files:
-                if '.npy' in file and str(org.split('.')[0] + '_') in file:
-                    result = np.load(f'{folder_validation}/{file}', allow_pickle='TRUE').item()
-                    result = pd.DataFrame.from_dict(result)
+                for file in performance_files:
+                    if '.npy' in file and str(org.split('.')[0] + '_') in file:
+                        result = np.load(f'{folder_validation}/{file}', allow_pickle='TRUE').item()
+                        result = pd.DataFrame.from_dict(result)
+                        
+                        # for each CV calculate the percentage difference
+                        for metric in metrics:
+                            # 100 * (Sc - Sb) / Sb
+                            max_rf = org_result.loc[org_result['param_classifier']==org_result.param_classifier.unique()[0], 'mean_test_' + metric].max()
+                            max_xgb = org_result.loc[org_result['param_classifier']==org_result.param_classifier.unique()[1], 'mean_test_' + metric].max()
+                            max_logr = org_result.loc[org_result['param_classifier']==org_result.param_classifier.unique()[2], 'mean_test_' + metric].max()
+                        
+                            result.loc[result['param_classifier']==result.param_classifier.unique()[0], 'mean_test_' + metric + '_perdif'] = 100 * (result['mean_test_' + metric] - max_rf) / max_rf
+                            result.loc[result['param_classifier']==result.param_classifier.unique()[1], 'mean_test_' + metric + '_perdif'] = 100 * (result['mean_test_' + metric] - max_xgb) / max_xgb
+                            result.loc[result['param_classifier']==result.param_classifier.unique()[2], 'mean_test_' + metric + '_perdif'] = 100 * (result['mean_test_' + metric] - max_logr) / max_logr
+                        
+                        result.loc[result['param_classifier']==result.param_classifier.unique()[0], 'model'] = "Random Forest"
+                        result.loc[result['param_classifier']==result.param_classifier.unique()[1], 'model'] = "XGBoost"
+                        result.loc[result['param_classifier']==result.param_classifier.unique()[2], 'model'] = "Logistic Regression"
 
-                    # for each CV calculate the percentage difference
-                    for metric in metrics:
-                        # 100 * (Sc - Sb) / Sb
-                        max_rf = org_result_rf['mean_test_' + metric].max()
-                        max_xgb = org_result_xgb['mean_test_' + metric].max()
-                        max_logr = org_result_logr['mean_test_' + metric].max()
-
-                        result['mean_test_' + metric + '_perdif'] = np.where(result['param_classifier'].str.contains("RandomForestClassifier"), 100 * (result['mean_test_' + metric] - max_rf) / max_rf, None)
-                        result['mean_test_' + metric + '_perdif'] = np.where(result['param_classifier'].str.contains("XGBClassifier"), 100 * (result['mean_test_' + metric] - max_xgb) / max_xgb, None)
-                        result['mean_test_' + metric + '_perdif'] = np.where(result['param_classifier'].str.contains("LogisticRegression"), 100 * (result['mean_test_' + metric] - max_logr) / max_logr, None)
-
-                    # add attribute with model's name
-                    result['model'] = np.where(result['param_classifier'].str.contains("RandomForestClassifier"), 'Random Forest', result['param_classifier'])
-                    result['model'] = np.where(result['param_classifier'].str.contains("XGBClassifier"), 'XGBoost', result['param_classifier'])
-                    result['model'] = np.where(result['param_classifier'].str.contains("LogisticRegression"), 'Logistic Regression', result['param_classifier'])
-
-                    # save csv with the 5 algorithms
-                    result.to_csv(f'{folder_validation}/{file.replace(".npy", ".csv")}', index=False)
+                        # save csv with the 5 algorithms
+                        result.to_csv(f'{folder_validation}/{file.replace(".npy", ".csv")}', index=False)
 
 # %%
 original_folder = f'{os.path.dirname(os.getcwd())}/output/modeling/original/validation'
@@ -195,8 +194,8 @@ plt.xticks(rotation=30)
 plt.xlabel("")
 plt.ylabel("Percentage difference of predictive performance (F-score)")
 plt.show()
-figure = ax.get_figure()
-figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/8results_technique_testindexes.png', bbox_inches='tight')
+#figure = ax.get_figure()
+#figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/8results_technique_testindexes.png', bbox_inches='tight')
 
 # %%
 melted_results = results_max.melt(id_vars=["mean_test_f1_weighted_perdif", "mean_test_gmean_perdif", "mean_test_roc_auc_curve_perdif"], 

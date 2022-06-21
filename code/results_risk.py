@@ -69,8 +69,8 @@ for i in range(len(risk_smote_under_over)):
     technique = risk_smote_under_over['ds'][i].split('_')[1]
     risk_smote_under_over['technique'][i] = technique.title()
 
-risk_smote_one['technique'] = 'Interpolation one class' 
-risk_smote_two['technique'] = 'Interpolation two classes'   
+risk_smote_one['technique'] = 'Synthetisation \n one class' 
+risk_smote_two['technique'] = 'Synthetisation \n two classes'   
 
 results = pd.concat([risk_ppt, risk_smote_under_over, risk_smote_one, risk_smote_two])
 results = results.reset_index(drop=True)

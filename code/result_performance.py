@@ -188,11 +188,15 @@ all_results = pd.concat([ppt_results, smote_under_over_results, smote_singleouts
 
 # %%
 results_max = all_results.groupby(['ds', 'technique'], as_index=False)['mean_test_f1_weighted', 'mean_test_f1_weighted_perdif', 'mean_test_gmean_perdif', 'mean_test_roc_auc_curve_perdif'].max()
+
 # %%
-order = ['PPT', 'Over', 'Under', 'Smote', 'Synthetisation \n one class', 'Synthetisation \n two classes']
+order = ['PPT', 'RUS', 'SMOTE', 'Synthetisation \n one class', 'Synthetisation \n two classes']
 # %%
+results_max = results_max.loc[results_max['technique']!='Over']
+results_max.loc[results_max['technique']=='Under', 'technique'] = 'RUS'
+results_max.loc[results_max['technique']=='Smote', 'technique'] = 'SMOTE'
 sns.set_style("darkgrid")
-plt.figure(figsize=(12,8))
+plt.figure(figsize=(11,8))
 ax = sns.boxplot(data=results_max, x='technique', y='mean_test_f1_weighted_perdif', palette='Spectral_r', order=order)
 # ax.set(ylim=(0, 30))
 sns.set(font_scale=1.5)

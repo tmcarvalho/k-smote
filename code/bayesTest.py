@@ -1,4 +1,5 @@
 # %%
+from logging import error
 import re
 import numpy as np
 import pandas as pd
@@ -9,7 +10,7 @@ import matplotlib.pyplot as plt
 # %% VALIDATION SETTING
 # percentage difference in out of sample setting
 # process predictive results
-def percentage_difference(baseline_folder, baseline_files, candidate_folder, candidate_files, technique):
+def percentage_difference_org(baseline_folder, baseline_files, candidate_folder, candidate_files, technique):
     df_concat = []
     c=0
     for baseline in baseline_files:
@@ -18,7 +19,6 @@ def percentage_difference(baseline_folder, baseline_files, candidate_folder, can
                 baseline_result = np.load(f'{baseline_folder}{baseline}', allow_pickle='TRUE').item()
                 b = list(map(int, re.findall(r'\d+', baseline.split('.')[0])))[0]
                 t = list(map(int, re.findall(r'\d+', transf.split('.')[0])))[0]
-            
                 if (t not in [0,1,3,13,23,28,34,36,40,48,54,66,87]) and (b==t): 
                     baseline_result = dict([(k, baseline_result[k]) for k in ['model', 'test_f1_weighted']])
                     baseline_result_df = pd.DataFrame(baseline_result.items())
@@ -70,24 +70,24 @@ _, _, baseline_file = next(walk(f'{baseline_folder}'))
 ppt_folder = '../output/modeling/PPT/test/'
 _, _, ppt_file = next(walk(f'{ppt_folder}'))
 
-baseline_org_ppt = percentage_difference(baseline_folder, baseline_file, ppt_folder, ppt_file, 'PPT')
+baseline_org_ppt = percentage_difference_org(baseline_folder, baseline_file, ppt_folder, ppt_file, 'PPT')
 # %% smote_under_over
 smote_under_over_folder = '../output/modeling/smote_under_over/test/'
 _, _, smote_under_over_file = next(walk(f'{smote_under_over_folder}'))
 
-baseline_org_smote_under_over = percentage_difference(baseline_folder, baseline_file, smote_under_over_folder, smote_under_over_file, 'smote_under_over')
+baseline_org_smote_under_over = percentage_difference_org(baseline_folder, baseline_file, smote_under_over_folder, smote_under_over_file, 'smote_under_over')
 
 # %% smote_singleouts
 smote_singleouts_folder = '../output/modeling/smote_singleouts/test/'
 _, _, smote_singleouts_file = next(walk(f'{smote_singleouts_folder}'))
 
-baseline_org_smote_singleouts = percentage_difference(baseline_folder, baseline_file, smote_singleouts_folder, smote_singleouts_file, 'Synthetisation \n one class')
+baseline_org_smote_singleouts = percentage_difference_org(baseline_folder, baseline_file, smote_singleouts_folder, smote_singleouts_file, 'Synthetisation \n one class')
 
 # %% smote_singleouts_scratch
 smote_singleouts_scratch_folder = '../output/modeling/smote_singleouts_scratch/test/'
 _, _, smote_singleouts_scratch_file = next(walk(f'{smote_singleouts_scratch_folder}'))
 
-baseline_org_smote_singleouts_scratch = percentage_difference(baseline_folder, baseline_file, smote_singleouts_scratch_folder, smote_singleouts_scratch_file, 'Synthetisation \n two classes')
+baseline_org_smote_singleouts_scratch = percentage_difference_org(baseline_folder, baseline_file, smote_singleouts_scratch_folder, smote_singleouts_scratch_file, 'Synthetisation \n two classes')
 
 # %% concat all data sets
 results_baseline_org = pd.concat([baseline_org_ppt, baseline_org_smote_under_over, baseline_org_smote_singleouts, baseline_org_smote_singleouts_scratch])
@@ -151,7 +151,7 @@ def custom_palette(df):
 def solutions_concat(candidates):
     solutions_concat = []  
     solutions = apply_test(candidates)
-    solutions = solutions[solutions['Probability'] > 0.05]
+    solutions = solutions[solutions['Probability'] > 0.005]
 
     solutions_concat.append(solutions)
 
@@ -162,11 +162,6 @@ def solutions_concat(candidates):
     return solutions_concat, palette
 
 # %%
-baseline_org_max = results_baseline_org.groupby(['ds', 'technique'], as_index=False)['test_f1_weighted_perdif'].max()
-# %%
-solutions_org_candidates, palette_candidates = solutions_concat(baseline_org_max)   
-solutions_org_candidates = solutions_org_candidates.reset_index(drop=True)
-# %%
 def sorter(column):
     reorder = [
         'PPT',
@@ -175,29 +170,36 @@ def sorter(column):
         'Smote',
         'Synthetisation \n one class',
         'Synthetisation \n two classes']
-
     cat = pd.Categorical(column, categories=reorder, ordered=True)
     return pd.Series(cat)
+# %%
+baseline_org_max = results_baseline_org.loc[results_baseline_org.groupby(['ds', 'technique'])['test_f1_weighted_perdif'].idxmax()].reset_index(drop=True)
 
+# %%
+solutions_org_candidates, palette_candidates = solutions_concat(baseline_org_max)   
+solutions_org_candidates = solutions_org_candidates.reset_index(drop=True)
+
+# %%
 solutions_org_candidates = solutions_org_candidates.sort_values(by="Solution", key=sorter)
 # %%
-def plot_hyperband(solutions, name):
-    sns.set_style("darkgrid")
-    fig = plt.figure(figsize=(8, 3))
-    gg = sns.histplot(data=solutions, stat='probability', multiple='fill', x='Solution', hue='Result', edgecolor='none',
-                palette = palette_candidates, shrink=0.8, hue_order=['Lose', 'Draw', 'Win'])
-    gg.axhline(0.5, linewidth=0.5, color='lightgrey')
-    gg.margins(x=0.2)
-    sns.move_legend(gg, bbox_to_anchor=(0.5,1.3), loc='upper center', borderaxespad=0., ncol=3, frameon=False)         
-    sns.set(font_scale=1.2)
-    plt.yticks(np.arange(0, 1.25, 0.25))
-    plt.xticks(rotation=30)
-    gg.set_ylabel('Proportion of probability')
-    gg.set_xlabel('')
-    plt.savefig(f'../output/plots/{name}.pdf', bbox_inches='tight')
+solutions_org_candidates = solutions_org_candidates.loc[solutions_org_candidates['Solution']!='Over']
+solutions_org_candidates.loc[solutions_org_candidates['Solution']=='Under', 'Solution'] = 'RUS'
+solutions_org_candidates.loc[solutions_org_candidates['Solution']=='Smote', 'Solution'] = 'SMOTE'
 
-# %%
-plot_hyperband(solutions_org_candidates, 'baseline_org')
+sns.set_style("darkgrid")
+fig, ax= plt.subplots(figsize=(7, 2.5))
+sns.histplot(data=solutions_org_candidates, stat='probability', multiple='fill', x='Solution', hue='Result', edgecolor='none',
+            palette = palette_candidates, shrink=0.8, hue_order=['Lose', 'Draw', 'Win'])
+ax.axhline(0.5, linewidth=0.5, color='lightgrey')
+ax.margins(x=0.2)
+sns.move_legend(ax, bbox_to_anchor=(0.5,1.35), loc='upper center', borderaxespad=0., ncol=3, frameon=False)         
+sns.set(font_scale=1.2)
+plt.yticks(np.arange(0, 1.25, 0.25))
+plt.xticks(rotation=30)
+ax.set_ylabel('Proportion of probability')
+ax.set_xlabel('')
+plt.savefig(f'../output/plots/baseline_org.pdf', bbox_inches='tight')
+
 
 # %% ##################################
 # Repeat for PPT as candidate
@@ -208,32 +210,144 @@ ppt = ppt.loc[ppt['technique']=='PPT', :].reset_index(drop=True)
 # %%
 candidates = results_baseline_org.loc[results_baseline_org['technique']!='PPT',:].reset_index(drop=True)
 # %%
-def percentage_difference_ppt(ppt, candidates):
-    df_concat = []
-    c=0
-    for i in range(len(ppt)):
-        for j in range(len(candidates)):
-            if candidates['ds'][j] == ppt['ds'][i]:
-            # calculate the percentage difference
+def percentage_difference(baseline, candidates):
+    candidates['test_f1_weighted_perdif']=None
+    for i in range(0, len(baseline)):
+        for j in range(0, len(candidates)):
+            if baseline['ds'][i] == candidates['ds'][j]:
+                # calculate the percentage difference
                 # 100 * (Sc - Sb) / Sb
-                candidates['test_f1_weighted_perdif'][i] = 100 * (candidates['test_f1_weighted'][i] - ppt['test_f1_weighted'][i]) / ppt['test_f1_weighted'][i]
+                candidates['test_f1_weighted_perdif'][j] = 100 * (candidates['test_f1_weighted'][j] - baseline['test_f1_weighted'][i]) / baseline['test_f1_weighted'][i]
 
-        return candidates    
+    return candidates    
 # %%
-results_baseline_ppt = percentage_difference_ppt(ppt, candidates)
+results_baseline_ppt = percentage_difference(ppt, candidates)
 # %%
-results_baseline_ppt.to_csv('../output/bayesianTest_baseline_ppt.csv', index=False)
-#results_baseline_ppt = pd.read_csv('../output/bayesianTest_baseline_ppt.csv')
+results_baseline_ppt['test_f1_weighted_perdif'] = results_baseline_ppt['test_f1_weighted_perdif'].astype(float)
+# %%
+#results_baseline_ppt.to_csv('../output/bayesianTest_baseline_ppt.csv', index=False)
+results_baseline_ppt = pd.read_csv('../output/bayesianTest_baseline_ppt.csv')
 
 # %%
-baseline_ppt_max = results_baseline_ppt.groupby(['ds', 'technique'], as_index=False)['test_f1_weighted_perdif'].max()
+baseline_ppt_max = results_baseline_ppt.loc[results_baseline_ppt.groupby(['ds', 'technique'])['test_f1_weighted_perdif'].idxmax()].reset_index(drop=True)
 # %%
 solutions_ppt_candidates, palette_candidates = solutions_concat(baseline_ppt_max)   
 solutions_ppt_candidates = solutions_ppt_candidates.reset_index(drop=True)
-
 solutions_ppt_candidates = solutions_ppt_candidates.sort_values(by="Solution", key=sorter)
 
 # %%
-plot_hyperband(solutions_ppt_candidates, 'baseline_ppt')
+solutions_ppt_candidates = solutions_ppt_candidates.loc[solutions_ppt_candidates['Solution']!='Over']
+sns.set_style("darkgrid")
+fig = plt.figure(figsize=(7, 3))
+gg = sns.histplot(data=solutions_ppt_candidates, stat='probability', multiple='fill', x='Solution', hue='Result', edgecolor='none',
+            palette = palette_candidates, shrink=0.8, hue_order=['Lose', 'Draw', 'Win'])
+gg.axhline(0.5, linewidth=0.5, color='lightgrey')
+gg.margins(x=0.2)
+sns.move_legend(gg, bbox_to_anchor=(0.5,1.3), loc='upper center', borderaxespad=0., ncol=3, frameon=False)         
+sns.set(font_scale=1)
+plt.yticks(np.arange(0, 1.25, 0.25))
+plt.xticks(rotation=30)
+gg.set_ylabel('Proportion of probability')
+gg.set_xlabel('')
+plt.savefig(f'../output/plots/baseline_ppt.pdf', bbox_inches='tight')
+
+# %% all against all ################################
+def add_original(baseline_folder, baseline_files, candidates):
+    for baseline in baseline_files:
+        if 'npy' in baseline:
+            baseline_result = np.load(f'{baseline_folder}{baseline}', allow_pickle='TRUE').item()
+            b = int(baseline.split(".")[0])
+            if b not in [0,1,3,13,23,28,34,36,40,48,54,66,87]: 
+                baseline_result = dict([(k, baseline_result[k]) for k in ['model', 'test_f1_weighted']])
+                baseline_result_df = pd.DataFrame(baseline_result.items())
+                baseline_result_df = baseline_result_df.T
+                baseline_result_df = baseline_result_df.rename(columns=baseline_result_df.iloc[0]).drop(baseline_result_df.index[0])
+
+                if str(baseline_result_df['model'][1]).startswith("{RandomForest"):
+                    baseline_result_df['classifier'] = 'Random Forest'
+                if str(baseline_result_df['model'][1]).startswith("{XGB"):
+                    baseline_result_df['classifier'] = 'XGBoost'
+                if str(baseline_result_df['model'][1]).startswith("{Logistic"):
+                    baseline_result_df['classifier'] = 'Logistic Regression'   
+
+                # get technique
+                baseline_result_df.loc[:, 'technique'] = 'Original'
+
+                # get dataset number
+                baseline_result_df['ds'] = f'ds{baseline.split(".")[0]}'
+
+                # concat each test result
+                candidates = pd.concat([candidates, baseline_result_df])
+    
+    return candidates
+# %%
+# path to predictive results
+baseline_folder = '../output/modeling/original/test/'
+_, _, baseline_file = next(walk(f'{baseline_folder}'))
+
+# %%
+tech_results = results_baseline_org[['test_f1_weighted', 'technique', 'classifier', 'ds']]
+# %%
+all_results = add_original(baseline_folder, baseline_file, tech_results)
+# %%
+del all_results['model']
+# %%
+all_results = all_results.reset_index(drop=True)
+all_results = all_results.rename_axis('idx').reset_index()
+all_results['test_f1_weighted'] = all_results['test_f1_weighted'].astype(float)
+# %%
+max_results = all_results.loc[all_results.groupby(['ds'])['test_f1_weighted'].idxmax()].reset_index(drop=True)
+# %%
+all_results = all_results.loc[~all_results['idx'].isin(max_results['idx'])].reset_index(drop=True)
+
+# %%
+all_results['test_f1_weighted_perdif']=None
+for i in range(0, len(max_results)):
+    for j in range(0, len(all_results)):
+        if max_results['ds'][i] == all_results['ds'][j]:
+            # calculate the percentage difference
+            # 100 * (Sc - Sb) / Sb
+            all_results['test_f1_weighted_perdif'][j] = 100 * (all_results['test_f1_weighted'][j] - max_results['test_f1_weighted'][i]) / max_results['test_f1_weighted'][i]
+
+# %%
+all_results['test_f1_weighted_perdif'] = all_results['test_f1_weighted_perdif'].astype(float)
+# %%
+all_results_percdiff_max = all_results.loc[all_results.groupby(['ds', 'technique'])['test_f1_weighted_perdif'].idxmax()].reset_index(drop=True)
+# %%
+solutions_candidates, palette_candidates = solutions_concat(all_results_percdiff_max)   
+solutions_candidates = solutions_candidates.reset_index(drop=True)
+
+def sorter_org(column):
+    reorder = [
+        'Original',
+        'PPT',
+        'Over',
+        'Under',
+        'Smote',
+        'Synthetisation \n one class',
+        'Synthetisation \n two classes']
+    cat = pd.Categorical(column, categories=reorder, ordered=True)
+    return pd.Series(cat)
+
+solutions_candidates = solutions_candidates.sort_values(by="Solution", key=sorter_org)
+
+# %%
+solutions_candidates = solutions_candidates.loc[solutions_candidates['Solution']!='Over']
+solutions_candidates.loc[solutions_candidates['Solution']=='Under', 'Solution'] = 'RUS'
+solutions_candidates.loc[solutions_candidates['Solution']=='Smote', 'Solution'] = 'SMOTE'
+
+sns.set_style("darkgrid")
+fig = plt.figure(figsize=(7, 2.5))
+gg = sns.histplot(data=solutions_candidates, stat='probability', multiple='fill', x='Solution', hue='Result', edgecolor='none',
+            palette = palette_candidates, shrink=0.8, hue_order=['Lose', 'Draw'])
+gg.axhline(0.5, linewidth=0.5, color='lightgrey')
+gg.margins(x=0.2)
+sns.move_legend(gg, bbox_to_anchor=(0.5,1.35), loc='upper center', borderaxespad=0., ncol=3, frameon=False)         
+sns.set(font_scale=1)
+plt.yticks(np.arange(0, 1.25, 0.25))
+plt.xticks(rotation=30)
+gg.set_ylabel('Proportion of probability')
+gg.set_xlabel('')
+plt.savefig(f'../output/plots/baseline_best.pdf', bbox_inches='tight')
 
 # %%

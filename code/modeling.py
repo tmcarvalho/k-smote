@@ -86,7 +86,7 @@ def evaluate_model(x_train, x_test, y_train, y_test):
     
     # apply best cv result in all training data (without CV - out of sample)
     retrain = gs.best_estimator_.named_steps['classifier'].fit(x_train, y_train)
-
+    # TODO in future: retrain with all models with best parameters in CV
     score['model'] = {gs.best_estimator_.named_steps["classifier"]}
     
     # Predict on test data with best params
@@ -95,5 +95,5 @@ def evaluate_model(x_train, x_test, y_train, y_test):
     score['test_f1_weighted'] = f1_score(y_test, y_pred, average='weighted')
     score['test_gmean'] = geometric_mean_score(y_test, y_pred)
     score['test_roc_auc'] = roc_auc_score(y_test, y_pred)
-
+    
     return validation, score

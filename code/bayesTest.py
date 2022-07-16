@@ -67,7 +67,8 @@ baseline_folder = '../output/modeling/original/test/'
 _, _, baseline_file = next(walk(f'{baseline_folder}'))
 
 # %% PPT
-ppt_folder = '../output/modeling/PPT/test/'
+# ppt_folder = '../output/modeling/PPT/test/'
+ppt_folder = '../output/modeling/PPT_ARX/test/'
 _, _, ppt_file = next(walk(f'{ppt_folder}'))
 
 baseline_org_ppt = percentage_difference_org(baseline_folder, baseline_file, ppt_folder, ppt_file, 'PPT')
@@ -81,19 +82,19 @@ baseline_org_smote_under_over = percentage_difference_org(baseline_folder, basel
 smote_singleouts_folder = '../output/modeling/smote_singleouts/test/'
 _, _, smote_singleouts_file = next(walk(f'{smote_singleouts_folder}'))
 
-baseline_org_smote_singleouts = percentage_difference_org(baseline_folder, baseline_file, smote_singleouts_folder, smote_singleouts_file, 'Synthetisation \n one class')
+baseline_org_smote_singleouts = percentage_difference_org(baseline_folder, baseline_file, smote_singleouts_folder, smote_singleouts_file, 'privateSMOTE')
 
 # %% smote_singleouts_scratch
 smote_singleouts_scratch_folder = '../output/modeling/smote_singleouts_scratch/test/'
 _, _, smote_singleouts_scratch_file = next(walk(f'{smote_singleouts_scratch_folder}'))
 
-baseline_org_smote_singleouts_scratch = percentage_difference_org(baseline_folder, baseline_file, smote_singleouts_scratch_folder, smote_singleouts_scratch_file, 'Synthetisation \n two classes')
+baseline_org_smote_singleouts_scratch = percentage_difference_org(baseline_folder, baseline_file, smote_singleouts_scratch_folder, smote_singleouts_scratch_file, 'privateSMOTE \n regardless of \n the class')
 
 # %% concat all data sets
 results_baseline_org = pd.concat([baseline_org_ppt, baseline_org_smote_under_over, baseline_org_smote_singleouts, baseline_org_smote_singleouts_scratch])
 # %%
 # results_baseline_org.to_csv('../output/bayesianTest_baseline_org.csv', index=False)
-results_baseline_org = pd.read_csv('../output/bayesianTest_baseline_org.csv')
+# results_baseline_org = pd.read_csv('../output/bayesianTest_baseline_org.csv')
 
 # %%
 def BayesianSignTest(diffVector, rope_min, rope_max):
@@ -122,8 +123,7 @@ def assign_hyperband(df, transfs_name):
                 solution_res.loc[c] = [transfs_name[i], 'Win', df[i][j]]
     return solution_res    
 
-     
-# %%
+
 def apply_test(candidates):
     solutions_f1 = [i for i in candidates.test_f1_weighted_perdif]
     solutions_names = [i for i in candidates.technique]
@@ -136,7 +136,6 @@ def apply_test(candidates):
     return solution_res
 
 
-# %%
 def custom_palette(df):
     custom_palette = {}
     for q in set(df.Result):
@@ -147,7 +146,8 @@ def custom_palette(df):
         elif q == 'Lose':
             custom_palette[q] = 'tab:blue'
     return custom_palette  
-# %% 
+
+
 def solutions_concat(candidates):
     solutions_concat = []  
     solutions = apply_test(candidates)
@@ -161,17 +161,21 @@ def solutions_concat(candidates):
 
     return solutions_concat, palette
 
-# %%
+
 def sorter(column):
     reorder = [
         'PPT',
         'Over',
         'Under',
         'Smote',
-        'Synthetisation \n one class',
-        'Synthetisation \n two classes']
+        'privateSMOTE',
+        'privateSMOTE \n regardless of \n the class']
     cat = pd.Categorical(column, categories=reorder, ordered=True)
     return pd.Series(cat)
+
+ # %%
+results_baseline_org = results_baseline_org.reset_index(drop=True)
+results_baseline_org['test_f1_weighted_perdif'] = pd.to_numeric(results_baseline_org['test_f1_weighted_perdif'])
 # %%
 baseline_org_max = results_baseline_org.loc[results_baseline_org.groupby(['ds', 'technique'])['test_f1_weighted_perdif'].idxmax()].reset_index(drop=True)
 
@@ -186,6 +190,7 @@ solutions_org_candidates = solutions_org_candidates.loc[solutions_org_candidates
 solutions_org_candidates.loc[solutions_org_candidates['Solution']=='Under', 'Solution'] = 'RUS'
 solutions_org_candidates.loc[solutions_org_candidates['Solution']=='Smote', 'Solution'] = 'SMOTE'
 
+# %%
 sns.set_style("darkgrid")
 fig, ax= plt.subplots(figsize=(7, 2.5))
 sns.histplot(data=solutions_org_candidates, stat='probability', multiple='fill', x='Solution', hue='Result', edgecolor='none',
@@ -198,7 +203,7 @@ plt.yticks(np.arange(0, 1.25, 0.25))
 plt.xticks(rotation=30)
 ax.set_ylabel('Proportion of probability')
 ax.set_xlabel('')
-plt.savefig(f'../output/plots/baseline_org.pdf', bbox_inches='tight')
+plt.savefig(f'../output/plots/baseline_org_arx.pdf', bbox_inches='tight')
 
 
 # %% ##################################
@@ -226,7 +231,7 @@ results_baseline_ppt = percentage_difference(ppt, candidates)
 results_baseline_ppt['test_f1_weighted_perdif'] = results_baseline_ppt['test_f1_weighted_perdif'].astype(float)
 # %%
 #results_baseline_ppt.to_csv('../output/bayesianTest_baseline_ppt.csv', index=False)
-results_baseline_ppt = pd.read_csv('../output/bayesianTest_baseline_ppt.csv')
+# results_baseline_ppt = pd.read_csv('../output/bayesianTest_baseline_ppt.csv')
 
 # %%
 baseline_ppt_max = results_baseline_ppt.loc[results_baseline_ppt.groupby(['ds', 'technique'])['test_f1_weighted_perdif'].idxmax()].reset_index(drop=True)
@@ -249,7 +254,7 @@ plt.yticks(np.arange(0, 1.25, 0.25))
 plt.xticks(rotation=30)
 gg.set_ylabel('Proportion of probability')
 gg.set_xlabel('')
-plt.savefig(f'../output/plots/baseline_ppt.pdf', bbox_inches='tight')
+plt.savefig(f'../output/plots/baseline_ppt_arx.pdf', bbox_inches='tight')
 
 # %% all against all ################################
 def add_original(baseline_folder, baseline_files, candidates):
@@ -324,8 +329,8 @@ def sorter_org(column):
         'Over',
         'Under',
         'Smote',
-        'Synthetisation \n one class',
-        'Synthetisation \n two classes']
+        'privateSMOTE',
+        'privateSMOTE \n regardless of \n the class']
     cat = pd.Categorical(column, categories=reorder, ordered=True)
     return pd.Series(cat)
 
@@ -348,6 +353,6 @@ plt.yticks(np.arange(0, 1.25, 0.25))
 plt.xticks(rotation=30)
 gg.set_ylabel('Proportion of probability')
 gg.set_xlabel('')
-plt.savefig(f'../output/plots/baseline_best.pdf', bbox_inches='tight')
+plt.savefig(f'../output/plots/baseline_best_arx.pdf', bbox_inches='tight')
 
 # %%

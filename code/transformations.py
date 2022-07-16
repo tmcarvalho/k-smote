@@ -38,9 +38,9 @@ def parameters(obj, key_vars):
     sup_parameters = [j for i in [0.7, 0.8, 0.9] for j in uniques_per if j == i and len(uniques_per)!=0]
 
     # for rounding
-    round_vars = obj[key_vars].select_dtypes(include=np.float64).columns
+    round_vars = obj[key_vars].select_dtypes(include=np.float).columns
     if len(round_vars) != 0:
-        round_parameters = [0.2, 2, 5, 10]
+        round_parameters = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.8, 0.9, 1.5, 2, 3, 4, 5, 10, 20, 50, 100, 200]
     
     # for generalisation
     gen_vars = obj[key_vars].select_dtypes(include=np.int).columns
@@ -48,7 +48,7 @@ def parameters(obj, key_vars):
         for col in gen_vars:
             sigma = np.std(obj[col])
             if sigma!=0:
-                gen_parameters = [0.5, 1.5 ,3]
+                gen_parameters = [0.5, 1.5, 2, 2.5, 3]
 
     # for top and bottom
     topbot_vars = obj[key_vars].select_dtypes(include=np.number).columns
@@ -111,8 +111,9 @@ def rounding(obj, key_vars, base=2):
 
     for col in round_vars:
         # guarantee the minimum utility --> base < max(df_round[col])
-        df_round[col] = df_round[col].apply(lambda x: base * round(x/base))
-        df_round[col] = df_round[col].astype(np.float)
+        if base <= abs(df_round[col].max()/2):
+            df_round[col] = df_round[col].apply(lambda x: base * round(x/base))
+            df_round[col] = df_round[col].astype(np.float)
         
     return df_round               
 
@@ -131,7 +132,7 @@ def globalRecoding(obj, key_vars, std_magnitude=1):
 
     for col in gen_vars:
         sigma = np.std(obj[col])
-        mg = int(sigma * std_magnitude)
+        mg = int(sigma * std_magnitude) if sigma>=0 else 0
         if sigma!=0 and mg!=0:
             bins = list(range(min(df_gen[col]), max(df_gen[col]) + mg, mg))
             labels = ['%d' % bins[i] for i in range(0, len(bins) - 1)]

@@ -35,8 +35,6 @@ def transform_npy_to_csv(original_foler, folder_validation):
 
                     t = list(map(int, re.findall(r'\d+', file.split('.')[0])))[0]
                     if o==t:
-                        print(org)
-                        print(file)
                         result = np.load(f'{folder_validation}/{file}', allow_pickle='TRUE').item()
                         result = pd.DataFrame.from_dict(result)
                         
@@ -60,7 +58,10 @@ def transform_npy_to_csv(original_foler, folder_validation):
 
 # %%
 original_folder = f'{os.path.dirname(os.getcwd())}/output/modeling/original/validation'
-transform_npy_to_csv(original_folder, f'{os.path.dirname(os.getcwd())}/output/modeling/PPT/validation')
+# %%
+#transform_npy_to_csv(original_folder, f'{os.path.dirname(os.getcwd())}/output/modeling/PPT/validation')
+transform_npy_to_csv(original_folder, f'{os.path.dirname(os.getcwd())}/output/modeling/PPT_ARX/validation')
+# %%
 transform_npy_to_csv(original_folder, f'{os.path.dirname(os.getcwd())}/output/modeling/smote_under_over/validation')
 transform_npy_to_csv(original_folder, f'{os.path.dirname(os.getcwd())}/output/modeling/smote_singleouts/validation')
 transform_npy_to_csv(original_folder, f'{os.path.dirname(os.getcwd())}/output/modeling/smote_singleouts_scratch/validation')
@@ -73,7 +74,8 @@ def concat_ppt_results():
     Returns:
         pd.Dataframe: joined results
     """
-    folder_validation = f'{os.path.dirname(os.getcwd())}/output/modeling/PPT/validation'
+    # folder_validation = f'{os.path.dirname(os.getcwd())}/output/modeling/PPT/validation'
+    folder_validation = f'{os.path.dirname(os.getcwd())}/output/modeling/PPT_ARX/validation'
     results = []
     _, _, performance_files = next(walk(f'{folder_validation}/'))
     performance_files.sort()
@@ -92,6 +94,7 @@ def concat_ppt_results():
                 result['technique'] = 'PPT'
                 result['knn'] = None
                 result['per'] = None
+                result['ds_complete'] = file
 
                 results.append(result)
 
@@ -126,6 +129,7 @@ def concat_smote_under_over_results():
                 result['per'] = per
                 result['ds'] = file.split('_')[0]
                 result['qi'] = None
+                result['ds_complete'] = file
 
                 results.append(result)
 
@@ -166,6 +170,7 @@ def concat_results_smote_singleouts(folder_validation, technique):
                 result['per'] = per
                 result['ds'] = file.split('_')[0]
                 result['technique'] = technique
+                result['ds_complete'] = file
 
                 results.append(result)
 
@@ -178,23 +183,25 @@ ppt_results = concat_ppt_results()
 smote_under_over_results = concat_smote_under_over_results()
 smote_singleouts_oneclass = concat_results_smote_singleouts(
     f'{os.path.dirname(os.getcwd())}/output/modeling/smote_singleouts/validation',
-    'Synthetisation \n one class')
+    'privateSMOTE')
 smote_singleouts_twoclasses = concat_results_smote_singleouts(
     f'{os.path.dirname(os.getcwd())}/output/modeling/smote_singleouts_scratch/validation',
-    'Synthetisation \n two classes')
+    'privateSMOTE \n regardless of \n the class')
 
 # %%
 all_results = pd.concat([ppt_results, smote_under_over_results, smote_singleouts_oneclass, smote_singleouts_twoclasses])
-
+# %%
+# all_results.to_csv('../output/predictiveresults.csv', index=False)
 # %%
 results_max = all_results.groupby(['ds', 'technique'], as_index=False)['mean_test_f1_weighted', 'mean_test_f1_weighted_perdif', 'mean_test_gmean_perdif', 'mean_test_roc_auc_curve_perdif'].max()
 
 # %%
-order = ['PPT', 'RUS', 'SMOTE', 'Synthetisation \n one class', 'Synthetisation \n two classes']
+order = ['PPT', 'RUS', 'SMOTE', 'privateSMOTE', 'privateSMOTE \n regardless of \n the class']
 # %%
 results_max = results_max.loc[results_max['technique']!='Over']
 results_max.loc[results_max['technique']=='Under', 'technique'] = 'RUS'
 results_max.loc[results_max['technique']=='Smote', 'technique'] = 'SMOTE'
+# %%
 sns.set_style("darkgrid")
 plt.figure(figsize=(11,8))
 ax = sns.boxplot(data=results_max, x='technique', y='mean_test_f1_weighted_perdif', palette='Spectral_r', order=order)
@@ -205,7 +212,7 @@ plt.xlabel("")
 plt.ylabel("Percentage difference of predictive performance (F-score)")
 plt.show()
 figure = ax.get_figure()
-figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allresults_technique_fscore.pdf', bbox_inches='tight')
+figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allresults_technique_fscoreARX.pdf', bbox_inches='tight')
 
 # %%
 melted_results = results_max.melt(id_vars=['technique'], value_vars=["mean_test_f1_weighted_perdif","mean_test_gmean_perdif", "mean_test_roc_auc_curve_perdif"], 
@@ -223,32 +230,7 @@ plt.xticks(rotation=30)
 plt.xlabel("")
 plt.ylabel("Percentage difference of predictive performance (F-score)")
 plt.show()
-#figure = ax.get_figure()
-#figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allresults_technique.pdf', bbox_inches='tight')
-
-# %% ###########################################################
-
-val = np.load('../output/modeling/PPT/validation/ds8_transf2_qi4.npy', allow_pickle=True).item()
-# %%
-val_df = pd.DataFrame.from_dict(val)
-# %%
-val_df
-# %%
-original_folder = f'{os.path.dirname(os.getcwd())}/original/'
-_, _, orig_file_validation = next(walk(f'{original_folder}/'))
-# %%
-ncat = []
-nnum = []
-nsize = []
-nfeat = []
-c=0
-for file in orig_file_validation:
-    if int(file.split('.csv')[0]) not in [0,1,3,13,23,28,34,36,40,48,54,66,87]:
-        c=c+1
-        df = pd.read_csv(f'{original_folder}/{file}')
-        nfeat.append(df.shape[1])
-        nsize.append(df.shape[0])
-        nnum.append(len(list(df.select_dtypes(include=[np.number]).columns)))
-        ncat.append(len(list(df.select_dtypes(exclude=[np.number]).columns)))
+figure = ax.get_figure()
+figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allresults_technique.pdf', bbox_inches='tight')
 
 # %%

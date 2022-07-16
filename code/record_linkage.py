@@ -25,11 +25,12 @@ def record_linkage(transformed: pd.DataFrame,
     print(len(candidates))
     compare = recordlinkage.Compare(n_jobs=-1)
     for idx, col in enumerate(columns):
-        if transformed[col].dtype == 'object':
-            original[col] = original[col].astype(str)
-            compare.string(col, columns[idx], label=columns[idx], method='levenshtein', threshold=0.7)    
-        else:
-            compare.numeric(col, columns[idx], label=columns[idx], method='gauss')
+        if col in transformed.columns:
+            if transformed[col].dtype == 'object':
+                original[col] = original[col].astype(str)
+                compare.string(col, columns[idx], label=columns[idx], method='levenshtein', threshold=0.7)    
+            else:
+                compare.numeric(col, columns[idx], label=columns[idx], method='gauss')
 
     comparisons = compare.compute(candidates, transformed, original)
     potential_matches = comparisons[comparisons.sum(axis=1) > 1].reset_index()

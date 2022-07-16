@@ -25,6 +25,7 @@ def privacy_risk(transf_file, orig_data, args, list_key_vars):
     transf_data = pd.read_csv(f'{args.input_folder}/{transf_file}')
     if args.type == 'smote_singleouts':
         transf_data = transf_data[transf_data['single_out']==1]
+
     
     # apply LabelEncoder for modeling
     orig_data = orig_data.apply(LabelEncoder().fit_transform)
@@ -34,8 +35,13 @@ def privacy_risk(transf_file, orig_data, args, list_key_vars):
         key_vars = ast.literal_eval(set_key_vars)[0]
         if args.type == 'smote_singleouts':
             orig_data = aux_singleouts(key_vars, orig_data)
-        
-        key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
+        try: key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
+        except: pass
+        try:
+            # remove rows with '*'
+            if transf_data[key_vars[0]].iloc[-1] == '*':
+                transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
+        except: pass    
         matches, percentages = threshold_record_linkage(
             transf_data,
             orig_data,
@@ -45,8 +51,13 @@ def privacy_risk(transf_file, orig_data, args, list_key_vars):
         key_vars = ast.literal_eval(set_key_vars)[1]
         if args.type == 'smote_singleouts':
             orig_data = aux_singleouts(key_vars, orig_data)
-
-        key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
+        try: key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
+        except: pass
+        try:
+            # remove rows with '*'
+            if transf_data[key_vars[0]].iloc[-1] == '*':
+                transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
+        except: pass
         matches, percentages = threshold_record_linkage(
             transf_data,
             orig_data,
@@ -57,7 +68,13 @@ def privacy_risk(transf_file, orig_data, args, list_key_vars):
         if args.type == 'smote_singleouts':
             orig_data = aux_singleouts(key_vars, orig_data)
 
-        key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
+        try: key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
+        except: pass
+        try:
+            # remove rows with '*'
+            if transf_data[key_vars[0]].iloc[-1] == '*':
+                transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
+        except: pass
         matches, percentages = threshold_record_linkage(
             transf_data,
             orig_data,
@@ -67,8 +84,13 @@ def privacy_risk(transf_file, orig_data, args, list_key_vars):
         key_vars = ast.literal_eval(set_key_vars)[3]
         if args.type == 'smote_singleouts':
             orig_data = aux_singleouts(key_vars, orig_data)
-
-        key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
+        try: key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
+        except: pass
+        try:
+            # remove rows with '*'
+            if transf_data[key_vars[0]].iloc[-1] == '*':
+                transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
+        except: pass
         matches, percentages = threshold_record_linkage(
             transf_data,
             orig_data,
@@ -79,7 +101,13 @@ def privacy_risk(transf_file, orig_data, args, list_key_vars):
         if args.type == 'smote_singleouts':
             orig_data = aux_singleouts(key_vars, orig_data)
 
-        key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
+        try: key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
+        except: pass
+        try:
+            # remove rows with '*'
+            if transf_data[key_vars[0]].iloc[-1] == '*':
+                transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
+        except: pass
         matches, percentages = threshold_record_linkage(
             transf_data,
             orig_data,

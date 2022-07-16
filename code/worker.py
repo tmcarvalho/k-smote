@@ -86,7 +86,7 @@ connection.close()
 
 
 # find . -name ".DS_Store" -delete
-# python3 code/task.py  --input_folder "output/oversampled/smote_under_over"
-# python3 code/worker.py --type "ppt" --input_folder "PPT" --output_folder "output/modeling/PPT"
+# python3 code/task.py  --input_folder "PPT_ARX/Cleaned"
+# python3 code/worker.py --type "ppt" --input_folder "PPT_ARX/Cleaned" --output_folder "output/modeling/PPT_ARX"
 # python3 code/worker.py --type "smote_under_over" --input_folder "output/oversampled/smote_under_over" --output_folder "output/modeling/smote_under_over"
-# python3 code/worker.py --type "singleouts" --input_folder "output/oversampled/smote_singleouts_scratch" --output_folder "output/modeling/smote_singleouts_scratch"
+# python3 code/worker.py --type "singleouts" --input_folder "output/oversampled/smote_singleouts" --output_folder "output/modeling/smote_singleouts"

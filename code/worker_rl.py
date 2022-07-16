@@ -90,6 +90,6 @@ connection.close()
 
 
 # find . -name ".DS_Store" -delete
-# python3 code/task_rl.py  --input_folder "output/oversampled/smote_under_over"
-# python3 code/worker_rl.py --input_folder "output/oversampled/smote_singleouts_scratch" --output_folder "output/record_linkage/smote_singleouts_scratch"
+# python3 code/task_rl.py  --input_folder "PPT_ARX/Cleaned"
+# python3 code/worker_rl.py --type "PPT" --input_folder "PPT_ARX/Cleaned" --output_folder "output/record_linkage/PPT_ARX"
 

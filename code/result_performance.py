@@ -32,12 +32,15 @@ def transform_npy_to_csv(original_foler, folder_validation):
                 if 'npy' in org and 'npy' in file:
                     org_result = np.load(f'{original_foler}/{org}', allow_pickle='TRUE').item()
                     org_result = pd.DataFrame.from_dict(org_result)
-
                     t = list(map(int, re.findall(r'\d+', file.split('.')[0])))[0]
                     if o==t:
                         result = np.load(f'{folder_validation}/{file}', allow_pickle='TRUE').item()
                         result = pd.DataFrame.from_dict(result)
-                        
+                        # add original results
+                        for i in range(0, 33):
+                            result.loc[i, 'mean_test_original'] = org_result['mean_test_f1_weighted'][i]
+
+
                         # for each CV calculate the percentage difference
                         for metric in metrics:
                             # 100 * (Sc - Sb) / Sb

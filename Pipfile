@@ -15,6 +15,7 @@ xgboost = "*"
 pika = "*"
 scipy = "*"
 sdv = {path = "./sdv"}
+icecream = "*"
 
 [dev-packages]
 ipykernel = "*"

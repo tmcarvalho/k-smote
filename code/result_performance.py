@@ -68,7 +68,9 @@ transform_npy_to_csv(original_folder, f'{os.path.dirname(os.getcwd())}/output/mo
 transform_npy_to_csv(original_folder, f'{os.path.dirname(os.getcwd())}/output/modeling/smote_under_over/validation')
 transform_npy_to_csv(original_folder, f'{os.path.dirname(os.getcwd())}/output/modeling/smote_singleouts/validation')
 transform_npy_to_csv(original_folder, f'{os.path.dirname(os.getcwd())}/output/modeling/smote_singleouts_scratch/validation')
-
+transform_npy_to_csv(original_folder, f'{os.path.dirname(os.getcwd())}/output/modeling/borderlineSmote_singleouts/validation')
+# %%
+transform_npy_to_csv(original_folder, f'{os.path.dirname(os.getcwd())}/output/modeling/borderlineSmote/validation')
 # %%
 
 def concat_ppt_results():
@@ -141,6 +143,40 @@ def concat_smote_under_over_results():
     return concat_results
 
 
+def concat_borderlinesmote():
+    """Join all csv results for smote, under and over
+
+    Returns:
+        pd.Dataframe: joined results
+    """
+    folder_validation = f'{os.path.dirname(os.getcwd())}/output/modeling/borderlineSmote/validation'
+    results = []
+    _, _, performance_files = next(walk(f'{folder_validation}/'))
+    performance_files.sort()
+    performance_files = [file for file in performance_files if '.csv' in file]
+
+    for _, file in enumerate(performance_files):
+        f = list(map(int, re.findall(r'\d+', file.split('_')[0])))[0]
+        if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87]:
+            if '.csv' in file:
+                result = pd.read_csv(f'{folder_validation}/{file}')
+                per = file.split('_')[2]
+                per = per.replace(".csv", "")
+                per = list(map(float, re.findall(r'\d+\.\d+', per)))[0] if '.' in per else list(map(float, re.findall(r'\d', per)))[0]
+                result['technique'] = 'BorderlineSMOTE'
+                result['knn'] = list(map(int, re.findall(r'\d+', file.split('_')[2])))[0]
+                result['per'] = per
+                result['ds'] = file.split('_')[0]
+                result['qi'] = None
+                result['ds_complete'] = file
+
+                results.append(result)
+
+    concat_results = pd.concat(results)
+
+    return concat_results
+
+
 def concat_results_smote_singleouts(folder_validation, technique):
     """Join all csv results for smote with single outs
 
@@ -190,16 +226,22 @@ smote_singleouts_oneclass = concat_results_smote_singleouts(
 smote_singleouts_twoclasses = concat_results_smote_singleouts(
     f'{os.path.dirname(os.getcwd())}/output/modeling/smote_singleouts_scratch/validation',
     'privateSMOTE \n regardless of \n the class')
+bordersmote_singleouts_oneclass = concat_results_smote_singleouts(
+    f'{os.path.dirname(os.getcwd())}/output/modeling/borderlineSmote_singleouts/validation',
+    'privateBorderlineSMOTE')
 
 # %%
-all_results = pd.concat([ppt_results, smote_under_over_results, smote_singleouts_oneclass, smote_singleouts_twoclasses])
+bordersmote = concat_borderlinesmote()
+# %%
+all_results = pd.concat([ppt_results, smote_under_over_results, bordersmote, smote_singleouts_oneclass, smote_singleouts_twoclasses, bordersmote_singleouts_oneclass])
 # %%
 # all_results.to_csv('../output/predictiveresults.csv', index=False)
+all_results = all_results.read_csv('../output/predictiveresults.csv')
 # %%
 results_max = all_results.groupby(['ds', 'technique'], as_index=False)['mean_test_f1_weighted', 'mean_test_f1_weighted_perdif', 'mean_test_gmean_perdif', 'mean_test_roc_auc_curve_perdif'].max()
 
 # %%
-order = ['PPT', 'RUS', 'SMOTE', 'privateSMOTE', 'privateSMOTE \n regardless of \n the class']
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'privateSMOTE', 'privateSMOTE \n regardless of \n the class', 'privateBorderlineSMOTE']
 # %%
 results_max = results_max.loc[results_max['technique']!='Over']
 results_max.loc[results_max['technique']=='Under', 'technique'] = 'RUS'
@@ -214,8 +256,8 @@ plt.xticks(rotation=30)
 plt.xlabel("")
 plt.ylabel("Percentage difference of predictive performance (F-score)")
 plt.show()
-figure = ax.get_figure()
-figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allresults_technique_fscoreARX.pdf', bbox_inches='tight')
+#figure = ax.get_figure()
+#figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allresults_technique_fscoreARX.pdf', bbox_inches='tight')
 
 # %%
 melted_results = results_max.melt(id_vars=['technique'], value_vars=["mean_test_f1_weighted_perdif","mean_test_gmean_perdif", "mean_test_roc_auc_curve_perdif"], 
@@ -233,7 +275,7 @@ plt.xticks(rotation=30)
 plt.xlabel("")
 plt.ylabel("Percentage difference of predictive performance (F-score)")
 plt.show()
-figure = ax.get_figure()
-figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allresults_technique.pdf', bbox_inches='tight')
+# figure = ax.get_figure()
+# figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allresults_technique.pdf', bbox_inches='tight')
 
 # %%

@@ -55,13 +55,19 @@ risk_ppt = concat_each_rl('../output/record_linkage/PPT_ARX', 'ppt')
 # %%
 risk_smote_under_over= concat_each_rl('../output/record_linkage/smote_under_over', 'smote_under_over')
 # %%
+risk_bordersmote= concat_each_rl('../output/record_linkage/borderlineSmote', 'smote_under_over')
+# %%
 risk_smote_one = concat_each_rl('../output/record_linkage/smote_singleouts', 'smote_singleouts')
 # %% 
 risk_smote_two = concat_each_rl('../output/record_linkage/smote_singleouts_scratch', 'smote_singleouts')
 # %%
+risk_bordersmote_one = concat_each_rl('../output/record_linkage/borderlineSmote_singleouts', 'smote_singleouts')
+# %%
 risk_ppt = risk_ppt.reset_index(drop=True)
 risk_smote_under_over = risk_smote_under_over.reset_index(drop=True)
+risk_bordersmote = risk_bordersmote.reset_index(drop=True)
 risk_smote_one = risk_smote_one.reset_index(drop=True)
+risk_bordersmote_one = risk_bordersmote_one.reset_index(drop=True)
 risk_smote_two = risk_smote_two.reset_index(drop=True)
 # %%
 
@@ -75,11 +81,13 @@ for i in range(len(risk_smote_under_over)):
     risk_smote_under_over['technique'][i] = technique.title()
 
 # %%
+risk_bordersmote['technique'] = 'BorderlineSMOTE' 
 risk_smote_one['technique'] = 'privateSMOTE' 
-risk_smote_two['technique'] = 'privateSMOTE \n regardless of \n the class'   
+risk_smote_two['technique'] = 'privateSMOTE \n regardless of \n the class'
+risk_bordersmote_one['technique'] = 'privateBorderlineSMOTE'
 
 # %%
-results = pd.concat([risk_ppt, risk_smote_under_over, risk_smote_one, risk_smote_two])
+results = pd.concat([risk_ppt, risk_smote_under_over, risk_bordersmote, risk_smote_one, risk_smote_two, risk_bordersmote_one])
 results = results.reset_index(drop=True)
 
 # %%
@@ -88,7 +96,7 @@ results['dsn'] = results['ds'].apply(lambda x: x.split('_')[0])
 # %%
 # results.to_csv('../output/rl_results.csv', index=False)
 # results = pd.read_csv('../output/rl_results.csv')
-
+priv=results.copy()
 # %%
 predictive_results = pd.read_csv('../output/predictiveresults.csv')
 
@@ -110,7 +118,7 @@ results_max = results.groupby(['dsn', 'technique'], as_index=False)['privacy_ris
 # %%
 results_melted = results_max.melt(id_vars=['dsn', 'technique'], value_vars=['privacy_risk_50', 'privacy_risk_70', 'privacy_risk_90', 'privacy_risk_100'])
 # %%
-order = ['PPT', 'RUS', 'SMOTE', 'privateSMOTE', 'privateSMOTE \n regardless of \n the class']
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'privateSMOTE', 'privateSMOTE \n regardless of \n the class', 'privateBorderlineSMOTE']
 # %%
 results_melted = results_melted.loc[results_melted['technique']!='Over']
 results_melted.loc[results_melted['technique']=='Under', 'technique'] = 'RUS'
@@ -163,51 +171,16 @@ plt.xticks(rotation=30)
 plt.xlabel("")
 plt.ylabel("Threshold at 100%")
 plt.show()
-figure = ax.get_figure()
-figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/thr_100_arx.pdf', bbox_inches='tight')
-
-
-
-# %% TERMINAR!!!
-folder = '../output/record_linkage/smote_under_over'
-_, _, input_files = next(walk(f'{folder}'))
-# %%
-len(input_files)
-# %%
-input_files = [f for f in input_files if 'total_risk' not in f]
-# %%
-for i, f in enumerate(input_files):
-    if i >= 971:
-        if 'rl' in f:
-            df = pd.read_csv(f'{folder}/{input_files[i]}')
-            df = df[df['Score'] >= \
-            0.5*df['Score'].max()]
-            df.to_csv(f'{folder}/{input_files[i]}', index=False)
-            gc.collect()
-
-
-# %%
-folder = '../output/record_linkage/smote_under_over'
-_, _, input_files = next(walk(f'{folder}'))
-input_files = [f for f in input_files if 'total_risk' not in f]
-print(len(input_files))
-with zipfile.ZipFile(f'{folder}/potential_matches.zip', "a", zipfile.ZIP_DEFLATED) as zip_file:
-    for i, f in enumerate(input_files):
-        print(i)
-        if 'rl' in f and i >=524:
-            df = pd.read_csv(f'{folder}/{input_files[i]}')
-            s = StringIO()
-            df.to_csv(s, index=False) 
-            zip_file.writestr(f'{input_files[i]}', s.getvalue())
-            os.remove(f'{folder}/{input_files[i]}')
+#figure = ax.get_figure()
+#figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/thr_100_arx.pdf', bbox_inches='tight')
 
 
 # %%
 #####################################################
-priv = pd.read_csv('../output/rl_results.csv')
+#priv = pd.read_csv('../output/rl_results.csv')
 max_priv = priv.loc[priv.groupby(['dsn', 'technique'])['privacy_risk_100'].idxmin()].reset_index(drop=True)
 # %%
-order = ['PPT', 'RUS', 'SMOTE', 'privateSMOTE', 'privateSMOTE \n regardless of \n the class']
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'privateSMOTE', 'privateSMOTE \n regardless of \n the class', 'privateBorderlineSMOTE']
 priv_melted = max_priv.melt(id_vars=['dsn', 'technique'], value_vars=['privacy_risk_100'])
 priv_melted = priv_melted.loc[priv_melted['technique']!='Over']
 priv_melted.loc[priv_melted['technique']=='Under', 'technique'] = 'RUS'
@@ -228,11 +201,10 @@ plt.xticks(rotation=30)
 plt.xlabel("")
 plt.ylabel("Threshold at 100%")
 plt.show()
-figure = ax.get_figure()
-figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/thr_100_riskfirst_arx.pdf', bbox_inches='tight')
+#figure = ax.get_figure()
+#figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/thr_100_riskfirst_arx.pdf', bbox_inches='tight')
 
 # %%
-
 predictive_results['flag'] = None
 for i in range(len(predictive_results)):
     for j in range(len(max_priv)):
@@ -258,8 +230,8 @@ plt.xticks(rotation=30)
 plt.xlabel("")
 plt.ylabel("Percentage difference of predictive performance (F-score)")
 plt.show()
-figure = ax.get_figure()
-figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allresults_technique_fscore_riskfirst_arx.pdf', bbox_inches='tight')
+#figure = ax.get_figure()
+#figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allresults_technique_fscore_riskfirst_arx.pdf', bbox_inches='tight')
 
 # %%
 sns.set_style("darkgrid")
@@ -275,6 +247,6 @@ axes[1].set_ylabel("Percentage difference of predictive performance")
 axes[1].set_xlabel("")
 axes[1].set_xticklabels(ax.get_xticklabels(), rotation=30)
 # figure = axes.get_figure()
-plt.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/riskfirst_withfscore_arx.pdf', bbox_inches='tight')
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/riskfirst_withfscore_arx.pdf', bbox_inches='tight')
 
 # %%

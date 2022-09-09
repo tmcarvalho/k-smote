@@ -113,10 +113,10 @@ def privacy_risk(transf_file, orig_data, args, list_key_vars):
             orig_data,
             key_vars)
     
-    with zipfile.ZipFile(f'{args.output_folder}/potential_matches.zip', "a", zipfile.ZIP_DEFLATED) as zip_file:
-        s = StringIO()
-        matches.to_csv(s, index=False) 
-        zip_file.writestr(f'{transf_file.split(".csv")[0]}_rl.csv', s.getvalue())
+    # with zipfile.ZipFile(f'{args.output_folder}/potential_matches.zip', "a", zipfile.ZIP_DEFLATED) as zip_file:
+    #     s = StringIO()
+    #     matches.to_csv(s, index=False) 
+    #     zip_file.writestr(f'{transf_file.split(".csv")[0]}_rl.csv', s.getvalue())
     # matches.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_rl.csv', index=False) 
     dict_per['privacy_risk_50'].append(percentages[0])
     dict_per['privacy_risk_70'].append(percentages[1])
@@ -151,10 +151,10 @@ def privacy_risk_smote_under_over(transf_file, orig_data, args, key_vars, i):
         orig_data,
         key_vars)
     
-    with zipfile.ZipFile(f'{args.output_folder}/potential_matches.zip', "a", zipfile.ZIP_DEFLATED) as zip_file:
-        s = StringIO()
-        matches.to_csv(s, index=False) 
-        zip_file.writestr(f'{transf_file.split(".csv")[0]}_qi{i}_rl.csv', s.getvalue())
+    # with zipfile.ZipFile(f'{args.output_folder}/potential_matches.zip', "a", zipfile.ZIP_DEFLATED) as zip_file:
+    #     s = StringIO()
+    #     matches.to_csv(s, index=False) 
+    #     zip_file.writestr(f'{transf_file.split(".csv")[0]}_qi{i}_rl.csv', s.getvalue())
     # matches.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_qi{i}_rl.csv', index=False) 
     dict_per['privacy_risk_50'].append(percentages[0])
     dict_per['privacy_risk_70'].append(percentages[1])

@@ -7,7 +7,7 @@ import functools
 import threading
 import argparse
 import pika
-from apply_models import modeling_ppt, modeling_singleouts, modeling_smote_under_over
+from apply_models import modeling_ppt, modeling_singleouts, modeling_smote_under_over, modeling_gans
 
 #%%
 parser = argparse.ArgumentParser(description='Master Example')
@@ -43,7 +43,9 @@ def modeling(file):
     if args.type == 'smote_under_over':
         modeling_smote_under_over(file, args)
     if args.type == 'singleouts':
-        modeling_singleouts(file, args)    
+        modeling_singleouts(file, args)
+    if args.type == 'gans':
+        modeling_gans(file, args)    
 
 # %%
 def do_work(conn, ch, delivery_tag, body):
@@ -86,7 +88,8 @@ connection.close()
 
 
 # find . -name ".DS_Store" -delete
-# python3 code/task.py  --input_folder "PPT_ARX/Cleaned"
+# python3 code/task.py  --input_folder "output/oversampled/TVAE"
 # python3 code/worker.py --type "ppt" --input_folder "PPT_ARX/Cleaned" --output_folder "output/modeling/PPT_ARX"
-# python3 code/worker.py --type "smote_under_over" --input_folder "output/oversampled/smote_under_over" --output_folder "output/modeling/smote_under_over"
-# python3 code/worker.py --type "singleouts" --input_folder "output/oversampled/smote_singleouts" --output_folder "output/modeling/smote_singleouts"
+# python3 code/worker.py --type "gans" --input_folder "output/oversampled/TVAE" --output_folder "output/modeling/TVAE"
+# python3 code/worker.py --type "smote_under_over" --input_folder "output/oversampled/borderlineSmote" --output_folder "output/modeling/borderlineSmote"
+# python3 code/worker.py --type "singleouts" --input_folder "output/oversampled/borderlineSmote" --output_folder "output/modeling/borderlineSmote"

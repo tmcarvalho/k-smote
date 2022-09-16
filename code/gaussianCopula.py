@@ -6,7 +6,7 @@ from sklearn.preprocessing import LabelEncoder
 from sdv.tabular import GaussianCopula
 
 # %%
-def synt_gaussianCopula(original_folder, data):
+def synt_gaussianCopula(original_folder, file):
     output_interpolation_folder = '../output/oversampled/gaussianCopula/'
     data = pd.read_csv(f'{original_folder}/{file}')
 

@@ -78,6 +78,36 @@ _, _, smote_under_over_file = next(walk(f'{smote_under_over_folder}'))
 
 baseline_org_smote_under_over = percentage_difference_org(baseline_folder, baseline_file, smote_under_over_folder, smote_under_over_file, 'smote_under_over')
 
+# %% Borderline SMOTE
+borderline_folder = '../output/modeling/borderlineSmote/test/'
+_, _, borderline_file = next(walk(f'{borderline_folder}'))
+
+baseline_org_borderline = percentage_difference_org(baseline_folder, baseline_file, borderline_folder, borderline_file, 'BorderlineSMOTE')
+
+# %% gaussianCopula
+gaussianCopula_folder = '../output/modeling/gaussianCopula/test/'
+_, _, gaussianCopula_file = next(walk(f'{gaussianCopula_folder}'))
+
+baseline_org_gaussianCopula = percentage_difference_org(baseline_folder, baseline_file, gaussianCopula_folder, gaussianCopula_file, 'Gaussian Copula')
+
+# %% copulaGAN
+copulaGAN_folder = '../output/modeling/copulaGAN/test/'
+_, _, copulaGAN_file = next(walk(f'{copulaGAN_folder}'))
+
+baseline_org_copulaGAN = percentage_difference_org(baseline_folder, baseline_file, copulaGAN_folder, copulaGAN_file, 'Copula GAN')
+
+# %% TVAE
+tvae_folder = '../output/modeling/TVAE/test/'
+_, _, tvae_file = next(walk(f'{tvae_folder}'))
+
+baseline_org_tvae = percentage_difference_org(baseline_folder, baseline_file, tvae_folder, tvae_file, 'TVAE')
+
+# %% CTGAN
+ctgan_folder = '../output/modeling/CTGAN/test/'
+_, _, ctgan_file = next(walk(f'{ctgan_folder}'))
+
+baseline_org_ctgan = percentage_difference_org(baseline_folder, baseline_file, ctgan_folder, ctgan_file, 'CTGAN')
+
 # %% smote_singleouts
 smote_singleouts_folder = '../output/modeling/smote_singleouts/test/'
 _, _, smote_singleouts_file = next(walk(f'{smote_singleouts_folder}'))
@@ -91,7 +121,7 @@ _, _, smote_singleouts_scratch_file = next(walk(f'{smote_singleouts_scratch_fold
 baseline_org_smote_singleouts_scratch = percentage_difference_org(baseline_folder, baseline_file, smote_singleouts_scratch_folder, smote_singleouts_scratch_file, 'privateSMOTE \n regardless of \n the class')
 
 # %% concat all data sets
-results_baseline_org = pd.concat([baseline_org_ppt, baseline_org_smote_under_over, baseline_org_smote_singleouts, baseline_org_smote_singleouts_scratch])
+results_baseline_org = pd.concat([baseline_org_ppt, baseline_org_smote_under_over, baseline_org_borderline, baseline_org_gaussianCopula, baseline_org_copulaGAN, baseline_org_tvae, baseline_org_ctgan, baseline_org_smote_singleouts, baseline_org_smote_singleouts_scratch])
 # %%
 # results_baseline_org.to_csv('../output/bayesianTest_baseline_org.csv', index=False)
 # results_baseline_org = pd.read_csv('../output/bayesianTest_baseline_org.csv')
@@ -166,8 +196,13 @@ def sorter(column):
     reorder = [
         'PPT',
         'Over',
-        'Under',
-        'Smote',
+        'RUS',
+        'SMOTE',
+        'BorderlineSMOTE',
+        'Gaussian Copula',
+        'Copula GAN',
+        'TVAE',
+        'CTGAN',
         'privateSMOTE',
         'privateSMOTE \n regardless of \n the class']
     cat = pd.Categorical(column, categories=reorder, ordered=True)
@@ -184,15 +219,15 @@ solutions_org_candidates, palette_candidates = solutions_concat(baseline_org_max
 solutions_org_candidates = solutions_org_candidates.reset_index(drop=True)
 
 # %%
-solutions_org_candidates = solutions_org_candidates.sort_values(by="Solution", key=sorter)
-# %%
 solutions_org_candidates = solutions_org_candidates.loc[solutions_org_candidates['Solution']!='Over']
 solutions_org_candidates.loc[solutions_org_candidates['Solution']=='Under', 'Solution'] = 'RUS'
 solutions_org_candidates.loc[solutions_org_candidates['Solution']=='Smote', 'Solution'] = 'SMOTE'
 
 # %%
+solutions_org_candidates = solutions_org_candidates.sort_values(by="Solution", key=sorter)
+# %%
 sns.set_style("darkgrid")
-fig, ax= plt.subplots(figsize=(7, 2.5))
+fig, ax= plt.subplots(figsize=(10, 2.5))
 sns.histplot(data=solutions_org_candidates, stat='probability', multiple='fill', x='Solution', hue='Result', edgecolor='none',
             palette = palette_candidates, shrink=0.8, hue_order=['Lose', 'Draw', 'Win'])
 ax.axhline(0.5, linewidth=0.5, color='lightgrey')
@@ -200,10 +235,10 @@ ax.margins(x=0.2)
 sns.move_legend(ax, bbox_to_anchor=(0.5,1.35), loc='upper center', borderaxespad=0., ncol=3, frameon=False)         
 sns.set(font_scale=1.2)
 plt.yticks(np.arange(0, 1.25, 0.25))
-plt.xticks(rotation=30)
+plt.xticks(rotation=45)
 ax.set_ylabel('Proportion of probability')
 ax.set_xlabel('')
-plt.savefig(f'../output/plots/baseline_org_arx.pdf', bbox_inches='tight')
+# plt.savefig(f'../output/plots/baseline_org_all.pdf', bbox_inches='tight')
 
 
 # %% ##################################
@@ -238,12 +273,15 @@ baseline_ppt_max = results_baseline_ppt.loc[results_baseline_ppt.groupby(['ds', 
 # %%
 solutions_ppt_candidates, palette_candidates = solutions_concat(baseline_ppt_max)   
 solutions_ppt_candidates = solutions_ppt_candidates.reset_index(drop=True)
+solutions_ppt_candidates = solutions_ppt_candidates.loc[solutions_ppt_candidates['Solution']!='Over']
+solutions_ppt_candidates.loc[solutions_ppt_candidates['Solution']=='Under', 'Solution'] = 'RUS'
+solutions_ppt_candidates.loc[solutions_ppt_candidates['Solution']=='Smote', 'Solution'] = 'SMOTE'
 solutions_ppt_candidates = solutions_ppt_candidates.sort_values(by="Solution", key=sorter)
 
 # %%
 solutions_ppt_candidates = solutions_ppt_candidates.loc[solutions_ppt_candidates['Solution']!='Over']
 sns.set_style("darkgrid")
-fig = plt.figure(figsize=(7, 3))
+fig = plt.figure(figsize=(9, 2.5))
 gg = sns.histplot(data=solutions_ppt_candidates, stat='probability', multiple='fill', x='Solution', hue='Result', edgecolor='none',
             palette = palette_candidates, shrink=0.8, hue_order=['Lose', 'Draw', 'Win'])
 gg.axhline(0.5, linewidth=0.5, color='lightgrey')
@@ -251,10 +289,10 @@ gg.margins(x=0.2)
 sns.move_legend(gg, bbox_to_anchor=(0.5,1.3), loc='upper center', borderaxespad=0., ncol=3, frameon=False)         
 sns.set(font_scale=1)
 plt.yticks(np.arange(0, 1.25, 0.25))
-plt.xticks(rotation=30)
+plt.xticks(rotation=45)
 gg.set_ylabel('Proportion of probability')
 gg.set_xlabel('')
-plt.savefig(f'../output/plots/baseline_ppt_arx.pdf', bbox_inches='tight')
+# plt.savefig(f'../output/plots/baseline_ppt_arx.pdf', bbox_inches='tight')
 
 # %% all against all ################################
 def add_original(baseline_folder, baseline_files, candidates):
@@ -329,6 +367,11 @@ def sorter_org(column):
         'Over',
         'Under',
         'Smote',
+        'BorderlineSMOTE',
+        'Gaussian Copula',
+        'Copula GAN',
+        'TVAE',
+        'CTGAN',
         'privateSMOTE',
         'privateSMOTE \n regardless of \n the class']
     cat = pd.Categorical(column, categories=reorder, ordered=True)
@@ -341,18 +384,19 @@ solutions_candidates = solutions_candidates.loc[solutions_candidates['Solution']
 solutions_candidates.loc[solutions_candidates['Solution']=='Under', 'Solution'] = 'RUS'
 solutions_candidates.loc[solutions_candidates['Solution']=='Smote', 'Solution'] = 'SMOTE'
 
+# %%
 sns.set_style("darkgrid")
-fig = plt.figure(figsize=(7, 2.5))
+fig = plt.figure(figsize=(10, 2.5))
 gg = sns.histplot(data=solutions_candidates, stat='probability', multiple='fill', x='Solution', hue='Result', edgecolor='none',
-            palette = palette_candidates, shrink=0.8, hue_order=['Lose', 'Draw'])
+            palette = palette_candidates, shrink=0.9, hue_order=['Lose', 'Draw'])
 gg.axhline(0.5, linewidth=0.5, color='lightgrey')
 gg.margins(x=0.2)
 sns.move_legend(gg, bbox_to_anchor=(0.5,1.35), loc='upper center', borderaxespad=0., ncol=3, frameon=False)         
-sns.set(font_scale=1)
+sns.set(font_scale=1.2)
 plt.yticks(np.arange(0, 1.25, 0.25))
-plt.xticks(rotation=30)
+plt.xticks(rotation=45)
 gg.set_ylabel('Proportion of probability')
 gg.set_xlabel('')
-plt.savefig(f'../output/plots/baseline_best_arx.pdf', bbox_inches='tight')
+plt.savefig(f'../output/plots/baseline_best_all.pdf', bbox_inches='tight')
 
 # %%

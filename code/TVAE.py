@@ -36,6 +36,5 @@ for idx,file in enumerate(input_files):
     if int(file.split(".csv")[0]) not in not_considered_files:
         print(idx)
         print(file)
-        if idx >= 24:
-            synt_TVAE(original_folder, file)
+        synt_TVAE(original_folder, file)
 # %%

@@ -13,7 +13,7 @@ import ast
 import zipfile
 
 # %%
-def privacy_risk(transf_file, orig_data, args, list_key_vars):
+def privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_vars):
     dict_per = {'privacy_risk_50': [], 'privacy_risk_70': [], 'privacy_risk_90':[], 'privacy_risk_100': [], 'ds': []}
 
     int_transf_files = list(map(int, re.findall(r'\d+', transf_file.split('_')[0])))
@@ -168,7 +168,7 @@ def privacy_risk_resampling_and_gans(transf_file, orig_data, args, key_vars, i):
 
 
 # %% 
-def apply_privacy_risk(transf_file, args):
+def apply_in_privatesmote_and_ppts(transf_file, args):
     original_folder = 'original'
     _, _, input_files = next(walk(f'{original_folder}'))
 
@@ -189,7 +189,7 @@ def apply_privacy_risk(transf_file, args):
     idx = list(set(list(orig_data.index)) - set(index))
     orig_data = orig_data.iloc[idx, :]
 
-    risk = privacy_risk(transf_file, orig_data, args, list_key_vars)
+    risk = privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_vars)
     total_risk = pd.DataFrame.from_dict(risk)
     total_risk.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_per.csv', index=False) 
 

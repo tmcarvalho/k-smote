@@ -9,7 +9,7 @@ import threading
 import argparse
 import pika
 import gc
-from apply_record_linkage import apply_in_smote_under_over, apply_privacy_risk
+from apply_record_linkage import apply_in_resampling_and_gans, apply_in_privatesmote_and_ppts
 
 #%%
 parser = argparse.ArgumentParser(description='Master Example')
@@ -40,10 +40,10 @@ def ack_message(ch, delivery_tag, work_sucess):
 
 
 def find_matches(file):
-    if args.type != 'smote_under_over':
-        apply_privacy_risk(file, args)
+    if args.type != 'resampling_and_gans':
+        apply_in_privatesmote_and_ppts(file, args)
     else:
-        apply_in_smote_under_over(file, args)
+        apply_in_resampling_and_gans(file, args)
         
     gc.collect()
     os.system('find . -name "__pycache__" -type d -exec rm -rf "{}" +')
@@ -90,6 +90,7 @@ connection.close()
 
 
 # find . -name ".DS_Store" -delete
-# python3 code/task_rl.py  --input_folder "PPT_ARX/Cleaned"
-# python3 code/worker_rl.py --type "PPT" --input_folder "PPT_ARX/Cleaned" --output_folder "output/record_linkage/PPT_ARX"
+# python3 code/task_rl.py  --input_folder "output/oversampled/re-sampling"
+# python3 code/worker_rl.py --type "ppt" --input_folder "PPT_ARX/Cleaned" --output_folder "output/record_linkage/PPT_ARX"
+# python3 code/worker_rl.py --type "resampling_and_gans" --input_folder "output/oversampled/re-sampling" --output_folder "output/record_linkage/re-sampling"
 

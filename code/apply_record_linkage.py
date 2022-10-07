@@ -136,14 +136,14 @@ def aux_singleouts(key_vars, dt):
     return dt
 
 
-def privacy_risk_smote_under_over(transf_file, orig_data, args, key_vars, i):
+def privacy_risk_resampling_and_gans(transf_file, orig_data, args, key_vars, i):
     dict_per = {'privacy_risk_50': [], 'privacy_risk_70': [], 'privacy_risk_90':[], 'privacy_risk_100': [], 'ds': []}
     
     transf_data = pd.read_csv(f'{args.input_folder}/{transf_file}')
         
-    # apply LabelEncoder for modeling
-    orig_data = orig_data.apply(LabelEncoder().fit_transform)
-    transf_data = transf_data.apply(LabelEncoder().fit_transform)
+    # apply LabelEncoder
+    # orig_data = orig_data.apply(LabelEncoder().fit_transform)
+    # transf_data = transf_data.apply(LabelEncoder().fit_transform)
     print(transf_file)
 
     matches, percentages = threshold_record_linkage(
@@ -179,12 +179,22 @@ def apply_privacy_risk(transf_file, args):
     print(orig_file)
     orig_data = pd.read_csv(f'{original_folder}/{orig_file[0]}')
 
+    # apply for the 80% of data
+    indexes = np.load('indexes.npy', allow_pickle=True).item()
+    indexes = pd.DataFrame.from_dict(indexes)
+    f = list(map(int, re.findall(r'\d+', transf_file.split('_')[0])))
+    index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
+
+    # split data 80/20
+    idx = list(set(list(orig_data.index)) - set(index))
+    orig_data = orig_data.iloc[idx, :]
+
     risk = privacy_risk(transf_file, orig_data, args, list_key_vars)
     total_risk = pd.DataFrame.from_dict(risk)
     total_risk.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_per.csv', index=False) 
 
 
-def apply_in_smote_under_over(transf_file, args):
+def apply_in_resampling_and_gans(transf_file, args):
     original_folder = 'original'
     _, _, input_files = next(walk(f'{original_folder}'))
 
@@ -198,8 +208,19 @@ def apply_in_smote_under_over(transf_file, args):
     print(int_transf_files)
     orig_data = pd.read_csv(f'{original_folder}/{orig_file[0]}')
     print(orig_file)
+    print(len(orig_data))
+    # apply for the 80% of data
+    indexes = np.load('indexes.npy', allow_pickle=True).item()
+    indexes = pd.DataFrame.from_dict(indexes)
+    f = list(map(int, re.findall(r'\d+', transf_file.split('_')[0])))
+    index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
+
+    # split data 80/20
+    idx = list(set(list(orig_data.index)) - set(index))
+    orig_data = orig_data.iloc[idx, :]
+    print(len(orig_data))
 
     for i in range(len(set_key_vars)):
-        risk = privacy_risk_smote_under_over(transf_file, orig_data, args, set_key_vars[i], i)
+        risk = privacy_risk_resampling_and_gans(transf_file, orig_data, args, set_key_vars[i], i)
         total_risk = pd.DataFrame.from_dict(risk)
         total_risk.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_qi{i}_per.csv', index=False) 

@@ -9,16 +9,13 @@ from modeling import evaluate_model
 import re
 
 
-def save_results(file, args, validation, test, outofsample_val, outofsample):
+def save_results(file, args, results):
     """Create a folder if dooes't exist and save results
 
     Args:
         file (string): file name
         args (args): command line arguments
-        validation (Dataframe): validation of training results
-        test (Dataframe): test results
-        outofsample_val (Dataframe): training results in out of sample
-        outofsample (Dataframe): test results in out of sample
+        results (list of Dataframes): results for cross validation and out of sample
     """
     output_folder_val = (
         f'{args.output_folder}/validation')
@@ -28,22 +25,15 @@ def save_results(file, args, validation, test, outofsample_val, outofsample):
         f'{args.output_folder}/outofsample_train')
     output_folder_outofsample = (
         f'{args.output_folder}/outofsample')
-    if not os.path.exists(output_folder_val) |\
-            os.path.exists(output_folder_test) |\
-            os.path.exists(output_folder_outofsample_train) |\
-            os.path.exists(output_folder_outofsample):
-        os.makedirs(output_folder_val)
-        os.makedirs(output_folder_test)
-        os.makedirs(output_folder_outofsample_train)
-        os.makedirs(output_folder_outofsample)
-    np.save(
-        f'{output_folder_val}/{file}', validation)
-    np.save(
-        f'{output_folder_test}/{file}', test)
-    np.save(
-        f'{output_folder_outofsample_train}/{file}', outofsample_val)
-    np.save(
-        f'{output_folder_outofsample}/{file}', outofsample)
+    if not os.path.exists(output_folder_val): os.makedirs(output_folder_val)
+    if not os.path.exists(output_folder_test): os.makedirs(output_folder_test)
+    if not os.path.exists(output_folder_outofsample_train): os.makedirs(output_folder_outofsample_train)
+    if not os.path.exists(output_folder_outofsample): os.makedirs(output_folder_outofsample)
+
+    results[0].to_csv(f'{output_folder_val}/{file}', index=False)
+    results[1].to_csv(f'{output_folder_test}/{file}', index=False)
+    results[2].to_csv(f'{output_folder_outofsample_train}/{file}', index=False)
+    results[3].to_csv(f'{output_folder_outofsample}/{file}', index=False)
 
 
 def modeling_ppt(file, args):
@@ -80,14 +70,10 @@ def modeling_ppt(file, args):
     y_test = y[index]
 
     # predictive performance
-    validation, test = evaluate_model(x_train, x_test, y_train, y_test)
-
+    results = evaluate_model(x_train, x_test, y_train, y_test)
+    
     # save validation and test results
-    try:
-       save_results(file, args, validation, test)
-
-    except Exception as exc:
-        raise exc
+    save_results(file, args, results)
 
 # %%
 def modeling_privateSMOTE_resampling_and_gans(file, args):
@@ -123,14 +109,11 @@ def modeling_privateSMOTE_resampling_and_gans(file, args):
     x_test = orig_data.iloc[index, :-1]
     y_test = orig_data.iloc[index, -1]
 
-    if y_train.value_counts().nunique() != 1:
+    #if y_train.value_counts().nunique() != 1:
+        # print(y_train.value_counts().nunique())
         # predictive performance
-        validation, test, outofsample_val, outofsample = evaluate_model(x_train, x_test, y_train, y_test)
+    results = evaluate_model(x_train, x_test, y_train, y_test)
 
-    try:
-        if validation:
-            save_results(file, args, validation, test, outofsample_val, outofsample)
+    save_results(file, args, results)
 
-    except Exception as exc:
-        raise exc
     

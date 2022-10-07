@@ -4,9 +4,9 @@ This script will test the predictive performance of the data sets.
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import make_scorer, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, make_scorer, f1_score, roc_auc_score
 from imblearn.metrics import geometric_mean_score
-from sklearn.model_selection import GridSearchCV, RepeatedKFold, cross_validate
+from sklearn.model_selection import GridSearchCV, RepeatedKFold
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
@@ -48,7 +48,7 @@ def evaluate_model(x_train, x_test, y_train, y_test):
 
     param3 = {}
     param3['classifier__C'] = np.logspace(-4, 4, 3)
-    param3['classifier__max_iter'] = [1000000, 10000000]
+    param3['classifier__max_iter'] = [1000000, 100000000]
     param3['classifier'] = [reg]
 
     # define metric functions
@@ -64,36 +64,88 @@ def evaluate_model(x_train, x_test, y_train, y_test):
     pipeline = Pipeline([('classifier', rf)])
     params = [param1, param2, param3]
 
+    print("Start modeling with CV")
     # Train the grid search model
     gs = GridSearchCV(
         pipeline,
         param_grid=params,
         cv=RepeatedKFold(n_splits=5, n_repeats=2),
         scoring=scoring,
-        refit='f1_weighted',
+        refit='acc',
         return_train_score=True,
         n_jobs=-1).fit(x_train, y_train)
 
-    validation = {}
-
-    # Store results from grid search
-    validation = gs.cv_results_
-
-    score = {
+    # validation = {}
+    score_cv = {
     'model':[],
-    'test_f1_weighted':[], 'test_gmean':[], 'test_roc_auc':[]
+    'test_accuracy': [], 'test_f1_weighted':[], 'test_gmean':[], 'test_roc_auc':[]
     }
+    # Store results from grid search
+    validation = pd.DataFrame(gs.cv_results_)
+    validation['model'] = validation['param_classifier']
+    validation['model'] = validation['model'].apply(lambda x: 'Random Forest' if 'RandomForest' in str(x) else x)
+    validation['model'] = validation['model'].apply(lambda x: 'XGBoost' if 'XGB' in str(x) else x)
+    validation['model'] = validation['model'].apply(lambda x: 'Logistic Regression' if 'Logistic' in str(x) else x)
+
+    validation_head = validation.sort_values(['rank_test_roc_auc_curve'],ascending=False).groupby('model').head(1).reset_index(drop=True)
     
+    # get best models for prediction on test
+    clf_1st_best = gs.best_estimator_.set_params(**validation_head.loc[0, 'params']).fit(x_train, y_train)
+    clf_1st = clf_1st_best.predict(x_test)
+    clf_2nd_best = gs.best_estimator_.set_params(**validation_head.loc[1, 'params']).fit(x_train, y_train)
+    clf_2nd = clf_2nd_best.predict(x_test)
+    clf_3rd_best = gs.best_estimator_.set_params(**validation_head.loc[2, 'params']).fit(x_train, y_train)
+    clf_3rd = clf_3rd_best.predict(x_test)
+
+    for i, clf in enumerate([clf_1st, clf_2nd, clf_3rd]):
+        score_cv['model'].append(validation_head.loc[i, 'model'])
+        score_cv['test_accuracy'].append(accuracy_score(y_test, clf))
+        score_cv['test_f1_weighted'].append(f1_score(y_test, clf, average='weighted'))
+        score_cv['test_gmean'].append(geometric_mean_score(y_test, clf))
+        score_cv['test_roc_auc'].append(roc_auc_score(y_test, clf))
+
+    ##################### OUT OF SAMPLE ##########################
     # apply best cv result in all training data (without CV - out of sample)
-    retrain = gs.best_estimator_.named_steps['classifier'].fit(x_train, y_train)
-    # TODO in future: retrain with all models with best parameters in CV
-    score['model'] = {gs.best_estimator_.named_steps["classifier"]}
+    # Train the grid search model
+    print("Start modeling without CV")
+    gs_outofsample = GridSearchCV(
+        pipeline,
+        param_grid=params,
+        cv=[(slice(None), slice(None))],
+        scoring=scoring,
+        refit='acc',
+        return_train_score=True,
+        n_jobs=-1).fit(x_train, y_train)
+
+    outofsample_val = pd.DataFrame(gs_outofsample.cv_results_)
+    outofsample_val['model'] = outofsample_val['param_classifier']
+    outofsample_val['model'] = outofsample_val['model'].apply(lambda x: 'Random Forest' if 'RandomForest' in str(x) else x)
+    outofsample_val['model'] = outofsample_val['model'].apply(lambda x: 'XGBoost' if 'XGB' in str(x) else x)
+    outofsample_val['model'] = outofsample_val['model'].apply(lambda x: 'Logistic Regression' if 'Logistic' in str(x) else x)
+
+    outofsample_val_head = outofsample_val.sort_values(['rank_test_roc_auc_curve'],ascending=False).groupby('model').head(1).reset_index(drop=True)
+
+    # Predict on train data with best params
+    clf_1st_best_out = gs_outofsample.best_estimator_.set_params(**outofsample_val_head.loc[0, 'params']).fit(x_train, y_train)
+    clf_1st_out = clf_1st_best_out.predict(x_test)
+    clf_2nd_best_out = gs_outofsample.best_estimator_.set_params(**outofsample_val_head.loc[1, 'params']).fit(x_train, y_train)
+    clf_2nd_out = clf_2nd_best_out.predict(x_test)
+    clf_3rd_best_out = gs_outofsample.best_estimator_.set_params(**outofsample_val_head.loc[2, 'params']).fit(x_train, y_train)
+    clf_3rd_out = clf_3rd_best_out.predict(x_test)
+
+    score_outofsample_val = {
+        'model':[],
+        'test_accuracy': [], 'test_f1_weighted':[], 'test_gmean':[], 'test_roc_auc':[]
+    }
+    # Store predicted results in out of sample
+    for i, clf in enumerate([clf_1st_out, clf_2nd_out, clf_3rd_out]):
+        score_outofsample_val['model'].append(outofsample_val_head.loc[i, 'model'])
+        score_outofsample_val['test_accuracy'].append(accuracy_score(y_test, clf))
+        score_outofsample_val['test_f1_weighted'].append(f1_score(y_test, clf, average='weighted'))
+        score_outofsample_val['test_gmean'].append(geometric_mean_score(y_test, clf))
+        score_outofsample_val['test_roc_auc'].append(roc_auc_score(y_test, clf))
     
-    # Predict on test data with best params
-    y_pred = retrain.predict(x_test)
-    # Store predicted results
-    score['test_f1_weighted'] = f1_score(y_test, y_pred, average='weighted')
-    score['test_gmean'] = geometric_mean_score(y_test, y_pred)
-    score['test_roc_auc'] = roc_auc_score(y_test, y_pred)
-    
-    return validation, score
+    score_cv = pd.DataFrame(score_cv)
+    score_outofsample_val = pd.DataFrame(score_outofsample_val)
+
+    return [validation, score_cv, outofsample_val, score_outofsample_val]

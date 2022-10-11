@@ -1,22 +1,35 @@
 # %%
 from os import sep, walk
+import re
 import pandas as pd
+import numpy as np
 from sdv.tabular import CTGAN
 
 # %%
-epochs=[100, 200]
-batch_size=[50, 100]
+epochs=[100, 300, 500]
+batch_size=[50, 100, 200]
 embedding_dim=[12, 64]
 
-def synt_CTGAN(original_folder, file):
-    output_interpolation_folder = '../output/oversampled/CTGAN/'
+def synt_ctgan(original_folder, file):
+    output_interpolation_folder = '../output/oversampled/deep_learning/'
     data = pd.read_csv(f'{original_folder}/{file}')
+
+    # get 80% of data to synthesise
+    indexes = np.load('../indexes.npy', allow_pickle=True).item()
+    indexes = pd.DataFrame.from_dict(indexes)
+
+    f = list(map(int, re.findall(r'\d+', file.split('_')[0])))
+    index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
+    data_idx = list(set(list(data.index)) - set(index))
+    data = data.iloc[data_idx, :]
 
     # transform target to string because integer targets are not well synthesised
     data[data.columns[-1]] = data[data.columns[-1]].astype(str)
 
     for ep in epochs:
         for bs in batch_size:
+            print("epoch: ", ep)
+            print("batch: ", bs)
             for ed in embedding_dim:
                 model = CTGAN(epochs=ep, batch_size=bs, embedding_dim=ed)
                 model.fit(data)
@@ -35,5 +48,5 @@ for idx,file in enumerate(input_files):
     if int(file.split(".csv")[0]) not in not_considered_files:
         print(idx)
         print(file)
-        synt_CTGAN(original_folder, file)
+        synt_ctgan(original_folder, file)
 # %%

@@ -4,5 +4,7 @@ output
 datasets.npy
 original
 PPT
-PPT_ARX
+PPT_ARX_train
+PPT_ARX_test
+arx_hierarquies
 computational_costs

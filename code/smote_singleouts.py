@@ -3,6 +3,7 @@ This script will apply SMOTE technique in the single out cases.
 """
 # %%
 from os import sep, walk
+import re
 import pandas as pd
 import numpy as np
 from imblearn.over_sampling import SMOTE
@@ -24,6 +25,15 @@ def interpolation_singleouts(original_folder, file):
     """
     output_interpolation_folder = '../output/oversampled/smote_singleouts/'
     data = pd.read_csv(f'{original_folder}/{file}')
+
+    # get 80% of data to synthesise
+    indexes = np.load('../indexes.npy', allow_pickle=True).item()
+    indexes = pd.DataFrame.from_dict(indexes)
+
+    f = list(map(int, re.findall(r'\d+', file.split('_')[0])))
+    index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
+    data_idx = list(set(list(data.index)) - set(index))
+    data = data.iloc[data_idx, :]
 
     # apply LabelEncoder because of smote
     label_encoder_dict = defaultdict(LabelEncoder)
@@ -223,6 +233,15 @@ def interpolation_singleouts_scratch(original_folder, file):
 
     output_interpolation_folder = '../output/oversampled/smote_singleouts_scratch/'
     data = pd.read_csv(f'{original_folder}/{file}')
+
+    # get 80% of data to synthesise
+    indexes = np.load('../indexes.npy', allow_pickle=True).item()
+    indexes = pd.DataFrame.from_dict(indexes)
+
+    f = list(map(int, re.findall(r'\d+', file.split('_')[0])))
+    index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
+    data_idx = list(set(list(data.index)) - set(index))
+    data = data.iloc[data_idx, :]
 
     # apply LabelEncoder beacause of smote
     label_encoder_dict = defaultdict(LabelEncoder)

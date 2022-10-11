@@ -50,24 +50,25 @@ def modeling_ppt(file, args):
     
     print(f'{args.input_folder}/{file}')
 
-    indexes = np.load('indexes.npy', allow_pickle=True).item()
-    indexes = pd.DataFrame.from_dict(indexes)
-
+    test_folder = 'PPT_ARX_test'
+    _, _, test_files = next(os.walk(f'{test_folder}'))
+    # TODO: VALIDAR O TEST FILE SE COINCIDE COM F!!!
     f = list(map(int, re.findall(r'\d+', file.split('_')[0])))
-    index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
-
+    print(f)
+    test_file = [fl for fl in test_files if list(map(int, re.findall(r'\d+', fl.split('_')[0])))[0] == f[0]]
+    print(test_file)
+    test_data = pd.read_csv(f'{test_folder}/{test_file[0]}')
     data = pd.read_csv(f'{args.input_folder}/{file}')
 
     # prepare data to modeling
+    test_data = test_data.apply(LabelEncoder().fit_transform)
     data = data.apply(LabelEncoder().fit_transform)
-    X, y = data.iloc[:, :-1], data.iloc[:, -1]
 
-    # split data 80/20
-    train_idx = list(set(list(X.index)) - set(index))
-    x_train = X.iloc[train_idx, :]
-    x_test = X.iloc[index, :]
-    y_train = y[train_idx]
-    y_test = y[index]
+    # split data 80/20 
+    x_train, y_train = data.iloc[:, :-1], data.iloc[:, -1]
+
+    x_test = test_data.iloc[:, :-1]
+    y_test = test_data.iloc[:, -1]
 
     # predictive performance
     results = evaluate_model(x_train, x_test, y_train, y_test)
@@ -76,7 +77,7 @@ def modeling_ppt(file, args):
     save_results(file, args, results)
 
 # %%
-def modeling_privateSMOTE_resampling_and_gans(file, args):
+def modeling_privatesmote_resampling_and_gans(file, args):
     """Apply predictive performance.
 
     Args:
@@ -92,7 +93,7 @@ def modeling_privateSMOTE_resampling_and_gans(file, args):
 
     orig_folder = 'original'
     _, _, orig_files = next(os.walk(f'{orig_folder}'))
-    orig_file = [file for file in orig_files if list(map(int, re.findall(r'\d+', file.split('_')[0])))[0] == f[0]]
+    orig_file = [fl for fl in orig_files if list(map(int, re.findall(r'\d+', fl.split('_')[0])))[0] == f[0]]
     print(orig_file)
     orig_data = pd.read_csv(f'{orig_folder}/{orig_file[0]}')
     data = pd.read_csv(f'{args.input_folder}/{file}')

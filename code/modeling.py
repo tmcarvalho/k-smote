@@ -75,7 +75,6 @@ def evaluate_model(x_train, x_test, y_train, y_test):
         return_train_score=True,
         n_jobs=-1).fit(x_train, y_train)
 
-    # validation = {}
     score_cv = {
     'model':[],
     'test_accuracy': [], 'test_f1_weighted':[], 'test_gmean':[], 'test_roc_auc':[]

@@ -24,8 +24,12 @@ def privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_va
 
     transf_data = pd.read_csv(f'{args.input_folder}/{transf_file}')
     if args.type == 'smote_singleouts':
+        # select single outs in the original data
+        idx = transf_data[transf_data['single_out']==1].index
+        orig_data = orig_data.iloc[idx, :]
+        # select single outs in the transformed data
         transf_data = transf_data[transf_data['single_out']==1]
-
+        
     
     # apply LabelEncoder for modeling
     orig_data = orig_data.apply(LabelEncoder().fit_transform)
@@ -187,7 +191,7 @@ def apply_in_privatesmote_and_ppts(transf_file, args):
 
     # split data 80/20
     idx = list(set(list(orig_data.index)) - set(index))
-    orig_data = orig_data.iloc[idx, :]
+    orig_data = orig_data.iloc[idx, :].reset_index(drop=True)
 
     risk = privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_vars)
     total_risk = pd.DataFrame.from_dict(risk)
@@ -208,7 +212,6 @@ def apply_in_resampling_and_gans(transf_file, args):
     print(int_transf_files)
     orig_data = pd.read_csv(f'{original_folder}/{orig_file[0]}')
     print(orig_file)
-    print(len(orig_data))
     # apply for the 80% of data
     indexes = np.load('indexes.npy', allow_pickle=True).item()
     indexes = pd.DataFrame.from_dict(indexes)
@@ -217,8 +220,7 @@ def apply_in_resampling_and_gans(transf_file, args):
 
     # split data 80/20
     idx = list(set(list(orig_data.index)) - set(index))
-    orig_data = orig_data.iloc[idx, :]
-    print(len(orig_data))
+    orig_data = orig_data.iloc[idx, :].reset_index(drop=True)
 
     for i in range(len(set_key_vars)):
         risk = privacy_risk_resampling_and_gans(transf_file, orig_data, args, set_key_vars[i], i)

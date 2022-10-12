@@ -1,5 +1,4 @@
 # %%
-from logging import error
 import re
 import numpy as np
 import pandas as pd
@@ -9,122 +8,7 @@ import matplotlib.pyplot as plt
 
 # %% VALIDATION SETTING
 # percentage difference in out of sample setting
-# process predictive results
-def percentage_difference_org(baseline_folder, baseline_files, candidate_folder, candidate_files, technique):
-    df_concat = []
-    c=0
-    for baseline in baseline_files:
-        for _, transf in enumerate(candidate_files):
-            if 'npy' in baseline and 'npy' in transf:
-                baseline_result = np.load(f'{baseline_folder}{baseline}', allow_pickle='TRUE').item()
-                b = list(map(int, re.findall(r'\d+', baseline.split('.')[0])))[0]
-                t = list(map(int, re.findall(r'\d+', transf.split('.')[0])))[0]
-                if (t not in [0,1,3,13,23,28,34,36,40,48,54,66,87]) and (b==t): 
-                    baseline_result = dict([(k, baseline_result[k]) for k in ['model', 'test_f1_weighted']])
-                    baseline_result_df = pd.DataFrame(baseline_result.items())
-                    baseline_result_df = baseline_result_df.T
-                    baseline_result_df = baseline_result_df.rename(columns=baseline_result_df.iloc[0]).drop(baseline_result_df.index[0])
-
-                    candidate_result = np.load(f'{candidate_folder}/{transf}', allow_pickle='TRUE').item()
-                    candidate_result = dict([(k, candidate_result[k]) for k in ['model', 'test_f1_weighted']])
-                    candidate_result_df = pd.DataFrame.from_dict(candidate_result.items())
-                    candidate_result_df = candidate_result_df.T
-                    candidate_result_df = candidate_result_df.rename(columns=candidate_result_df.iloc[0]).drop(candidate_result_df.index[0])
- 
-                    # calculate the percentage difference
-                    # 100 * (Sc - Sb) / Sb
-                    #print(candidate_result_df)
-                    candidate_result_df['test_f1_weighted_perdif'] = 100 * (candidate_result_df['test_f1_weighted'] - baseline_result_df['test_f1_weighted']) / baseline_result_df['test_f1_weighted']
-                    
-                    if str(candidate_result_df['model'][1]).startswith("{RandomForest"):
-                        candidate_result_df['classifier'] = 'Random Forest'
-                    if str(candidate_result_df['model'][1]).startswith("{XGB"):
-                        candidate_result_df['classifier'] = 'XGBoost'
-                    if str(candidate_result_df['model'][1]).startswith("{Logistic"):
-                        candidate_result_df['classifier'] = 'Logistic Regression'   
-
-                    # get technique
-                    if technique!='smote_under_over':
-                        candidate_result_df.loc[:, 'technique'] = technique
-                    else:
-                        candidate_result_df.loc[:, 'technique'] = transf.split('_')[1].title()
-                    
-                    # get dataset number
-                    candidate_result_df['ds'] = transf.split('_')[0]
-
-                    # concat each test result
-                    if c == 0:
-                        df_concat = candidate_result_df
-                        c += 1
-                    else:     
-                        df_concat = pd.concat([df_concat, candidate_result_df])
-
-    return df_concat    
-
-# %% 
-# path to predictive results
-baseline_folder = '../output/modeling/original/test/'
-_, _, baseline_file = next(walk(f'{baseline_folder}'))
-
-# %% PPT
-# ppt_folder = '../output/modeling/PPT/test/'
-ppt_folder = '../output/modeling/PPT_ARX/test/'
-_, _, ppt_file = next(walk(f'{ppt_folder}'))
-
-baseline_org_ppt = percentage_difference_org(baseline_folder, baseline_file, ppt_folder, ppt_file, 'PPT')
-# %% smote_under_over
-smote_under_over_folder = '../output/modeling/smote_under_over/test/'
-_, _, smote_under_over_file = next(walk(f'{smote_under_over_folder}'))
-
-baseline_org_smote_under_over = percentage_difference_org(baseline_folder, baseline_file, smote_under_over_folder, smote_under_over_file, 'smote_under_over')
-
-# %% Borderline SMOTE
-borderline_folder = '../output/modeling/borderlineSmote/test/'
-_, _, borderline_file = next(walk(f'{borderline_folder}'))
-
-baseline_org_borderline = percentage_difference_org(baseline_folder, baseline_file, borderline_folder, borderline_file, 'BorderlineSMOTE')
-
-# %% gaussianCopula
-gaussianCopula_folder = '../output/modeling/gaussianCopula/test/'
-_, _, gaussianCopula_file = next(walk(f'{gaussianCopula_folder}'))
-
-baseline_org_gaussianCopula = percentage_difference_org(baseline_folder, baseline_file, gaussianCopula_folder, gaussianCopula_file, 'Gaussian Copula')
-
-# %% copulaGAN
-copulaGAN_folder = '../output/modeling/copulaGAN/test/'
-_, _, copulaGAN_file = next(walk(f'{copulaGAN_folder}'))
-
-baseline_org_copulaGAN = percentage_difference_org(baseline_folder, baseline_file, copulaGAN_folder, copulaGAN_file, 'Copula GAN')
-
-# %% TVAE
-tvae_folder = '../output/modeling/TVAE/test/'
-_, _, tvae_file = next(walk(f'{tvae_folder}'))
-
-baseline_org_tvae = percentage_difference_org(baseline_folder, baseline_file, tvae_folder, tvae_file, 'TVAE')
-
-# %% CTGAN
-ctgan_folder = '../output/modeling/CTGAN/test/'
-_, _, ctgan_file = next(walk(f'{ctgan_folder}'))
-
-baseline_org_ctgan = percentage_difference_org(baseline_folder, baseline_file, ctgan_folder, ctgan_file, 'CTGAN')
-
-# %% smote_singleouts
-smote_singleouts_folder = '../output/modeling/smote_singleouts/test/'
-_, _, smote_singleouts_file = next(walk(f'{smote_singleouts_folder}'))
-
-baseline_org_smote_singleouts = percentage_difference_org(baseline_folder, baseline_file, smote_singleouts_folder, smote_singleouts_file, 'privateSMOTE')
-
-# %% smote_singleouts_scratch
-smote_singleouts_scratch_folder = '../output/modeling/smote_singleouts_scratch/test/'
-_, _, smote_singleouts_scratch_file = next(walk(f'{smote_singleouts_scratch_folder}'))
-
-baseline_org_smote_singleouts_scratch = percentage_difference_org(baseline_folder, baseline_file, smote_singleouts_scratch_folder, smote_singleouts_scratch_file, 'privateSMOTE \n regardless of \n the class')
-
-# %% concat all data sets
-results_baseline_org = pd.concat([baseline_org_ppt, baseline_org_smote_under_over, baseline_org_borderline, baseline_org_gaussianCopula, baseline_org_copulaGAN, baseline_org_tvae, baseline_org_ctgan, baseline_org_smote_singleouts, baseline_org_smote_singleouts_scratch])
-# %%
-# results_baseline_org.to_csv('../output/bayesianTest_baseline_org.csv', index=False)
-# results_baseline_org = pd.read_csv('../output/bayesianTest_baseline_org.csv')
+all_results_baseorg_out = pd.read_csv('../output/test_outofsample_roc_auc.csv')
 
 # %%
 def BayesianSignTest(diffVector, rope_min, rope_max):
@@ -155,7 +39,7 @@ def assign_hyperband(df, transfs_name):
 
 
 def apply_test(candidates):
-    solutions_f1 = [i for i in candidates.test_f1_weighted_perdif]
+    solutions_f1 = [i for i in candidates['test_roc_auc_perdif']]
     solutions_names = [i for i in candidates.technique]
 
     for i in range(0, len(candidates)):
@@ -199,20 +83,20 @@ def sorter(column):
         'RUS',
         'SMOTE',
         'BorderlineSMOTE',
-        'Gaussian Copula',
         'Copula GAN',
         'TVAE',
         'CTGAN',
-        'privateSMOTE',
-        'privateSMOTE \n regardless of \n the class']
+        'privateSMOTE A',
+        'privateSMOTE B'
+        ]
     cat = pd.Categorical(column, categories=reorder, ordered=True)
     return pd.Series(cat)
 
  # %%
-results_baseline_org = results_baseline_org.reset_index(drop=True)
-results_baseline_org['test_f1_weighted_perdif'] = pd.to_numeric(results_baseline_org['test_f1_weighted_perdif'])
+results_baseorg_out = all_results_baseorg_out.reset_index(drop=True)
 # %%
-baseline_org_max = results_baseline_org.loc[results_baseline_org.groupby(['ds', 'technique'])['test_f1_weighted_perdif'].idxmax()].reset_index(drop=True)
+results_baseorg_out['test_roc_auc_perdif'] = results_baseorg_out['test_roc_auc_perdif'].fillna(0)
+baseline_org_max = results_baseorg_out.loc[results_baseorg_out.groupby(['ds', 'technique'])['test_roc_auc_perdif'].idxmax()].reset_index(drop=True)
 
 # %%
 solutions_org_candidates, palette_candidates = solutions_concat(baseline_org_max)   
@@ -221,7 +105,10 @@ solutions_org_candidates = solutions_org_candidates.reset_index(drop=True)
 # %%
 solutions_org_candidates = solutions_org_candidates.loc[solutions_org_candidates['Solution']!='Over']
 solutions_org_candidates.loc[solutions_org_candidates['Solution']=='Under', 'Solution'] = 'RUS'
+solutions_org_candidates.loc[solutions_org_candidates['Solution']=='Bordersmote', 'Solution'] = 'BorderlineSMOTE'
 solutions_org_candidates.loc[solutions_org_candidates['Solution']=='Smote', 'Solution'] = 'SMOTE'
+solutions_org_candidates.loc[solutions_org_candidates['Solution']=='privateSMOTE', 'Solution'] = 'privateSMOTE A'
+solutions_org_candidates.loc[solutions_org_candidates['Solution']=='privateSMOTE \n regardless of \n the class', 'Solution'] = 'privateSMOTE B'
 
 # %%
 solutions_org_candidates = solutions_org_candidates.sort_values(by="Solution", key=sorter)
@@ -244,32 +131,32 @@ ax.set_xlabel('')
 # %% ##################################
 # Repeat for PPT as candidate
 
-ppt = results_baseline_org.groupby(['technique', 'ds'], as_index=False)['test_f1_weighted', 'classifier', 'ds', 'technique'].max()
+ppt = results_baseline_org.groupby(['technique', 'ds'], as_index=False)['test_roc_auc', 'classifier', 'ds', 'technique'].max()
 ppt = ppt.loc[ppt['technique']=='PPT', :].reset_index(drop=True)
 
 # %%
 candidates = results_baseline_org.loc[results_baseline_org['technique']!='PPT',:].reset_index(drop=True)
 # %%
 def percentage_difference(baseline, candidates):
-    candidates['test_f1_weighted_perdif']=None
+    candidates['test_roc_auc_perdif']=None
     for i in range(0, len(baseline)):
         for j in range(0, len(candidates)):
             if baseline['ds'][i] == candidates['ds'][j]:
                 # calculate the percentage difference
                 # 100 * (Sc - Sb) / Sb
-                candidates['test_f1_weighted_perdif'][j] = 100 * (candidates['test_f1_weighted'][j] - baseline['test_f1_weighted'][i]) / baseline['test_f1_weighted'][i]
+                candidates['test_roc_auc_perdif'][j] = 100 * (candidates['test_roc_auc'][j] - baseline['test_roc_auc'][i]) / baseline['test_roc_auc'][i]
 
     return candidates    
 # %%
 results_baseline_ppt = percentage_difference(ppt, candidates)
 # %%
-results_baseline_ppt['test_f1_weighted_perdif'] = results_baseline_ppt['test_f1_weighted_perdif'].astype(float)
+results_baseline_ppt['test_roc_auc_perdif'] = results_baseline_ppt['test_roc_auc_perdif'].astype(float)
 # %%
 #results_baseline_ppt.to_csv('../output/bayesianTest_baseline_ppt.csv', index=False)
 # results_baseline_ppt = pd.read_csv('../output/bayesianTest_baseline_ppt.csv')
 
 # %%
-baseline_ppt_max = results_baseline_ppt.loc[results_baseline_ppt.groupby(['ds', 'technique'])['test_f1_weighted_perdif'].idxmax()].reset_index(drop=True)
+baseline_ppt_max = results_baseline_ppt.loc[results_baseline_ppt.groupby(['ds', 'technique'])['test_roc_auc_perdif'].idxmax()].reset_index(drop=True)
 # %%
 solutions_ppt_candidates, palette_candidates = solutions_concat(baseline_ppt_max)   
 solutions_ppt_candidates = solutions_ppt_candidates.reset_index(drop=True)
@@ -368,12 +255,11 @@ def sorter_org(column):
         'Under',
         'Smote',
         'BorderlineSMOTE',
-        'Gaussian Copula',
         'Copula GAN',
         'TVAE',
         'CTGAN',
-        'privateSMOTE',
-        'privateSMOTE \n regardless of \n the class']
+        'privateSMOTE A',
+        'privateSMOTE B']
     cat = pd.Categorical(column, categories=reorder, ordered=True)
     return pd.Series(cat)
 
@@ -383,7 +269,8 @@ solutions_candidates = solutions_candidates.sort_values(by="Solution", key=sorte
 solutions_candidates = solutions_candidates.loc[solutions_candidates['Solution']!='Over']
 solutions_candidates.loc[solutions_candidates['Solution']=='Under', 'Solution'] = 'RUS'
 solutions_candidates.loc[solutions_candidates['Solution']=='Smote', 'Solution'] = 'SMOTE'
-
+solutions_candidates.loc[solutions_candidates['Solution']=='privateSMOTE', 'Solution'] = 'privateSMOTE A'
+solutions_candidates.loc[solutions_candidates['Solution']=='privateSMOTE \n regardless of \n the class', 'Solution'] = 'privateSMOTE B'
 # %%
 sns.set_style("darkgrid")
 fig = plt.figure(figsize=(10, 2.5))
@@ -397,6 +284,26 @@ plt.yticks(np.arange(0, 1.25, 0.25))
 plt.xticks(rotation=45)
 gg.set_ylabel('Proportion of probability')
 gg.set_xlabel('')
-plt.savefig(f'../output/plots/baseline_best_all.pdf', bbox_inches='tight')
+# plt.savefig(f'../output/plots/baseline_best_all_gmean.pdf', bbox_inches='tight')
+
+# %%
+solutions_candidates_privateSMOTE = solutions_candidates.loc[solutions_candidates['Solution']!='privateSMOTE A']
+solutions_candidates_privateSMOTE.loc[solutions_candidates_privateSMOTE['Solution']=='privateSMOTE B', 'Solution'] = 'privateSMOTE'
+sns.set_style("darkgrid")
+fig = plt.figure(figsize=(10, 2.5))
+gg = sns.histplot(data=solutions_candidates_privateSMOTE, stat='probability', multiple='fill', x='Solution', hue='Result', edgecolor='none',
+            palette = palette_candidates, shrink=0.9, hue_order=['Lose', 'Draw'])
+gg.axhline(0.5, linewidth=0.5, color='lightgrey')
+gg.margins(x=0.02)
+gg.margins(y=0)
+gg.use_sticky_edges = False
+gg.autoscale_view(scaley=True)
+sns.move_legend(gg, bbox_to_anchor=(0.5,1.35), loc='upper center', borderaxespad=0., ncol=3, frameon=False)         
+sns.set(font_scale=1.2)
+plt.yticks(np.arange(0, 1.25, 0.25))
+plt.xticks(rotation=45)
+gg.set_ylabel('Proportion of probability')
+gg.set_xlabel('')
+plt.savefig(f'../output/plots/baseline_best_all_gmean.pdf', bbox_inches='tight')
 
 # %%

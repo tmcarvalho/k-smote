@@ -31,10 +31,6 @@ def privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_va
         transf_data = transf_data[transf_data['single_out']==1]
         
     
-    # apply LabelEncoder for modeling
-    orig_data = orig_data.apply(LabelEncoder().fit_transform)
-    transf_data = transf_data.apply(LabelEncoder().fit_transform)
-
     if int_transf_qi[0] == 0:
         key_vars = ast.literal_eval(set_key_vars)[0]
         if args.type == 'smote_singleouts':
@@ -45,7 +41,7 @@ def privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_va
             # remove rows with '*'
             if transf_data[key_vars[0]].iloc[-1] == '*':
                 transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
-        except: pass    
+        except: pass  
         matches, percentages = threshold_record_linkage(
             transf_data,
             orig_data,
@@ -176,7 +172,7 @@ def apply_in_privatesmote_and_ppts(transf_file, args):
     original_folder = 'original'
     _, _, input_files = next(walk(f'{original_folder}'))
 
-    list_key_vars = pd.read_csv('PPT/list_key_vars.csv')
+    list_key_vars = pd.read_csv('list_key_vars.csv')
     
     int_transf_files = list(map(int, re.findall(r'\d+', transf_file.split('_')[0])))
     orig_file = [file for file in input_files if int(file.split(".csv")[0]) == int_transf_files[0]]
@@ -204,7 +200,7 @@ def apply_in_resampling_and_gans(transf_file, args):
 
     int_transf_files = list(map(int, re.findall(r'\d+', transf_file.split('_')[0])))
 
-    list_key_vars = pd.read_csv('PPT/list_key_vars.csv')
+    list_key_vars = pd.read_csv('list_key_vars.csv')
     set_key_vars = ast.literal_eval(
         list_key_vars.loc[list_key_vars['ds']==int_transf_files[0], 'set_key_vars'].values[0])
 

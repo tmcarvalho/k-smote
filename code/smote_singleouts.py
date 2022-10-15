@@ -4,6 +4,7 @@ This script will apply SMOTE technique in the single out cases.
 # %%
 from os import sep, walk
 import re
+import ast
 import pandas as pd
 import numpy as np
 from imblearn.over_sampling import SMOTE
@@ -14,6 +15,12 @@ import random
 from sklearn.neighbors import NearestNeighbors
 import seaborn as sns
 from matplotlib import pyplot as plt
+
+def encode(data, key_vars):
+    for col in key_vars:
+        try: data[col] = data[col].apply(lambda x: ast.literal_eval(x))
+        except: pass
+    return data
 
 # %%
 def interpolation_singleouts(original_folder, file):
@@ -35,18 +42,21 @@ def interpolation_singleouts(original_folder, file):
     data_idx = list(set(list(data.index)) - set(index))
     data = data.iloc[data_idx, :]
 
-    # apply LabelEncoder because of smote
+    # encode string with numbers to numeric
+    data = encode(data, data.columns) 
+    # apply LabelEncoder to categorical attributes
     label_encoder_dict = defaultdict(LabelEncoder)
-    data_encoded = data.apply(lambda x: label_encoder_dict[x.name].fit_transform(x))
+    data_encoded = data.apply(lambda x: label_encoder_dict[x.name].fit_transform(x) if x.dtype=='object' else x)
+
+    # save dict
     map_dict = dict()
-    
     for k in data.columns:
         if data[k].dtype=='object':
             keys = data[k]
             values = data_encoded[k]
             sub_dict = dict(zip(keys, values))
             map_dict[k] = sub_dict
-
+    
     set_data, _ = single_outs_sets(data_encoded)
 
     knn = [1, 3, 5]
@@ -57,42 +67,44 @@ def interpolation_singleouts(original_folder, file):
             for ratio in ratios:
                 dt = set_data[idx]
                 dt_singleouts = dt.loc[dt['single_out']==1, :].reset_index(drop=True)
-                
+
                 X = dt_singleouts.loc[:, dt_singleouts.columns[:-2]]
                 y = dt_singleouts.loc[:, dt_singleouts.columns[-2]]
 
-                try:
-                    mijority_class = np.argmax(y.value_counts().sort_index(ascending=True))
-                    minority_class = np.argmin(y.value_counts().sort_index(ascending=True))
-                    smote = SMOTE(random_state=42,
-                                k_neighbors=nn,
-                                sampling_strategy={
-                                    minority_class: int(ratio*len(y[y==minority_class])),
-                                    mijority_class: int(ratio*len(y[y==mijority_class]))})
-                    
-                    # fit predictor and target variable
-                    x_smote, y_smote = smote.fit_resample(X, y)
-                    # add target variable
-                    x_smote[dt.columns[-2]] = y_smote
-                    # add single out to further apply record linkage
-                    x_smote[dt.columns[-1]] = 1
+                #try: TODO: FIX!!!!!!!!!!!!!
+                ##############################
+                majority_class = np.argmax(y.value_counts().sort_index(ascending=True))
+                minority_class = np.argmin(y.value_counts().sort_index(ascending=True))
 
-                    # remove original single outs from oversample
-                    oversample = x_smote.copy()
-                    oversample = oversample.drop(dt_singleouts.index)
-                    oversample = pd.concat([oversample, dt.loc[dt['single_out']==0,:]]).reset_index(drop=True)   
+                smote = SMOTE(random_state=42,
+                            k_neighbors=nn,
+                            sampling_strategy={
+                                minority_class: int(ratio*len(y[y==minority_class])),
+                                majority_class: int(ratio*len(y[y==majority_class]))})
+                
+                # fit predictor and target variable
+                x_smote, y_smote = smote.fit_resample(X, y)
+                # add target variable
+                x_smote[dt.columns[-2]] = y_smote
+                # add single out to further apply record linkage
+                x_smote[dt.columns[-1]] = 1
 
-                    # decoded
-                    for key in map_dict.keys():
-                        d = dict(map(reversed, map_dict[key].items()))
-                        oversample[key] = oversample[key].map(d)
+                # remove original single outs from oversample
+                oversample = x_smote.copy()
+                oversample = oversample.drop(dt_singleouts.index)
+                oversample = pd.concat([oversample, dt.loc[dt['single_out']==0,:]]).reset_index(drop=True)   
 
-                    # save oversampled data
-                    oversample.to_csv(
-                        f'{output_interpolation_folder}{sep}ds{file.split(".csv")[0]}_smote_QI{idx}_knn{nn}_per{ratio}.csv',
-                        index=False)    
+                # decoded
+                for key in map_dict.keys():
+                    d = dict(map(reversed, map_dict[key].items()))
+                    oversample[key] = oversample[key].map(d)
 
-                except: pass
+                # save oversampled data
+                oversample.to_csv(
+                    f'{output_interpolation_folder}{sep}ds{file.split(".csv")[0]}_smote_QI{idx}_knn{nn}_per{ratio}.csv',
+                    index=False)    
+
+                #except: pass
                                         
 
 # %%
@@ -102,9 +114,10 @@ _, _, input_files = next(walk(f'{original_folder}'))
 not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87]
 for idx,file in enumerate(input_files):
     if int(file.split(".csv")[0]) not in not_considered_files:
-        print(idx)
-        print(file)
-        interpolation_singleouts(original_folder, file)
+        if idx >18:
+            print(idx)
+            print(file)
+            interpolation_singleouts(original_folder, file)
 
 """ NOTE
 Smote from imblearn doesn't work when number of minority class is equal to majority class (e.g. dataset 34.csv)
@@ -243,11 +256,13 @@ def interpolation_singleouts_scratch(original_folder, file):
     data_idx = list(set(list(data.index)) - set(index))
     data = data.iloc[data_idx, :]
 
-    # apply LabelEncoder beacause of smote
+    # encode string with numbers to numeric
+    data = encode(data, data.columns) 
+    # apply LabelEncoder to categorical attributes
     label_encoder_dict = defaultdict(LabelEncoder)
-    data_encoded = data.apply(lambda x: label_encoder_dict[x.name].fit_transform(x))
+    data_encoded = data.apply(lambda x: label_encoder_dict[x.name].fit_transform(x) if x.dtype=='object' else x)
+
     map_dict = dict()
-    
     for k in data.columns:
         if data[k].dtype=='object':
             keys = data[k]

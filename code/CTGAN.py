@@ -6,9 +6,9 @@ import numpy as np
 from sdv.tabular import CTGAN
 
 # %%
-epochs=[100, 300, 500]
-batch_size=[50, 100, 200]
-embedding_dim=[12, 64]
+epochs=[100, 200]
+batch_size=[50, 100]
+embedding_dim=[32, 64]
 
 def synt_ctgan(original_folder, file):
     output_interpolation_folder = '../output/oversampled/deep_learning/'
@@ -28,9 +28,10 @@ def synt_ctgan(original_folder, file):
 
     for ep in epochs:
         for bs in batch_size:
-            print("epoch: ", ep)
-            print("batch: ", bs)
             for ed in embedding_dim:
+                print("epochs: ", ep)
+                print("batch_size: ", bs)
+                print("embedding: ", ed)
                 model = CTGAN(epochs=ep, batch_size=bs, embedding_dim=ed)
                 model.fit(data)
                 new_data = model.sample(num_rows=len(data))
@@ -46,7 +47,8 @@ _, _, input_files = next(walk(f'{original_folder}'))
 not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87]
 for idx,file in enumerate(input_files):
     if int(file.split(".csv")[0]) not in not_considered_files:
-        print(idx)
-        print(file)
-        synt_ctgan(original_folder, file)
+        if idx >= 22:
+            print(idx)
+            print(file)
+            synt_ctgan(original_folder, file)
 # %%

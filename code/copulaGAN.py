@@ -6,9 +6,9 @@ import numpy as np
 from sdv.tabular import CopulaGAN
 
 # %%
-epochs=[100, 200, 300]
+epochs=[100, 200]
 batch_size=[50, 100]
-embedding_dim=[12, 64]
+embedding_dim=[32, 64]
 
 def synt_copulagan(original_folder, file):
     output_interpolation_folder = '../output/oversampled/deep_learning/'
@@ -29,6 +29,9 @@ def synt_copulagan(original_folder, file):
     for ep in epochs:
         for bs in batch_size:
             for ed in embedding_dim:
+                print("epochs: ", ep)
+                print("batch_size: ", bs)
+                print("embedding: ", ed)
                 model = CopulaGAN(epochs=ep, batch_size=bs, embedding_dim=ed)
                 model.fit(data)
                 new_data = model.sample(num_rows=len(data))

@@ -1,13 +1,10 @@
 # %%
 import os
 from os import walk
-import re
-import zipfile
 import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
-import gc
 
 # %%
 def concat_each_rl(folder, technique):
@@ -15,93 +12,63 @@ def concat_each_rl(folder, technique):
     concat_results = pd.DataFrame()
 
     for file in input_files:
-        if 'per' in file:
-            f = list(map(int, re.findall(r'\d+', file.split('_')[0])))[0]
-            if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87]:
-                if technique == 'ppt':
-                    if 'csv' in file:
-                        risk = pd.read_csv(f'{folder}/{file}')
-                    else:
-                        risk = np.load(f'{folder}/{file}', allow_pickle=True)
-                        risk = pd.DataFrame(risk.tolist())
-                    risk['ds_complet']=file
-                    concat_results = pd.concat([concat_results, risk])
+        if technique == 'ppt':
+            if 'csv' in file:
+                risk = pd.read_csv(f'{folder}/{file}')
+            else:
+                risk = np.load(f'{folder}/{file}', allow_pickle=True)
+                risk = pd.DataFrame(risk.tolist())
+            risk['ds_complete']=file
+            concat_results = pd.concat([concat_results, risk])
 
-                if technique == 'smote_under_over':
-                    if file != 'total_risk.csv':
-                        if 'rl' not in file:
-                            risk = pd.read_csv(f'{folder}/{file}')    
-                            risk['ds_complet']=file
-                            concat_results = pd.concat([concat_results, risk])
+        if (technique == 'resampling_gans') and (file != 'total_risk.csv') and ('rl' not in file):
+            risk = pd.read_csv(f'{folder}/{file}')    
+            risk['ds_complete']=file
+            concat_results = pd.concat([concat_results, risk])
 
-                if technique == 'smote_singleouts':
-                    if file != 'total_risk.csv':
-                        if 'per' in file.split('_')[5]:     
-                            risk = pd.read_csv(f'{folder}/{file}')    
-                            risk['ds_complet']=file
-                            concat_results = pd.concat([concat_results, risk])
-    
-        gc.collect()
+        if (technique == 'privateSMOTE') and (file != 'total_risk.csv') and ('per' in file.split('_')[5]):
+            risk = pd.read_csv(f'{folder}/{file}')    
+            risk['ds_complete']=file
+            concat_results = pd.concat([concat_results, risk])
 
     return concat_results
 
+# %%
+risk_ppt = concat_each_rl('../output/record_linkage/PPT_ARX', 'PPT')
+# %%
+risk_resampling= concat_each_rl('../output/record_linkage/re-sampling', 'resampling_gans')
+# %%
+# %%
+risk_deeplearning= concat_each_rl('../output/record_linkage/TVAE', 'resampling_gans')
 
 # %%
-# risk_ppt = concat_each_rl('../output/record_linkage/PPT', 'ppt')
-# %%
-risk_ppt = concat_each_rl('../output/record_linkage/PPT_ARX', 'ppt')
-# %%
-risk_smote_under_over= concat_each_rl('../output/record_linkage/smote_under_over', 'smote_under_over')
-# %%
-risk_bordersmote= concat_each_rl('../output/record_linkage/borderlineSmote', 'smote_under_over')
-# %%
-risk_gaussianCopula = concat_each_rl('../output/record_linkage/gaussianCopula', 'smote_under_over')
-# %%
-risk_tvae= concat_each_rl('../output/record_linkage/TVAE', 'smote_under_over')
-# %%
-risk_ctgan= concat_each_rl('../output/record_linkage/CTGAN', 'smote_under_over')
-# %%
-risk_copulagan= concat_each_rl('../output/record_linkage/copulaGAN', 'smote_under_over')
-# %%
-risk_smote_one = concat_each_rl('../output/record_linkage/smote_singleouts', 'smote_singleouts')
+risk_privateSMOTEA = concat_each_rl('../output/record_linkage/smote_singleouts', 'privateSMOTE A')
 # %% 
-risk_smote_two = concat_each_rl('../output/record_linkage/smote_singleouts_scratch', 'smote_singleouts')
+risk_privateSMOTEB = concat_each_rl('../output/record_linkage/smote_singleouts_scratch', 'privateSMOTE B')
 # %%
 # risk_bordersmote_one = concat_each_rl('../output/record_linkage/borderlineSmote_singleouts', 'smote_singleouts')
 # %%
-risk_ppt = risk_ppt.reset_index(drop=True)
-risk_smote_under_over = risk_smote_under_over.reset_index(drop=True)
-risk_bordersmote = risk_bordersmote.reset_index(drop=True)
-risk_gaussianCopula = risk_gaussianCopula.reset_index(drop=True)
-risk_tvae = risk_tvae.reset_index(drop=True)
-risk_ctgan = risk_ctgan.reset_index(drop=True)
-risk_copulagan = risk_copulagan.reset_index(drop=True)
-risk_smote_one = risk_smote_one.reset_index(drop=True)
-# risk_bordersmote_one = risk_bordersmote_one.reset_index(drop=True)
-risk_smote_two = risk_smote_two.reset_index(drop=True)
+#risk_ppt = risk_ppt.reset_index(drop=True)
+risk_resampling = risk_resampling.reset_index(drop=True)
+#risk_deeplearning = risk_deeplearning.reset_index(drop=True)
+#risk_privateSMOTEA = risk_privateSMOTEA.reset_index(drop=True)
+#risk_privateSMOTEB = risk_privateSMOTEB.reset_index(drop=True)
 # %%
 
 results = []
+# %%
 risk_ppt['technique'] = 'PPT'
 risk_ppt['ds_qi'] = None
 
-risk_smote_under_over['technique'] = None
-for i in range(len(risk_smote_under_over)):
-    technique = risk_smote_under_over['ds'][i].split('_')[1]
-    risk_smote_under_over['technique'][i] = technique.title()
+# %%
+risk_resampling['technique'] = risk_resampling['ds'].apply(lambda x: x.split('_')[1].title())
+# %%
+risk_deeplearning['technique'] = None
+risk_deeplearning['technique'] = risk_deeplearning['ds'].apply(lambda x: x.split('_')[1].title())
+
 
 # %%
-risk_bordersmote['technique'] = 'BorderlineSMOTE' 
-risk_gaussianCopula['technique'] = 'Gaussian Copula'
-risk_tvae['technique'] = 'TVAE'
-risk_ctgan['technique'] = 'CTGAN'
-risk_copulagan['technique'] = 'Copula GAN'
-risk_smote_one['technique'] = 'privateSMOTE' 
-risk_smote_two['technique'] = 'privateSMOTE \n regardless of \n the class'
-# risk_bordersmote_one['technique'] = 'privateBorderlineSMOTE'
-
-# %%
-results = pd.concat([risk_ppt, risk_smote_under_over, risk_bordersmote, risk_gaussianCopula, risk_copulagan, risk_tvae, risk_ctgan, risk_smote_one, risk_smote_two])
+results = pd.concat([risk_resampling])
 results = results.reset_index(drop=True)
 
 # %%
@@ -113,7 +80,7 @@ results = pd.read_csv('../output/rl_results.csv')
 
 priv=results.copy()
 # %%
-predictive_results = pd.read_csv('../output/bayesianTest_baseline_org_auc.csv')
+predictive_results = pd.read_csv('../output/test_cv_roc_auc.csv')
 
 # %%
 predictive_results_max = predictive_results.loc[predictive_results.groupby(['ds', 'technique'])['test_roc_auc_perdif'].idxmax()].reset_index(drop=True)
@@ -122,7 +89,7 @@ results = results.reset_index(drop=True)
 results['flag'] = None
 for i in range(len(predictive_results_max)):
     for j in range(len(results)):
-        if (predictive_results_max['ds_complete'][i].split('.npy')[0] in results['ds'][j]) and (results['technique'][j] == predictive_results_max['technique'][i]):
+        if (predictive_results_max['ds_complete'][i].split('.csv')[0] in results['ds'][j]) and (results['technique'][j] == predictive_results_max['technique'][i]):
             results['flag'][j] = 1
 
 # %%
@@ -135,9 +102,8 @@ results_melted = results_max.melt(id_vars=['dsn', 'technique'], value_vars=['pri
 # %%
 results_melted = results_melted.loc[results_melted['technique']!='Over']
 results_melted.loc[results_melted['technique']=='Under', 'technique'] = 'RUS'
+results_melted.loc[results_melted['technique']=='Bordersmote', 'technique'] = 'BorderlineSMOTE'
 results_melted.loc[results_melted['technique']=='Smote', 'technique'] = 'SMOTE'
-results_melted.loc[results_melted['technique']=='privateSMOTE', 'technique'] = 'privateSMOTE A'
-results_melted.loc[results_melted['technique']=='privateSMOTE \n regardless of \n the class', 'technique'] = 'privateSMOTE B'
 
 # %%
 order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'privateSMOTE A', 'privateSMOTE B']

@@ -6,12 +6,20 @@ from os import walk
 import pandas as pd
 import numpy as np
 import re
+import ast
 from collections import defaultdict
 from sklearn.preprocessing import LabelEncoder
 from imblearn.under_sampling import RandomUnderSampler
 from imblearn.over_sampling import SMOTE, BorderlineSMOTE
 
 
+def encode(data, key_vars):
+    for col in key_vars:
+        try: data[col] = data[col].apply(lambda x: ast.literal_eval(x))
+        except: pass
+    return data
+
+# %%
 def interpolation(original_folder, file):
     """Generate several interpolated data sets.
 
@@ -31,10 +39,13 @@ def interpolation(original_folder, file):
     data_idx = list(set(list(data.index)) - set(index))
     data = data.iloc[data_idx, :]
 
+    # encode string with numbers to numeric
+    data = encode(data, data.columns) 
+    # apply LabelEncoder to categorical attributes
     label_encoder_dict = defaultdict(LabelEncoder)
-    data_encoded = data.apply(lambda x: label_encoder_dict[x.name].fit_transform(x))
+    data_encoded = data.apply(lambda x: label_encoder_dict[x.name].fit_transform(x) if x.dtype=='object' else x)
+
     map_dict = dict()
-    
     for k in data.columns:
         if data[k].dtype=='object':
             keys = data[k]

@@ -2,10 +2,12 @@
 This script will analyse the predictive performance in the out-of-sample.
 """
 # %%
+from cmath import nan
 from os import walk
 import os
 import re
 import pandas as pd
+import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
 
@@ -87,8 +89,7 @@ def percentage_difference_org(baseline_folder, candidate_folder, technique):
 orig_folder = '../output/modeling/original/'
 
 # %% PPT
-# ppt_folder = '../output/modeling/PPT/test/'
-ppt_folder = '../output/modeling/PPT_ARX/test/'
+ppt_folder = '../output/modeling/PPT_ARX/'
 _, _, ppt_file = next(walk(f'{ppt_folder}'))
 
 baseline_org_ppt = percentage_difference_org(baseline_folder, baseline_file, ppt_folder, ppt_file, 'PPT')
@@ -104,20 +105,19 @@ _, _, copulaGAN_file = next(walk(f'{copulaGAN_folder}'))
 baseline_org_copulaGAN = percentage_difference_org(baseline_folder, baseline_file, copulaGAN_folder, copulaGAN_file, 'deep_learning')
 
 # %% smote_singleouts
-smote_singleouts_folder = '../output/modeling/smote_singleouts/test/'
-_, _, smote_singleouts_file = next(walk(f'{smote_singleouts_folder}'))
+smote_singleouts_folder = '../output/modeling/smote_singleouts/'
 
-baseline_org_smote_singleouts = percentage_difference_org(baseline_folder, baseline_file, smote_singleouts_folder, smote_singleouts_file, 'privateSMOTE')
+baseorg_smote_singleouts_cv, baseorg_smote_singleouts_out = percentage_difference_org(orig_folder, smote_singleouts_folder, 'privateSMOTE A')
 
 # %% smote_singleouts_scratch
-smote_singleouts_scratch_folder = '../output/modeling/smote_singleouts_scratch/test/'
+smote_singleouts_scratch_folder = '../output/modeling/smote_singleouts_scratch/'
 _, _, smote_singleouts_scratch_file = next(walk(f'{smote_singleouts_scratch_folder}'))
 
-baseline_org_smote_singleouts_scratch = percentage_difference_org(baseline_folder, baseline_file, smote_singleouts_scratch_folder, smote_singleouts_scratch_file, 'privateSMOTE \n regardless of \n the class')
+baseline_org_smote_singleouts_scratch = percentage_difference_org(baseline_folder, baseline_file, smote_singleouts_scratch_folder, smote_singleouts_scratch_file, 'privateSMOTE B')
 
 # %% concat all data sets
-results_baseorg_cv = pd.concat([baseorg_resampling_cv])
-results_baseorg_out = pd.concat([baseorg_resampling_out])
+results_baseorg_cv = pd.concat([baseorg_resampling_cv, baseorg_smote_singleouts_cv])
+results_baseorg_out = pd.concat([baseorg_resampling_out, baseorg_smote_singleouts_out])
 # %%
 results_baseorg_cv.to_csv('../output/test_cv_roc_auc.csv', index=False)
 results_baseorg_out.to_csv('../output/test_outofsample_roc_auc.csv', index=False)

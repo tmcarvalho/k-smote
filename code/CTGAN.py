@@ -47,8 +47,7 @@ _, _, input_files = next(walk(f'{original_folder}'))
 not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87]
 for idx,file in enumerate(input_files):
     if int(file.split(".csv")[0]) not in not_considered_files:
-        if idx >= 22:
-            print(idx)
-            print(file)
-            synt_ctgan(original_folder, file)
+        print(idx)
+        print(file)
+        synt_ctgan(original_folder, file)
 # %%

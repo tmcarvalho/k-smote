@@ -52,7 +52,6 @@ def modeling_ppt(file, args):
 
     test_folder = 'PPT_ARX_test'
     _, _, test_files = next(os.walk(f'{test_folder}'))
-    # TODO: VALIDAR O TEST FILE SE COINCIDE COM F!!!
     f = list(map(int, re.findall(r'\d+', file.split('_')[0])))
     print(f)
     test_file = [fl for fl in test_files if list(map(int, re.findall(r'\d+', fl.split('_')[0])))[0] == f[0]]
@@ -93,7 +92,7 @@ def modeling_privatesmote_resampling_and_gans(file, args):
 
     orig_folder = 'original'
     _, _, orig_files = next(os.walk(f'{orig_folder}'))
-    orig_file = [fl for fl in orig_files if list(map(int, re.findall(r'\d+', fl.split('_')[0])))[0] == f[0]]
+    orig_file = [fl for fl in orig_files if list(map(int, re.findall(r'\d+', fl.split('.')[0])))[0] == f[0]]
     print(orig_file)
     orig_data = pd.read_csv(f'{orig_folder}/{orig_file[0]}')
     data = pd.read_csv(f'{args.input_folder}/{file}')
@@ -110,11 +109,9 @@ def modeling_privatesmote_resampling_and_gans(file, args):
     x_test = orig_data.iloc[index, :-1]
     y_test = orig_data.iloc[index, -1]
 
-    #if y_train.value_counts().nunique() != 1:
-        # print(y_train.value_counts().nunique())
-        # predictive performance
-    results = evaluate_model(x_train, x_test, y_train, y_test)
+    if (y_train.value_counts().nunique() != 1):
+        results = evaluate_model(x_train, x_test, y_train, y_test)
+        save_results(file, args, results)
 
-    save_results(file, args, results)
 
     

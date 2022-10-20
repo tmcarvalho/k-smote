@@ -7,186 +7,27 @@ import re
 import ast
 import pandas as pd
 import numpy as np
-from imblearn.over_sampling import SMOTE
 from collections import defaultdict
 from sklearn.preprocessing import LabelEncoder
-from kanon import single_outs_sets
 import random
 from sklearn.neighbors import NearestNeighbors
-import seaborn as sns
-from matplotlib import pyplot as plt
+import random
+from random import randrange
 
-def encode(data, key_vars):
-    for col in key_vars:
-        try: data[col] = data[col].apply(lambda x: ast.literal_eval(x))
+def encode(data):
+    for col in data.columns:
+        try: 
+            data[col] = data[col].apply(lambda x: ast.literal_eval(x))
         except: pass
     return data
 
-# %%
-def interpolation_singleouts(original_folder, file):
-    """Generate several interpolated data sets.
 
-    Args:
-        original_folder (string): path of original folder
-        file (string): name of file
-    """
-    output_interpolation_folder = '../output/oversampled/smote_singleouts/'
-    data = pd.read_csv(f'{original_folder}/{file}')
+def aux_singleouts(key_vars, dt):
+    k = dt.groupby(key_vars)[key_vars[0]].transform(len)
+    dt['single_out'] = None
+    dt['single_out'] = np.where(k == 1, 1, 0)
+    return dt
 
-    # get 80% of data to synthesise
-    indexes = np.load('../indexes.npy', allow_pickle=True).item()
-    indexes = pd.DataFrame.from_dict(indexes)
-
-    f = list(map(int, re.findall(r'\d+', file.split('_')[0])))
-    index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
-    data_idx = list(set(list(data.index)) - set(index))
-    data = data.iloc[data_idx, :]
-
-    # encode string with numbers to numeric
-    data = encode(data, data.columns) 
-    # apply LabelEncoder to categorical attributes
-    label_encoder_dict = defaultdict(LabelEncoder)
-    data_encoded = data.apply(lambda x: label_encoder_dict[x.name].fit_transform(x) if x.dtype=='object' else x)
-
-    # save dict
-    map_dict = dict()
-    for k in data.columns:
-        if data[k].dtype=='object':
-            keys = data[k]
-            values = data_encoded[k]
-            sub_dict = dict(zip(keys, values))
-            map_dict[k] = sub_dict
-    
-    set_data, _ = single_outs_sets(data_encoded)
-
-    knn = [1, 3, 5]
-    # percentage of majority class
-    ratios = [2, 3, 4]
-    for idx, dt in enumerate(set_data):
-        for nn in knn:
-            for ratio in ratios:
-                dt = set_data[idx]
-                dt_singleouts = dt.loc[dt['single_out']==1, :].reset_index(drop=True)
-
-                X = dt_singleouts.loc[:, dt_singleouts.columns[:-2]]
-                y = dt_singleouts.loc[:, dt_singleouts.columns[-2]]
-
-                #try: TODO: FIX!!!!!!!!!!!!!
-                ##############################
-                majority_class = np.argmax(y.value_counts().sort_index(ascending=True))
-                minority_class = np.argmin(y.value_counts().sort_index(ascending=True))
-
-                smote = SMOTE(random_state=42,
-                            k_neighbors=nn,
-                            sampling_strategy={
-                                minority_class: int(ratio*len(y[y==minority_class])),
-                                majority_class: int(ratio*len(y[y==majority_class]))})
-                
-                # fit predictor and target variable
-                x_smote, y_smote = smote.fit_resample(X, y)
-                # add target variable
-                x_smote[dt.columns[-2]] = y_smote
-                # add single out to further apply record linkage
-                x_smote[dt.columns[-1]] = 1
-
-                # remove original single outs from oversample
-                oversample = x_smote.copy()
-                oversample = oversample.drop(dt_singleouts.index)
-                oversample = pd.concat([oversample, dt.loc[dt['single_out']==0,:]]).reset_index(drop=True)   
-
-                # decoded
-                for key in map_dict.keys():
-                    d = dict(map(reversed, map_dict[key].items()))
-                    oversample[key] = oversample[key].map(d)
-
-                # save oversampled data
-                oversample.to_csv(
-                    f'{output_interpolation_folder}{sep}ds{file.split(".csv")[0]}_smote_QI{idx}_knn{nn}_per{ratio}.csv',
-                    index=False)    
-
-                #except: pass
-                                        
-
-# %%
-original_folder = '../original'
-_, _, input_files = next(walk(f'{original_folder}'))
-
-not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87]
-for idx,file in enumerate(input_files):
-    if int(file.split(".csv")[0]) not in not_considered_files:
-        if idx >18:
-            print(idx)
-            print(file)
-            interpolation_singleouts(original_folder, file)
-
-""" NOTE
-Smote from imblearn doesn't work when number of minority class is equal to majority class (e.g. dataset 34.csv)
-The minimum to duplicate cases is per=2, if per=1, Smote doesn't create new instances
-"""
-# %%
-#################### CASE STUDY SMOTE ######################
-from imblearn import FunctionSampler
-from sklearn.datasets import make_classification
-
-
-def create_dataset(
-    n_samples=1000,
-    weights=(0.01, 0.98),
-    n_classes=2,
-    class_sep=0.8,
-    n_clusters=1,
-):
-    return make_classification(
-        n_samples=n_samples,
-        n_features=2,
-        n_informative=2,
-        n_redundant=0,
-        n_repeated=0,
-        n_classes=n_classes,
-        n_clusters_per_class=n_clusters,
-        weights=list(weights),
-        class_sep=class_sep,
-        random_state=0,
-    )
-
-def plot_resampling(X, y, sampler, ax, title=None):
-    X_res, y_res = sampler.fit_resample(X, y)
-    print(f'class 0: {len(y_res[y_res==0])}')
-    print(f'class 1: {len(y_res[y_res==1])}')
-    # ax.scatter(X_res.iloc[:, 0], X_res.iloc[:, 1], c=y_res, alpha=0.8, edgecolor="k")
-    ax.scatter(X_res[:, 0], X_res[:, 1], c=y_res, alpha=0.8, edgecolor="k")
-    if title is None:
-        title = f"Resampling with {sampler.__class__.__name__}"
-    ax.set_title(title)
-    sns.despine(ax=ax, offset=10)
-    #ax.get
-
-fig, axs = plt.subplots(nrows=1,ncols=2, figsize=(15, 10))
-
-X, y = create_dataset(n_samples=150, weights=(0.1, 0.7))
-
-samplers = [
-    FunctionSampler(),
-    SMOTE(random_state=42,
-            k_neighbors=1,
-            sampling_strategy={0:int(0.5*len(y[y==1]))}),    
-]
-
-for ax, sampler in zip(axs.ravel(), samplers):
-    title = "Original dataset" if isinstance(sampler, FunctionSampler) else None
-    plot_resampling(X, y, sampler, ax, title=title)
-fig.tight_layout()
-
-
-""" NOTE
-In this casse study it is verified that smote from imblearn creates minority cases from minority neighbours.
-Therefore, we need to implement smote from scratch to create cases based on two classes.
-"""
-# %%
-#################### SMOTE FROM SCRATCH #######################
-import random
-from random import randrange
-from sklearn.neighbors import NearestNeighbors
 
 class Smote:
     def __init__(self,samples,y,N,k):
@@ -236,7 +77,129 @@ class Smote:
             self.newindex+=1
 
 # %%
-def interpolation_singleouts_scratch(original_folder, file):
+def interpolation_singleouts_A(original_folder, file):
+    """Generate several interpolated data sets considering all classes.
+
+    Args:
+        original_folder (string): path of original folder
+        file (string): name of file
+    """
+
+    output_interpolation_folder = '../output/oversampled/smote_singleouts/'
+    data = pd.read_csv(f'{original_folder}/{file}')
+
+    # get 80% of data to synthesise
+    indexes = np.load('../indexes.npy', allow_pickle=True).item()
+    indexes = pd.DataFrame.from_dict(indexes)
+
+    f = list(map(int, re.findall(r'\d+', file.split('_')[0])))
+    index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
+    data_idx = list(set(list(data.index)) - set(index))
+    data = data.iloc[data_idx, :]
+
+    # encode string with numbers to numeric
+    data = encode(data) 
+    # apply LabelEncoder to categorical attributes
+    label_encoder_dict = defaultdict(LabelEncoder)
+    data_encoded = data.apply(lambda x: label_encoder_dict[x.name].fit_transform(x) if x.dtype=='object' else x)
+    # remove trailing zeros in integers
+    data_encoded = data_encoded.apply(lambda x: x.astype(int) if all(x%1==0) else x)
+
+    map_dict = dict()
+    for k in data.columns:
+        if data[k].dtype=='object':
+            keys = data[k]
+            values = data_encoded[k]
+            sub_dict = dict(zip(keys, values))
+            map_dict[k] = sub_dict
+
+    list_key_vars = pd.read_csv('../list_key_vars.csv')
+    set_key_vars = ast.literal_eval(
+        list_key_vars.loc[list_key_vars['ds']==f[0], 'set_key_vars'].values[0])
+
+    for idx, keys in enumerate(set_key_vars):
+        dt = aux_singleouts(keys, data_encoded)
+        zero = dt.loc[dt[dt.columns[-2]]==0,:]
+        one = dt.loc[dt[dt.columns[-2]]==1,:]
+
+        X_train_zero = zero.loc[zero['single_out']==1, zero.columns[:-2]]
+        Y_train_zero = zero.loc[zero['single_out']==1, zero.columns[-1]]
+        y_zero = zero.loc[zero['single_out']==1, zero.columns[-2]]
+
+        X_train_one = one.loc[one['single_out']==1, one.columns[:-2]]
+        Y_train_one = one.loc[one['single_out']==1, one.columns[-1]]
+        y_one = one.loc[one['single_out']==1, one.columns[-2]]
+
+        # getting the number of singleouts in training set
+        singleouts_zero = Y_train_zero.shape[0]
+        singleouts_one = Y_train_one.shape[0]
+
+        # storing the singleouts instances separately
+        x1_zero = np.ones((singleouts_zero, X_train_zero.shape[1]))
+        x1_zero=[X_train_zero.iloc[i] for i, v in enumerate(Y_train_zero) if v==1.0]
+        x1_zero=np.array(x1_zero)
+        x1_one = np.ones((singleouts_one, X_train_one.shape[1]))
+        x1_one=[X_train_one.iloc[i] for i, v in enumerate(Y_train_one) if v==1.0]
+        x1_one=np.array(x1_one)
+
+        y_zero=np.array(y_zero)
+        y_one=np.array(y_one)
+
+        knn = [1,3,5]
+        per = [1,2,3]
+        for k in knn:
+            for p in per:
+                if k<len(x1_zero):
+                    new_zero = Smote(x1_zero, y_zero, p, k).over_sampling()
+                    newDf_zero = pd.DataFrame(new_zero)
+                    # restore feature name 
+                    newDf_zero.columns = dt.columns[:-1]
+                    # assign singleout
+                    newDf_zero[dt.columns[-1]] = 1
+
+                if k<len(x1_one):
+                    new_one = Smote(x1_one, y_one, p, k).over_sampling()
+                    newDf_one = pd.DataFrame(new_one)
+                    newDf_one.columns = dt.columns[:-1]
+                    newDf_one[dt.columns[-1]] = 1
+                
+                # concat two classes
+                if len(x1_zero)==0:
+                    print("class ZERO: zero singleouts - ", idx)
+                    new = newDf_one
+                elif len(x1_one)==0:
+                    print("class ONE: zero singleouts - ", idx)
+                    new = newDf_zero
+                else:
+                    new = pd.concat([newDf_zero, newDf_one])
+                
+                # add non single outs
+                newDf = pd.concat([new, dt.loc[dt['single_out']==0]])
+
+                for col in newDf.columns:
+                    if dt[col].dtype == np.int64:
+                        newDf[col] = round(newDf[col], 0).astype(int)
+                    elif dt[col].dtype == np.float64:
+                        # get decimal places in float
+                        dec = str(dt[col].values[0])[::-1].find('.')
+                        newDf[col] = round(newDf[col], dec)
+                    else:    
+                        newDf[col] = newDf[col].astype(dt[col].dtype)
+                
+                # decoded
+                for key in map_dict.keys():
+                    d = dict(map(reversed, map_dict[key].items()))
+                    # get the closest key in dict as the synthetisation may not create exact values
+                    newDf[key] = newDf[key].apply(lambda x: d.get(x) or d[min(d.keys(), key = lambda key: abs(key-x))])
+                    #newDf[key] = newDf[key].map(d)
+
+                # save oversampled data
+                newDf.to_csv(
+                    f'{output_interpolation_folder}{sep}ds{file.split(".csv")[0]}_smote_QI{idx}_knn{k}_per{p}.csv',
+                    index=False)
+
+# %% privateSMOTE regardless of the class
+def interpolation_singleouts_B(original_folder, file):
     """Generate several interpolated data sets considering all classes.
 
     Args:
@@ -257,10 +220,12 @@ def interpolation_singleouts_scratch(original_folder, file):
     data = data.iloc[data_idx, :]
 
     # encode string with numbers to numeric
-    data = encode(data, data.columns) 
+    data = encode(data) 
     # apply LabelEncoder to categorical attributes
     label_encoder_dict = defaultdict(LabelEncoder)
     data_encoded = data.apply(lambda x: label_encoder_dict[x.name].fit_transform(x) if x.dtype=='object' else x)
+    # remove trailing zeros in integers
+    data_encoded = data_encoded.apply(lambda x: x.astype(int) if all(x%1==0) else x)
 
     map_dict = dict()
     for k in data.columns:
@@ -270,9 +235,12 @@ def interpolation_singleouts_scratch(original_folder, file):
             sub_dict = dict(zip(keys, values))
             map_dict[k] = sub_dict
 
-    set_data, _ = single_outs_sets(data_encoded)
+    list_key_vars = pd.read_csv('../list_key_vars.csv')
+    set_key_vars = ast.literal_eval(
+        list_key_vars.loc[list_key_vars['ds']==f[0], 'set_key_vars'].values[0])
 
-    for idx, dt in enumerate(set_data):
+    for idx, keys in enumerate(set_key_vars):
+        dt = aux_singleouts(keys, data_encoded)
         X_train = dt.loc[dt['single_out']==1, dt.columns[:-2]]
         Y_train = dt.loc[dt['single_out']==1, dt.columns[-1]]
         y = dt.loc[dt['single_out']==1, dt.columns[-2]]
@@ -303,48 +271,43 @@ def interpolation_singleouts_scratch(original_folder, file):
                     for col in newDf.columns:
                         if dt[col].dtype == np.int64:
                             newDf[col] = round(newDf[col], 0).astype(int)
+                        elif dt[col].dtype == np.float64:
+                            # get decimal places in float
+                            dec = str(dt[col].values[0])[::-1].find('.')
+                            newDf[col] = round(newDf[col], dec)
                         else:    
                             newDf[col] = newDf[col].astype(dt[col].dtype)
                     
                     # decoded
                     for key in map_dict.keys():
                         d = dict(map(reversed, map_dict[key].items()))
-                        newDf[key] = newDf[key].map(d)
+                        newDf[key] = newDf[key].apply(lambda x: d.get(x) or d[min(d.keys(), key = lambda key: abs(key-x))])
+                        # newDf[key] = newDf[key].map(d)
 
                     # save oversampled data
                     newDf.to_csv(
                         f'{output_interpolation_folder}{sep}ds{file.split(".csv")[0]}_smote_QI{idx}_knn{k}_per{p}.csv',
                         index=False)
 
-                except:
+                except: # no singleouts
                     pass
 # %%
 original_folder = '../original'
 _, _, input_files = next(walk(f'{original_folder}'))
 
 not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87]
+# %%
 for idx,file in enumerate(input_files):
     if int(file.split(".csv")[0]) not in not_considered_files:
         print(idx)
         print(file)
-        interpolation_singleouts_scratch(original_folder, file)
+        interpolation_singleouts_A(original_folder, file)
 
 # %%
-################ EXAMPLE ORIGINAL VS ONE CLASSS VS TWO CLASSES
-original_32 = pd.read_csv("../original/32.csv")
-package_32 = pd.read_csv("../output/oversampled/smote_singleouts/ds32_smote_QI4_knn3_per2.csv")
-scratch_32 = pd.read_csv("../output/oversampled/smote_singleouts_scratch/ds32_smote_QI4_knn3_per1.csv")
-# %%
-idx=scratch_32[scratch_32['single_out']==1].index
-fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(10,10))
-sns.scatterplot(data=original_32.loc[idx, :], x='age', y='hoursPerWeek', hue='label', palette="deep",s=14, ax=axs[0,0], legend=False).set_title("Original")
-sns.scatterplot(data=package_32[package_32['single_out']==1], x='age', y='hoursPerWeek', hue='label', palette="deep", s=14, ax=axs[0,1], legend=False).set_title("One class")
-sns.scatterplot(data=original_32, x='age', y='hoursPerWeek', hue='label', palette="deep", s=14, ax=axs[1,0], legend=False).set_title("Original")
-sns.scatterplot(data=scratch_32[scratch_32['single_out']==1], x='age', y='hoursPerWeek', hue='label', palette="deep", s=14, ax=axs[1,1], legend=False).set_title("Both classes")
-axs[0,0].set(xlim=(0,100))
-axs[0,1].set(xlim=(0,100))
-axs[1,0].set(xlim=(0,100))
-axs[1,1].set(xlim=(0,100))
+for idx,file in enumerate(input_files):
+    if int(file.split(".csv")[0]) not in not_considered_files:
+        print(idx)
+        print(file)
+        interpolation_singleouts_B(original_folder, file)
 
-fig.savefig('../output/plots/smote_case_study.png',bbox_inches='tight')
 # %%

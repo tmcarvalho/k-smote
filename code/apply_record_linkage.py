@@ -1,16 +1,13 @@
 """_summary_
 """
 # %%
-from io import StringIO
 from os import walk
 import pandas as pd
 import numpy as np
 from record_linkage import threshold_record_linkage
-from sklearn.preprocessing import LabelEncoder
 import re
 import gc
 import ast
-import zipfile
 
 # %%
 def privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_vars):
@@ -23,101 +20,30 @@ def privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_va
     print(int_transf_files)
 
     transf_data = pd.read_csv(f'{args.input_folder}/{transf_file}')
+    
+    key_vars = ast.literal_eval(set_key_vars)[int_transf_qi[0]]
+    
     if args.type == 'smote_singleouts':
-        # select single outs in the original data
-        idx = transf_data[transf_data['single_out']==1].index
-        orig_data = orig_data.iloc[idx, :]
         # select single outs in the transformed data
         transf_data = transf_data[transf_data['single_out']==1]
-        
+        # select single outs in the original data according the set of key vars
+        orig_data = aux_singleouts(key_vars, orig_data)
     
-    if int_transf_qi[0] == 0:
-        key_vars = ast.literal_eval(set_key_vars)[0]
-        if args.type == 'smote_singleouts':
-            orig_data = aux_singleouts(key_vars, orig_data)
-        try: key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
-        except: pass
-        try:
-            # remove rows with '*'
-            if transf_data[key_vars[0]].iloc[-1] == '*':
-                transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
-        except: pass  
-        matches, percentages = threshold_record_linkage(
-            transf_data,
-            orig_data,
-            key_vars)
-
-    if int_transf_qi[0] == 1:
-        key_vars = ast.literal_eval(set_key_vars)[1]
-        if args.type == 'smote_singleouts':
-            orig_data = aux_singleouts(key_vars, orig_data)
-        try: key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
-        except: pass
-        try:
-            # remove rows with '*'
-            if transf_data[key_vars[0]].iloc[-1] == '*':
-                transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
-        except: pass
-        matches, percentages = threshold_record_linkage(
-            transf_data,
-            orig_data,
-            key_vars)
+    # remove suppressed variables in PPT
+    try: key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
+    except: pass
     
-    if int_transf_qi[0] == 2:
-        key_vars = ast.literal_eval(set_key_vars)[2]
-        if args.type == 'smote_singleouts':
-            orig_data = aux_singleouts(key_vars, orig_data)
-
-        try: key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
-        except: pass
-        try:
-            # remove rows with '*'
-            if transf_data[key_vars[0]].iloc[-1] == '*':
-                transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
-        except: pass
-        matches, percentages = threshold_record_linkage(
-            transf_data,
-            orig_data,
-            key_vars)
+    try:
+        # remove suppressed rows in PPT
+        if transf_data[key_vars[0]].iloc[-1] == '*':
+            transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
+    except: pass  
     
-    if int_transf_qi[0] == 3:
-        key_vars = ast.literal_eval(set_key_vars)[3]
-        if args.type == 'smote_singleouts':
-            orig_data = aux_singleouts(key_vars, orig_data)
-        try: key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
-        except: pass
-        try:
-            # remove rows with '*'
-            if transf_data[key_vars[0]].iloc[-1] == '*':
-                transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
-        except: pass
-        matches, percentages = threshold_record_linkage(
-            transf_data,
-            orig_data,
-            key_vars)
-    
-    if int_transf_qi[0] == 4:
-        key_vars = ast.literal_eval(set_key_vars)[4]
-        if args.type == 'smote_singleouts':
-            orig_data = aux_singleouts(key_vars, orig_data)
-
-        try: key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
-        except: pass
-        try:
-            # remove rows with '*'
-            if transf_data[key_vars[0]].iloc[-1] == '*':
-                transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
-        except: pass
-        matches, percentages = threshold_record_linkage(
-            transf_data,
-            orig_data,
-            key_vars)
-    
-    # with zipfile.ZipFile(f'{args.output_folder}/potential_matches.zip', "a", zipfile.ZIP_DEFLATED) as zip_file:
-    #     s = StringIO()
-    #     matches.to_csv(s, index=False) 
-    #     zip_file.writestr(f'{transf_file.split(".csv")[0]}_rl.csv', s.getvalue())
-    # matches.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_rl.csv', index=False) 
+    _, percentages = threshold_record_linkage(
+        transf_data,
+        orig_data,
+        key_vars)
+     
     dict_per['privacy_risk_50'].append(percentages[0])
     dict_per['privacy_risk_70'].append(percentages[1])
     dict_per['privacy_risk_90'].append(percentages[2])
@@ -140,22 +66,14 @@ def privacy_risk_resampling_and_gans(transf_file, orig_data, args, key_vars, i):
     dict_per = {'privacy_risk_50': [], 'privacy_risk_70': [], 'privacy_risk_90':[], 'privacy_risk_100': [], 'ds': []}
     
     transf_data = pd.read_csv(f'{args.input_folder}/{transf_file}')
-        
-    # apply LabelEncoder
-    # orig_data = orig_data.apply(LabelEncoder().fit_transform)
-    # transf_data = transf_data.apply(LabelEncoder().fit_transform)
+
     print(transf_file)
 
-    matches, percentages = threshold_record_linkage(
+    _, percentages = threshold_record_linkage(
         transf_data,
         orig_data,
         key_vars)
     
-    # with zipfile.ZipFile(f'{args.output_folder}/potential_matches.zip', "a", zipfile.ZIP_DEFLATED) as zip_file:
-    #     s = StringIO()
-    #     matches.to_csv(s, index=False) 
-    #     zip_file.writestr(f'{transf_file.split(".csv")[0]}_qi{i}_rl.csv', s.getvalue())
-    # matches.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_qi{i}_rl.csv', index=False) 
     dict_per['privacy_risk_50'].append(percentages[0])
     dict_per['privacy_risk_70'].append(percentages[1])
     dict_per['privacy_risk_90'].append(percentages[2])
@@ -179,7 +97,7 @@ def apply_in_privatesmote_and_ppts(transf_file, args):
     print(orig_file)
     orig_data = pd.read_csv(f'{original_folder}/{orig_file[0]}')
 
-    # apply for the 80% of data
+    # apply for the 80% of original data 
     indexes = np.load('indexes.npy', allow_pickle=True).item()
     indexes = pd.DataFrame.from_dict(indexes)
     f = list(map(int, re.findall(r'\d+', transf_file.split('_')[0])))
@@ -208,7 +126,7 @@ def apply_in_resampling_and_gans(transf_file, args):
     print(int_transf_files)
     orig_data = pd.read_csv(f'{original_folder}/{orig_file[0]}')
     print(orig_file)
-    # apply for the 80% of data
+    # apply for the 80% of original data
     indexes = np.load('indexes.npy', allow_pickle=True).item()
     indexes = pd.DataFrame.from_dict(indexes)
     f = list(map(int, re.findall(r'\d+', transf_file.split('_')[0])))

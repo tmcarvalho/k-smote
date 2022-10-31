@@ -76,7 +76,7 @@ def evaluate_model(x_train, x_test, y_train, y_test):
         n_jobs=-1).fit(x_train, y_train)
 
     score_cv = {
-    'model':[],
+    'params':[], 'model':[],
     'test_accuracy': [], 'test_f1_weighted':[], 'test_gmean':[], 'test_roc_auc':[]
     }
     # Store results from grid search
@@ -86,65 +86,20 @@ def evaluate_model(x_train, x_test, y_train, y_test):
     validation['model'] = validation['model'].apply(lambda x: 'XGBoost' if 'XGB' in str(x) else x)
     validation['model'] = validation['model'].apply(lambda x: 'Logistic Regression' if 'Logistic' in str(x) else x)
 
-    validation_head = validation.sort_values(['rank_test_roc_auc_curve'],ascending=False).groupby('model').head(1).reset_index(drop=True)
-    
-    # get best models for prediction on test
-    clf_1st_best = gs.best_estimator_.set_params(**validation_head.loc[0, 'params']).fit(x_train, y_train)
-    clf_1st = clf_1st_best.predict(x_test)
-    clf_2nd_best = gs.best_estimator_.set_params(**validation_head.loc[1, 'params']).fit(x_train, y_train)
-    clf_2nd = clf_2nd_best.predict(x_test)
-    clf_3rd_best = gs.best_estimator_.set_params(**validation_head.loc[2, 'params']).fit(x_train, y_train)
-    clf_3rd = clf_3rd_best.predict(x_test)
+    print("Start modeling in out of sample")
 
-    for i, clf in enumerate([clf_1st, clf_2nd, clf_3rd]):
-        score_cv['model'].append(validation_head.loc[i, 'model'])
+    for i in range(len(validation)):
+        # set each model for prediction on test
+        clf_best = gs.best_estimator_.set_params(**gs.cv_results_['params'][i]).fit(x_train, y_train)
+        clf = clf_best.predict(x_test)
+        score_cv['params'].append(str(gs.cv_results_['params'][i]))
+        score_cv['model'].append(validation.loc[i, 'model'])
         score_cv['test_accuracy'].append(accuracy_score(y_test, clf))
         score_cv['test_f1_weighted'].append(f1_score(y_test, clf, average='weighted'))
         score_cv['test_gmean'].append(geometric_mean_score(y_test, clf))
         score_cv['test_roc_auc'].append(roc_auc_score(y_test, clf))
 
-    ##################### OUT OF SAMPLE ##########################
-    # apply best cv result in all training data (without CV - out of sample)
-    # Train the grid search model
-    print("Start modeling without CV")
-    gs_outofsample = GridSearchCV(
-        pipeline,
-        param_grid=params,
-        cv=[(slice(None), slice(None))],
-        scoring=scoring,
-        refit='acc',
-        return_train_score=True,
-        n_jobs=-1).fit(x_train, y_train)
 
-    outofsample_val = pd.DataFrame(gs_outofsample.cv_results_)
-    outofsample_val['model'] = outofsample_val['param_classifier']
-    outofsample_val['model'] = outofsample_val['model'].apply(lambda x: 'Random Forest' if 'RandomForest' in str(x) else x)
-    outofsample_val['model'] = outofsample_val['model'].apply(lambda x: 'XGBoost' if 'XGB' in str(x) else x)
-    outofsample_val['model'] = outofsample_val['model'].apply(lambda x: 'Logistic Regression' if 'Logistic' in str(x) else x)
-
-    outofsample_val_head = outofsample_val.sort_values(['rank_test_roc_auc_curve'],ascending=False).groupby('model').head(1).reset_index(drop=True)
-
-    # Predict on train data with best params
-    clf_1st_best_out = gs_outofsample.best_estimator_.set_params(**outofsample_val_head.loc[0, 'params']).fit(x_train, y_train)
-    clf_1st_out = clf_1st_best_out.predict(x_test)
-    clf_2nd_best_out = gs_outofsample.best_estimator_.set_params(**outofsample_val_head.loc[1, 'params']).fit(x_train, y_train)
-    clf_2nd_out = clf_2nd_best_out.predict(x_test)
-    clf_3rd_best_out = gs_outofsample.best_estimator_.set_params(**outofsample_val_head.loc[2, 'params']).fit(x_train, y_train)
-    clf_3rd_out = clf_3rd_best_out.predict(x_test)
-
-    score_outofsample_val = {
-        'model':[],
-        'test_accuracy': [], 'test_f1_weighted':[], 'test_gmean':[], 'test_roc_auc':[]
-    }
-    # Store predicted results in out of sample
-    for i, clf in enumerate([clf_1st_out, clf_2nd_out, clf_3rd_out]):
-        score_outofsample_val['model'].append(outofsample_val_head.loc[i, 'model'])
-        score_outofsample_val['test_accuracy'].append(accuracy_score(y_test, clf))
-        score_outofsample_val['test_f1_weighted'].append(f1_score(y_test, clf, average='weighted'))
-        score_outofsample_val['test_gmean'].append(geometric_mean_score(y_test, clf))
-        score_outofsample_val['test_roc_auc'].append(roc_auc_score(y_test, clf))
-    
     score_cv = pd.DataFrame(score_cv)
-    score_outofsample_val = pd.DataFrame(score_outofsample_val)
 
-    return [validation, score_cv, outofsample_val, score_outofsample_val]
+    return [validation, score_cv]

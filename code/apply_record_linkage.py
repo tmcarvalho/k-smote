@@ -39,7 +39,7 @@ def privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_va
             transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
     except: pass  
     
-    _, percentages = threshold_record_linkage(
+    percentages = threshold_record_linkage(
         transf_data,
         orig_data,
         key_vars)
@@ -49,6 +49,8 @@ def privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_va
     dict_per['privacy_risk_90'].append(percentages[2])
     dict_per['privacy_risk_100'].append(percentages[3])
     dict_per['ds'].append(transf_file.split('.csv')[0])
+    
+    del percentages
     gc.collect()
     
     return dict_per
@@ -69,7 +71,7 @@ def privacy_risk_resampling_and_gans(transf_file, orig_data, args, key_vars, i):
 
     print(transf_file)
 
-    _, percentages = threshold_record_linkage(
+    percentages = threshold_record_linkage(
         transf_data,
         orig_data,
         key_vars)
@@ -80,6 +82,8 @@ def privacy_risk_resampling_and_gans(transf_file, orig_data, args, key_vars, i):
     dict_per['privacy_risk_100'].append(percentages[3])
     dict_per['ds'].append(transf_file.split('.csv')[0])
     dict_per['qi'] = i
+    
+    del percentages
     gc.collect()
 
     return dict_per  
@@ -107,9 +111,13 @@ def apply_in_privatesmote_and_ppts(transf_file, args):
     idx = list(set(list(orig_data.index)) - set(index))
     orig_data = orig_data.iloc[idx, :].reset_index(drop=True)
 
-    risk = privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_vars)
-    total_risk = pd.DataFrame.from_dict(risk)
-    total_risk.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_per.csv', index=False) 
+    try: 
+        risk = privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_vars)
+        total_risk = pd.DataFrame.from_dict(risk)
+        del risk
+        gc.collect()
+        total_risk.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_per.csv', index=False) 
+    except: pass
 
 
 def apply_in_resampling_and_gans(transf_file, args):
@@ -140,3 +148,5 @@ def apply_in_resampling_and_gans(transf_file, args):
         risk = privacy_risk_resampling_and_gans(transf_file, orig_data, args, set_key_vars[i], i)
         total_risk = pd.DataFrame.from_dict(risk)
         total_risk.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_qi{i}_per.csv', index=False) 
+        del risk
+        gc.collect()

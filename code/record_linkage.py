@@ -2,7 +2,6 @@
 This script applies comparisons between the select QIs for all single outs.
 """
 # %%
-from os import walk
 import gc
 import recordlinkage
 import pandas as pd
@@ -37,7 +36,8 @@ def record_linkage(transformed: pd.DataFrame,
     potential_matches['Score'] = potential_matches.iloc[:, 2:].sum(axis=1)
     potential_matches = potential_matches[potential_matches['Score'] >= \
         0.5*potential_matches['Score'].max()]
-
+    del comparisons
+    gc.collect()
     return potential_matches
 
 
@@ -82,5 +82,8 @@ def threshold_record_linkage(transformed_data, original_data, keys):
     level_1_max_score = max_score.groupby(['level_1'])['level_0'].size()
     per_100 = (len(level_1_max_score[level_1_max_score == 1]) * 100) / len(transformed_data)
 
-    return potential_matches, [per_50, per_70, per_90, per_100]
+    del potential_matches
+    gc.collect()
+
+    return [per_50, per_70, per_90, per_100]
 

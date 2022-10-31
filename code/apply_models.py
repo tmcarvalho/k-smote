@@ -21,20 +21,11 @@ def save_results(file, args, results):
         f'{args.output_folder}/validation')
     output_folder_test = (
         f'{args.output_folder}/test')
-    output_folder_outofsample_train = (
-        f'{args.output_folder}/outofsample_train')
-    output_folder_outofsample = (
-        f'{args.output_folder}/outofsample')
     if not os.path.exists(output_folder_val): os.makedirs(output_folder_val)
     if not os.path.exists(output_folder_test): os.makedirs(output_folder_test)
-    if not os.path.exists(output_folder_outofsample_train): os.makedirs(output_folder_outofsample_train)
-    if not os.path.exists(output_folder_outofsample): os.makedirs(output_folder_outofsample)
 
     results[0].to_csv(f'{output_folder_val}/{file}', index=False)
     results[1].to_csv(f'{output_folder_test}/{file}', index=False)
-    results[2].to_csv(f'{output_folder_outofsample_train}/{file}', index=False)
-    results[3].to_csv(f'{output_folder_outofsample}/{file}', index=False)
-
 
 def modeling_ppt(file, args):
     """Apply predictive performance.
@@ -50,11 +41,14 @@ def modeling_ppt(file, args):
     
     print(f'{args.input_folder}/{file}')
 
-    test_folder = 'PPT_ARX_test'
+    test_folder = 'PPT_transformed/PPT_test'
     _, _, test_files = next(os.walk(f'{test_folder}'))
-    f = list(map(int, re.findall(r'\d+', file.split('_')[0])))
+    ff = file.split('.')[0]
+    f1 = ff.split('_')[0]
+    f2 = ff.split('_')[2]
+    f = f1+'_'+f2
     print(f)
-    test_file = [fl for fl in test_files if list(map(int, re.findall(r'\d+', fl.split('_')[0])))[0] == f[0]]
+    test_file = [fl for fl in test_files if fl.split('.')[0] == f]
     print(test_file)
     test_data = pd.read_csv(f'{test_folder}/{test_file[0]}')
     data = pd.read_csv(f'{args.input_folder}/{file}')

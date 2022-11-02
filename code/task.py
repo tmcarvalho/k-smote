@@ -4,8 +4,8 @@ This script will add the tasks in the queue
 #!/usr/bin/env python
 import argparse
 import os
-import pika
 import re
+import pika
 
 parser = argparse.ArgumentParser(description='Master Example')
 parser.add_argument('--input_folder', type=str, help='Input folder', default="./input")
@@ -41,10 +41,9 @@ dl_queue = channel.queue_declare(queue='dl')
 channel.queue_bind(exchange='dlx', routing_key='task_queue', queue=dl_queue.method.queue)
 
 for file in os.listdir(args.input_folder):
-    if file != 'list_key_vars.csv':
-        f = list(map(int, re.findall(r'\d+', file.split('_')[0])))[0]
-        if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87]:
-            print(file)
-            put_file_queue(channel, file)
+    f = list(map(int, re.findall(r'\d+', file.split('_')[0])))[0]
+    if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87]:
+        print(file)
+        put_file_queue(channel, file)
 
 connection.close()

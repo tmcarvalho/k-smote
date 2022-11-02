@@ -36,7 +36,7 @@ def percentage_difference_org(baseline_folder, candidate_folder, technique):
             # calculate the percentage difference
             # 100 * (Sc - Sb) / Sb
         
-            if (technique == 'privateSMOTE B') or (technique == 'deep_learning') or (technique == 'PPT'):
+            if (technique == 'privateSMOTE') or (technique == 'deep_learning') or (technique == 'PPT'):
                 best_candidate_cv = candidate_result_cv_train.loc[candidate_result_cv_train['rank_test_roc_auc_curve'] == 1,:]
                 candidate_result_cv_best = candidate_result_cv.iloc[best_candidate_cv.index,:]
                 candidate_result_cv_best['test_roc_auc_perdif'] = 100 * (candidate_result_cv_best['test_roc_auc'].values[0] - baseline_result_cv_best['test_roc_auc'].values[0]) / baseline_result_cv_best['test_roc_auc'].values[0]
@@ -90,15 +90,15 @@ _, _, deeplearn_file = next(walk(f'{deeplearn_folder}'))
 baseorg_deeplearn = percentage_difference_org(orig_folder, deeplearn_folder, 'deep_learning')
 
 # %% smote_singleouts
-smote_singleouts_folder = '../output/modeling/smote_singleouts/'
-baseorg_smote_singleouts = percentage_difference_org(orig_folder, smote_singleouts_folder, 'privateSMOTE A')
+# smote_singleouts_folder = '../output/modeling/smote_singleouts/old/'
+# baseorg_smote_singleouts = percentage_difference_org(orig_folder, smote_singleouts_folder, 'privateSMOTE A')
 
 # %% smote_singleouts_scratch
 smote_singleouts_scratch_folder = '../output/modeling/smote_singleouts_scratch/'
-baseorg_smote_singleouts_scratch = percentage_difference_org(orig_folder, smote_singleouts_scratch_folder, 'privateSMOTE B')
+baseorg_smote_singleouts_scratch = percentage_difference_org(orig_folder, smote_singleouts_scratch_folder, 'privateSMOTE')
 
 # %% concat all data sets
-results_baseorg_cv = pd.concat([baseorg_ppt, baseorg_resampling, baseorg_deeplearn, baseorg_smote_singleouts, baseorg_smote_singleouts_scratch])
+results_baseorg_cv = pd.concat([baseorg_ppt, baseorg_resampling, baseorg_deeplearn, baseorg_smote_singleouts_scratch])
 # %%
 results_baseorg_cv = results_baseorg_cv.reset_index(drop=True)
 # %%
@@ -119,7 +119,7 @@ results_max.loc[results_max['technique']=='Smote', 'technique'] = 'SMOTE'
 results_max.loc[results_max['technique']=='copulaGAN', 'technique'] = 'Copula GAN'
 
 # %%
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'privateSMOTE A', 'privateSMOTE B']
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'privateSMOTE']
 # %%
 sns.set_style("darkgrid")
 plt.figure(figsize=(12,8))
@@ -133,29 +133,7 @@ plt.ylabel("Percentage difference of predictive performance (AUC)")
 #plt.yscale('symlog')
 plt.autoscale(True)
 plt.show()
-#figure = ax.get_figure()
-#figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performance.pdf', bbox_inches='tight')
-
-
-# %%
-results_max_privateSMOTE = results_max.loc[results_max.technique!='privateSMOTE A']
-results_max_privateSMOTE.loc[results_max_privateSMOTE['technique']=='privateSMOTE B', 'technique'] = 'privateSMOTE'
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'privateSMOTE']
-sns.set_style("darkgrid")
-plt.figure(figsize=(15,11))
-ax = sns.boxplot(data=results_max_privateSMOTE, x='technique', y='test_roc_auc_perdif', palette='Spectral_r', order=order)
-ax.margins(x=0.03)
-ax.margins(y=0.08)
-ax.use_sticky_edges = False
-ax.autoscale_view(scaley=True)
-sns.set(font_scale=2)
-plt.xticks(rotation=45)
-plt.xlabel("")
-plt.ylabel("Percentage difference of predictive performance (AUC)")
-plt.yscale('symlog')
-plt.autoscale(True)
-plt.show()
 # figure = ax.get_figure()
-# figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/alltechniques_outofsample_auc.pdf', bbox_inches='tight')
+# figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performance.pdf', bbox_inches='tight')
 
 # %%

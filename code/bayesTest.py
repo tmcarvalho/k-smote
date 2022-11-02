@@ -86,8 +86,7 @@ def sorter(column):
         'Copula GAN',
         'TVAE',
         'CTGAN',
-        'privateSMOTE A',
-        'privateSMOTE B'
+        'privateSMOTE'
         ]
     cat = pd.Categorical(column, categories=reorder, ordered=True)
     return pd.Series(cat)
@@ -124,4 +123,6 @@ plt.yticks(np.arange(0, 1.25, 0.25))
 plt.xticks(rotation=45)
 ax.set_ylabel('Proportion of probability')
 ax.set_xlabel('')
-# plt.savefig(f'../output/plots/baseline_org_all.pdf', bbox_inches='tight')
+# plt.savefig(f'../output/plots/bayes_oracle.pdf', bbox_inches='tight')
+
+# %%

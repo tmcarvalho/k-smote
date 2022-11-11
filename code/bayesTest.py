@@ -86,7 +86,7 @@ def sorter(column):
         'Copula GAN',
         'TVAE',
         'CTGAN',
-        'privateSMOTE'
+        'PrivateSMOTE'
         ]
     cat = pd.Categorical(column, categories=reorder, ordered=True)
     return pd.Series(cat)
@@ -107,6 +107,7 @@ solutions_org_candidates.loc[solutions_org_candidates['Solution']=='Under', 'Sol
 solutions_org_candidates.loc[solutions_org_candidates['Solution']=='Bordersmote', 'Solution'] = 'BorderlineSMOTE'
 solutions_org_candidates.loc[solutions_org_candidates['Solution']=='Smote', 'Solution'] = 'SMOTE'
 solutions_org_candidates.loc[solutions_org_candidates['Solution']=='copulaGAN', 'Solution'] = 'Copula GAN'
+solutions_org_candidates.loc[solutions_org_candidates['Solution']=='privateSMOTE', 'Solution'] = 'PrivateSMOTE'
 
 # %%
 solutions_org_candidates = solutions_org_candidates.sort_values(by="Solution", key=sorter)

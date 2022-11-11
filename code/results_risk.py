@@ -70,8 +70,8 @@ results = results.reset_index(drop=True)
 results['dsn'] = results['ds'].apply(lambda x: x.split('_')[0])
 
 # %%
-results.to_csv('../output/rl_results.csv', index=False)
-#results = pd.read_csv('../output/rl_results.csv')
+#results.to_csv('../output/rl_results.csv', index=False)
+results = pd.read_csv('../output/rl_results.csv')
 
 # %%
 priv=results.copy()
@@ -102,9 +102,10 @@ results_melted.loc[results_melted['technique']=='Under', 'technique'] = 'RUS'
 results_melted.loc[results_melted['technique']=='Bordersmote', 'technique'] = 'BorderlineSMOTE'
 results_melted.loc[results_melted['technique']=='Smote', 'technique'] = 'SMOTE'
 results_melted.loc[results_melted['technique']=='copulaGAN', 'technique'] = 'Copula GAN'
+results_melted.loc[results_melted['technique']=='privateSMOTE', 'technique'] = 'PrivateSMOTE'
 
 # %%
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'privateSMOTE']
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'PrivateSMOTE']
 # %%
 g = sns.FacetGrid(results_melted, col='variable', col_wrap=1, height=4.5, aspect=1.5, margin_titles=True)
 g.map(sns.boxplot, 'technique', 'value', palette='muted', order=order)
@@ -132,7 +133,7 @@ plt.figure(figsize=(20,10))
 ax = sns.boxplot(data=results_melted.loc[results_melted['variable']!='Threshold at 100%'],
     x='technique', y='value', hue='variable', order=order,  palette='muted')
 # ax.set(ylim=(0, 30))
-sns.set(font_scale=2.3)
+sns.set(font_scale=2.5)
 ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1), ncol=3, title='', borderaxespad=0., frameon=False)
 ax.set_yscale("log")
 ax.margins(x=0)
@@ -143,17 +144,17 @@ plt.xticks(rotation=45)
 plt.xlabel("")
 plt.ylabel("Re-identification Risk (%)")
 plt.show()
-#figure = ax.get_figure()
-#figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allthr_except100.pdf', bbox_inches='tight')
+# figure = ax.get_figure()
+# figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allthr_except100.pdf', bbox_inches='tight')
 
 # %%
 # y_values = results_melted_privateSMOTE.loc[results_melted_privateSMOTE['variable']=='Threshold at 100%']["value"].values
-plt.figure(figsize=(15,11))
+plt.figure(figsize=(11,6))
 ax = sns.boxplot(data=results_melted.loc[results_melted['variable']=='Threshold at 100%'], x='technique', y='value',
     palette='Spectral_r', order=order)
 ax.set_yscale("symlog")
 #ax.set(ylim=(-0.2,np.max(y_values)))
-sns.set(font_scale=2)
+sns.set(font_scale=1.6)
 ax.margins(y=0.02)
 ax.margins(x=0.03)
 ax.use_sticky_edges = False
@@ -162,9 +163,10 @@ plt.xticks(rotation=45)
 plt.xlabel("")
 plt.ylabel("Re-identification Risk (threshold at 100%)")
 plt.show()
-#figure = ax.get_figure()
-#figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performanceFirst_thr100.pdf', bbox_inches='tight')
-
+# figure = ax.get_figure()
+# figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performanceFirst_thr100.pdf', bbox_inches='tight')
+# %%
+np.median(results_melted.loc[(results_melted['variable']=='Threshold at 100%') & (results_melted['technique']=='PrivateSMOTE'), 'value'].values)
 
 # %%
 #####################################################
@@ -180,8 +182,9 @@ priv_melted.loc[priv_melted['technique']=='Under', 'technique'] = 'RUS'
 priv_melted.loc[priv_melted['technique']=='Bordersmote', 'technique'] = 'BorderlineSMOTE'
 priv_melted.loc[priv_melted['technique']=='Smote', 'technique'] = 'SMOTE'
 priv_melted.loc[priv_melted['technique']=='copulaGAN', 'technique'] = 'Copula GAN'
+priv_melted.loc[priv_melted['technique']=='privateSMOTE', 'technique'] = 'PrivateSMOTE'
 
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'privateSMOTE']
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'PrivateSMOTE']
 
 priv_melted['variable'] = np.where(priv_melted['variable']=='privacy_risk_100', 'Threshold at 100%', priv_melted['variable'])
 
@@ -223,6 +226,7 @@ predictive_results_max.loc[predictive_results_max['technique']=='Under', 'techni
 predictive_results_max.loc[predictive_results_max['technique']=='Bordersmote', 'technique'] = 'BorderlineSMOTE'
 predictive_results_max.loc[predictive_results_max['technique']=='Smote', 'technique'] = 'SMOTE'
 predictive_results_max.loc[predictive_results_max['technique']=='copulaGAN', 'technique'] = 'Copula GAN'
+predictive_results_max.loc[predictive_results_max['technique']=='privateSMOTE', 'technique'] = 'PrivateSMOTE'
 
 # %%
 sns.set_style("darkgrid")
@@ -239,12 +243,12 @@ plt.show()
 #figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/allresults_technique_fscore_riskfirst_arx.pdf', bbox_inches='tight')
 
 # %%
-order_priv = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'privateSMOTE']
+order_priv = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'PrivateSMOTE']
 y_values_priv = priv_melted["value"].values
 y_values_pred = predictive_results_max["test_roc_auc_perdif"].values
 # %%
 sns.set_style("darkgrid")
-fig, axes = plt.subplots(1, 2, figsize=(24,8))
+fig, axes = plt.subplots(1, 2, figsize=(18,7))
 sns.boxplot(ax=axes[0], data=priv_melted,
     x='technique', y='value', palette='Spectral_r', order=order_priv)
 sns.boxplot(ax=axes[1], data=predictive_results_max,
@@ -260,7 +264,7 @@ axes[1].set_xlabel("")
 axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=45)
 axes[0].set(ylim=(-0.2,np.max(y_values_priv)+15))
 # axes[1].set(ylim=(-0.2,np.max(y_values_pred)))
-sns.set(font_scale=1.8)
+sns.set(font_scale=1.6)
 axes[0].margins(y=0.2)
 #axes[1].margins(y=0.2)
 axes[0].use_sticky_edges = False

@@ -102,9 +102,9 @@ results_baseorg_cv = pd.concat([baseorg_ppt, baseorg_resampling, baseorg_deeplea
 # %%
 results_baseorg_cv = results_baseorg_cv.reset_index(drop=True)
 # %%
-results_baseorg_cv.to_csv('../output/test_cv_roc_auc.csv', index=False)
+# results_baseorg_cv.to_csv('../output/test_cv_roc_auc.csv', index=False)
 # %%
-# all_results_baseorg_cv = pd.read_csv('../output/test_cv_roc_auc.csv')
+results_baseorg_cv = pd.read_csv('../output/test_cv_roc_auc.csv')
 # %%
 #results_baseorg_cv['test_roc_auc_perdif'] = results_baseorg_cv['test_roc_auc_perdif'].fillna(0)
 #results_max_prSmote = results_baseorg_cv.loc[results_baseorg_cv.technique=='privateSMOTE A',:].reset_index(drop=True)
@@ -117,9 +117,10 @@ results_max.loc[results_max['technique']=='Under', 'technique'] = 'RUS'
 results_max.loc[results_max['technique']=='Bordersmote', 'technique'] = 'BorderlineSMOTE'
 results_max.loc[results_max['technique']=='Smote', 'technique'] = 'SMOTE'
 results_max.loc[results_max['technique']=='copulaGAN', 'technique'] = 'Copula GAN'
+results_max.loc[results_max['technique']=='privateSMOTE', 'technique'] = 'PrivateSMOTE'
 
 # %%
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'privateSMOTE']
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'PrivateSMOTE']
 # %%
 sns.set_style("darkgrid")
 plt.figure(figsize=(12,8))

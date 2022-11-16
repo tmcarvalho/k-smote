@@ -65,7 +65,7 @@ class Smote:
             # find index of nearest neighbour excluding the observation in comparison
             neighbour = randrange(1, self.k+1)
 
-            difference = abs(self.samples[i]-self.samples[nnarray[neighbour]])
+            difference = self.samples[nnarray[neighbour]] - self.samples[i]
             # multiply with a weight
             weight = random.uniform(0, 1)
             additive = np.multiply(difference,weight)
@@ -207,7 +207,7 @@ def interpolation_singleouts_B(original_folder, file):
         file (string): name of file
     """
 
-    output_interpolation_folder = '../output/oversampled/smote_singleouts_scratch/'
+    output_interpolation_folder = '../output/oversampled/smote_singleouts_scratch_org/'
     data = pd.read_csv(f'{original_folder}/{file}')
 
     # get 80% of data to synthesise

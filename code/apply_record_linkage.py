@@ -25,7 +25,7 @@ def privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_va
     
     if args.type == 'smote_singleouts':
         # re-calculate single outs after the oversampling and select them
-        transf_data = aux_singleouts(key_vars, transf_data)
+        # transf_data = aux_singleouts(key_vars, transf_data)
         # select single outs in the original data according the set of key vars
         orig_data = aux_singleouts(key_vars, orig_data)
     

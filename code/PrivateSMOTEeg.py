@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 from collections import Counter
 from matplotlib.colors import to_rgba
 # %%
-original = pd.read_csv('../original/14.csv')
-knn1 = pd.read_csv('../output/oversampled/smote_singleouts_scratch_org/ds14_smote_QI4_knn1_per1.csv')
-knn3 = pd.read_csv('../output/oversampled/smote_singleouts_scratch_org/ds14_smote_QI4_knn3_per1.csv')
-knn5 = pd.read_csv('../output/oversampled/smote_singleouts_scratch_org/ds14_smote_QI4_knn5_per1.csv')
+original = pd.read_csv('../original/68.csv')
+knn1 = pd.read_csv('../output/oversampled/smote_singleouts_scratch_org/ds68_smote_QI1_knn1_per1.csv')
+knn3 = pd.read_csv('../output/oversampled/smote_singleouts_scratch_org/ds68_smote_QI1_knn3_per1.csv')
+knn5 = pd.read_csv('../output/oversampled/smote_singleouts_scratch_org/ds68_smote_QI1_knn5_per1.csv')
 # %%
 def aux_singleouts(key_vars, dt):
     k = dt.groupby(key_vars)[key_vars[0]].transform(len)
@@ -22,7 +22,7 @@ def aux_singleouts(key_vars, dt):
 
 # %% get key vars
 list_key_vars = pd.read_csv('../list_key_vars.csv')
-transf_file = 'ds14_smote_QI4_knn1_per1'
+transf_file = 'ds68_smote_QI1_knn1_per1'
 int_transf_files = list(map(int, re.findall(r'\d+', transf_file.split('_')[0])))
 int_transf_qi = list(map(int, re.findall(r'\d+', transf_file.split('_')[2])))
 set_key_vars = list_key_vars.loc[list_key_vars['ds']==int_transf_files[0], 'set_key_vars'].values[0]
@@ -55,7 +55,12 @@ knn1['synt'] = 'Synthetic'
 knn3['synt'] = 'Synthetic'
 knn5['synt'] = 'Synthetic'
 orig_data['synt'] = np.where(orig_data['single_out'] == 'Y', 'Single out', 'Non-single out')
-all_data = pd.concat([orig_data, knn1, knn3, knn5])
+
+# %%
+indexes = knn1.sample(frac=.12).index.to_list()
+# %%
+all_data = pd.concat([orig_data.iloc[indexes,:], knn1.iloc[indexes,:], knn3.iloc[indexes,:], knn5.iloc[indexes,:]])
+
 # %%
 # plt.figure(figsize=(20,6))
 sns.set(font_scale=1.5)
@@ -66,7 +71,7 @@ color_dict = {
     'Synthetic': to_rgba('darkseagreen', 0.45)
               }
 g = sns.relplot(
-    data=all_data, x="att11", y="att20",
+    data=all_data, x="input11", y="input13",
     col="type", col_wrap=4, hue=orig_data.columns[-1],
     palette=color_dict,
     linewidth=0.1,
@@ -78,6 +83,6 @@ g.set_ylabels("")
 g.set_xlabels("")
 sns.move_legend(g, loc='upper center', bbox_to_anchor=(0.5,1.15), title='Type', 
 ncol=3, borderaxespad=0, frameon=False, markerscale=1.3)
-#plt.savefig(f'../output/plots/PrivateSMOTEeg2.jpeg', bbox_inches='tight')
+plt.savefig(f'../output/plots/PrivateSMOTEeg14.jpeg', bbox_inches='tight')
 
 # %%

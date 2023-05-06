@@ -207,7 +207,7 @@ def interpolation_singleouts_B(original_folder, file):
         file (string): name of file
     """
 
-    output_interpolation_folder = '../output/oversampled/smote_singleouts_scratch_org/'
+    output_interpolation_folder = '../output/'
     data = pd.read_csv(f'{original_folder}/{file}')
 
     # get 80% of data to synthesise
@@ -217,8 +217,11 @@ def interpolation_singleouts_B(original_folder, file):
     f = list(map(int, re.findall(r'\d+', file.split('_')[0])))
     index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
     data_idx = list(set(list(data.index)) - set(index))
-    data = data.iloc[data_idx, :]
-
+    data = data.iloc[data_idx, :].reset_index()
+    indexes = data.sample(frac=.015).index.to_list()
+    data = data.iloc[indexes,:]
+    data.to_csv(f'{output_interpolation_folder}{sep}ds{file}',
+                        index=False)
     # encode string with numbers to numeric
     data = encode(data) 
     # apply LabelEncoder to categorical attributes
@@ -305,7 +308,7 @@ for idx,file in enumerate(input_files):
 
 # %%
 for idx,file in enumerate(input_files):
-    if int(file.split(".csv")[0]) not in not_considered_files:
+    if int(file.split(".csv")[0]) in [33]:
         print(idx)
         print(file)
         interpolation_singleouts_B(original_folder, file)

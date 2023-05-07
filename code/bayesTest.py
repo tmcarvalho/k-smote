@@ -124,6 +124,6 @@ plt.yticks(np.arange(0, 1.25, 0.25))
 plt.xticks(rotation=45)
 ax.set_ylabel('Proportion of probability')
 ax.set_xlabel('')
-# plt.savefig(f'../output/plots/bayes_oracle.pdf', bbox_inches='tight')
+#plt.savefig(f'../output/plots/bayes_oracle2.pdf', bbox_inches='tight')
 
 # %%

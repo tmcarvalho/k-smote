@@ -5,6 +5,8 @@ This script applies comparisons between the select QIs for all single outs.
 import gc
 import recordlinkage
 import pandas as pd
+import warnings
+warnings.filterwarnings('ignore')
 # %%
 def record_linkage(transformed: pd.DataFrame,
     original: pd.DataFrame, columns: list) -> pd.DataFrame:
@@ -82,8 +84,17 @@ def threshold_record_linkage(transformed_data, original_data, keys):
     level_1_max_score = max_score.groupby(['level_1'])['level_0'].size()
     per_100 = (len(level_1_max_score[level_1_max_score == 1]) * 100) / len(transformed_data)
 
+    # gurantee that we have orginal indexes without duplicates
+    max_score_df = pd.DataFrame()
+    if len(level_1_max_score[level_1_max_score == 1]) > 0:
+        #print(max_score.groupby(['level_1']).transform('size'))
+        #max_score['size'] = max_score.groupby(['level_1']).transform('size')
+        #max_score_df = max_score.loc[max_score['size'] == 1]
+        #print(max_score_df)
+        #del max_score_df['size']
+        max_score_df = max_score
     del potential_matches
     gc.collect()
 
-    return [per_50, per_70, per_90, per_100]
+    return [per_50, per_70, per_90, per_100], max_score_df
 

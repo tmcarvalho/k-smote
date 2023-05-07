@@ -90,7 +90,8 @@ connection.close()
 
 
 # find . -name ".DS_Store" -delete
-# python3 code/task_rl.py  --input_folder "output/oversampled/re-sampling"
-# python3 code/worker_rl.py --type "ppt" --input_folder "PPT_ARX/Cleaned" --output_folder "output/record_linkage/PPT_ARX"
-# python3 code/worker_rl.py --type "resampling_and_gans" --input_folder "output/oversampled/re-sampling" --output_folder "output/record_linkage/re-sampling"
+# python3 code/record_linkage/task_rl.py  --input_folder "output/oversampled/smote_singleouts"
+# python3 code/record_linkage/worker_rl.py --type "ppt" --input_folder "PPT_ARX/Cleaned" --output_folder "output/record_linkage/PPT_ARX"
+# python3 code/record_linkage/worker_rl.py --type "resampling_and_gans" --input_folder "output/oversampled/re-sampling" --output_folder "output/record_linkage/re-sampling"
+# python3 code/record_linkage/worker_rl.py --type "smote_singleouts" --input_folder "output/oversampled/smote_singleouts" --output_folder "output/record_linkage/smote_singleouts"
 

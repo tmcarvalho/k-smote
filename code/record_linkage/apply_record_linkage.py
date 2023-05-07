@@ -29,17 +29,18 @@ def privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_va
         # select single outs in the original data according the set of key vars
         orig_data = aux_singleouts(key_vars, orig_data)
     
-    # remove suppressed variables in PPT
-    try: key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
-    except: pass
+    if args.type == 'ppt':
+        # remove suppressed variables in PPT
+        try: key_vars = [k for k in key_vars if transf_data[k].values[0]!='*']
+        except: pass
+        
+        try:
+            # remove suppressed rows in PPT
+            if transf_data[key_vars[0]].iloc[-1] == '*':
+                transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
+        except: pass  
     
-    try:
-        # remove suppressed rows in PPT
-        if transf_data[key_vars[0]].iloc[-1] == '*':
-            transf_data = transf_data[transf_data[key_vars[0]].map(lambda x: x!='*')]
-    except: pass  
-    
-    percentages = threshold_record_linkage(
+    percentages, max_score = threshold_record_linkage(
         transf_data,
         orig_data,
         key_vars)
@@ -53,12 +54,11 @@ def privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_va
     del percentages
     gc.collect()
     
-    return dict_per
+    return dict_per, max_score
 
 
 def aux_singleouts(key_vars, dt):
     k = dt.groupby(key_vars)[key_vars[0]].transform(len)
-    dt['single_out'] = None
     dt['single_out'] = np.where(k == 1, 1, 0)
     dt = dt[dt['single_out']==1]
     return dt
@@ -71,7 +71,7 @@ def privacy_risk_resampling_and_gans(transf_file, orig_data, args, key_vars, i):
 
     print(transf_file)
 
-    percentages = threshold_record_linkage(
+    percentages, max_score = threshold_record_linkage(
         transf_data,
         orig_data,
         key_vars)
@@ -86,7 +86,7 @@ def privacy_risk_resampling_and_gans(transf_file, orig_data, args, key_vars, i):
     del percentages
     gc.collect()
 
-    return dict_per  
+    return dict_per, max_score
 
 
 # %% 
@@ -111,13 +111,11 @@ def apply_in_privatesmote_and_ppts(transf_file, args):
     idx = list(set(list(orig_data.index)) - set(index))
     orig_data = orig_data.iloc[idx, :].reset_index(drop=True)
 
-    try: 
-        risk = privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_vars)
-        total_risk = pd.DataFrame.from_dict(risk)
-        del risk
-        gc.collect()
-        total_risk.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_per.csv', index=False) 
-    except: pass
+    risk_per, max_score = privacy_risk_privatesmote_and_ppts(transf_file, orig_data, args, list_key_vars)
+    total_risk = pd.DataFrame.from_dict(risk_per)
+    gc.collect()
+    total_risk.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_per.csv', index=False) 
+    max_score.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_max.csv', index=False)
 
 
 def apply_in_resampling_and_gans(transf_file, args):
@@ -145,8 +143,8 @@ def apply_in_resampling_and_gans(transf_file, args):
     orig_data = orig_data.iloc[idx, :].reset_index(drop=True)
 
     for i in range(len(set_key_vars)):
-        risk = privacy_risk_resampling_and_gans(transf_file, orig_data, args, set_key_vars[i], i)
-        total_risk = pd.DataFrame.from_dict(risk)
+        risk_per, max_score = privacy_risk_resampling_and_gans(transf_file, orig_data, args, set_key_vars[i], i)
+        total_risk = pd.DataFrame.from_dict(risk_per)
         total_risk.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_qi{i}_per.csv', index=False) 
-        del risk
+        max_score.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_max.csv', index=False)
         gc.collect()

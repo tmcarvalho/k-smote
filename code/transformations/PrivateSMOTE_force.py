@@ -2,6 +2,7 @@
 This script will apply SMOTE technique in the single out cases.
 """
 # %%
+import psutil
 from os import sep, walk
 import re
 import ast
@@ -11,6 +12,8 @@ import random
 from sklearn.neighbors import NearestNeighbors
 import random
 from random import randrange
+import time
+
 
 def encode(data):
     for col in data.columns:
@@ -85,11 +88,11 @@ class Smote:
             neighbour = randrange(1, self.k+1)
             new_sample = []
             z=0
+            # generate new value from each column
             for a, b in zip(x[nnarray[neighbour]], x[i]):
                 if str(a).isdigit():
-                    # print(a, b)
                     if a-b==0:
-                        new_sample.append(b + np.multiply(b + random.choice([-1, 1]), random.uniform(0, 1)))
+                        new_sample.append(b + np.multiply(random.choice([-1, 1]), random.uniform(0, 1)))
                     else: new_sample.append(b + np.multiply(a-b, random.uniform(0, 1)))
                 else:
                     unique_values = self.samples.iloc[:,z].unique()
@@ -106,79 +109,83 @@ class Smote:
 
 
 # %% privateSMOTE with "force" - add 1 or -1 when difference is 0
-def PrivateSMOTE_force(original_folder, file):
+def PrivateSMOTE_force_(msg):
     """Generate several interpolated data sets considering all classes.
 
     Args:
-        original_folder (string): path of original folder
-        file (string): name of file
+        msg (str): name of the original file and respective PrivateSMOTE parameters
     """
+    print(msg)
 
-    output_interpolation_folder = '../output/oversampled/PrivateSMOTE_force'
-    data = pd.read_csv(f'{original_folder}/{file}')
-    print(len(data))
+    start= time.time()
+    output_interpolation_folder = 'output/oversampled/PrivateSMOTE_force'
+    
     # get 80% of data to synthesise
-    indexes = np.load('../indexes.npy', allow_pickle=True).item()
+    indexes = np.load('indexes.npy', allow_pickle=True).item()
     indexes = pd.DataFrame.from_dict(indexes)
 
-    f = list(map(int, re.findall(r'\d+', file.split('_')[0])))
+    f = list(map(int, re.findall(r'\d+', msg.split('_')[0])))
+    print(str(f[0]))
+    data = pd.read_csv(f'original/{str(f[0])}.csv')
+
     index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
     data_idx = list(set(list(data.index)) - set(index))
     data = data.iloc[data_idx, :]
-    print(len(data))
     
     # encode string with numbers to numeric
     data = encode(data) 
     
-    list_key_vars = pd.read_csv('../list_key_vars.csv')
+    list_key_vars = pd.read_csv('list_key_vars.csv')
     set_key_vars = ast.literal_eval(
         list_key_vars.loc[list_key_vars['ds']==f[0], 'set_key_vars'].values[0])
 
-    for idx, keys in enumerate(set_key_vars):
-        data = aux_singleouts(keys, data)
-        X_train = data.loc[data['single_out']==1, data.columns[:-2]]
-        Y_train = data.loc[data['single_out']==1, data.columns[-1]]
-        y = data.loc[data['single_out']==1, data.columns[-2]]
+    keys_nr = list(map(int, re.findall(r'\d+', msg.split('_')[2])))[0]
+    print(keys_nr)
+    keys = set_key_vars[keys_nr]
+    data = aux_singleouts(keys, data)
+    X_train = data.loc[data['single_out']==1, data.columns[:-2]]
+    Y_train = data.loc[data['single_out']==1, data.columns[-1]]
+    y = data.loc[data['single_out']==1, data.columns[-2]]
 
-        knn = [1,3,5]
-        per = [1,2,3]
-        for k in knn:
-            for p in per:
-                new = Smote(X_train, Y_train, y, p, k).over_sampling()
-                newDf = pd.DataFrame(new)
-                # restore feature name 
-                newDf.columns = data.columns[:-1]
-                # assign singleout
-                newDf[data.columns[-1]] = 1
-                # add non single outs
-                newDf = pd.concat(
-                    [newDf, data.loc[data['single_out']==0]])
-                
-                for col in newDf.columns:
-                    if data[col].dtype == np.int64:
-                        newDf[col] = round(newDf[col], 0).astype(int)
-                    elif data[col].dtype == np.float64:
-                        # get decimal places in float
-                        dec = str(data[col].values[0])[::-1].find('.')
-                        newDf[col] = round(newDf[col], dec)
-                    else:    
-                        newDf[col] = newDf[col].astype(data[col].dtype)
-                    
-                    # save oversampled data
-                    newDf.to_csv(
-                        f'{output_interpolation_folder}{sep}ds{file.split(".csv")[0]}_smote_QI{idx}_knn{k}_per{p}.csv',
-                        index=False)
+    knn = list(map(int, re.findall(r'\d+', msg.split('_')[3])))[0]
+    per = list(map(int, re.findall(r'\d+', msg.split('_')[4])))[0]
+    
+    new = Smote(X_train, Y_train, y, per, knn).over_sampling()
+    newDf = pd.DataFrame(new)
+    # restore feature name 
+    newDf.columns = data.columns[:-1]
+    # assign singleout
+    newDf[data.columns[-1]] = 1
+    # add non single outs
+    newDf = pd.concat(
+        [newDf, data.loc[data['single_out']==0]])
+    
+    for col in newDf.columns:
+        if data[col].dtype == np.int64:
+            newDf[col] = round(newDf[col], 0).astype(int)
+        elif data[col].dtype == np.float64:
+            # get decimal places in float
+            dec = str(data[col].values[0])[::-1].find('.')
+            newDf[col] = round(newDf[col], dec)
+        else:    
+            newDf[col] = newDf[col].astype(data[col].dtype)
+        
+        # save oversampled data
+        newDf.to_csv(
+            f'{output_interpolation_folder}{sep}{msg}.csv',
+            index=False)
 
-# %%
-original_folder = '../original'
-_, _, input_files = next(walk(f'{original_folder}'))
-
-not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87]
-# %%
-for idx,file in enumerate(input_files):
-    if int(file.split(".csv")[0]) not in not_considered_files:
-        print(idx)
-        print(file)
-        PrivateSMOTE_force(original_folder, file)
+    # Store execution costs  
+    process = psutil.Process()
+    computational_costs = {'execution_time': time.time()-start,
+                            'memory': process.memory_percent(),
+                            'cpu_time_user': process.cpu_times()[0],
+                            'cpu_time_system': process.cpu_times()[1],
+                            'cpu_percent': process.cpu_percent()}
+    
+    computational_costs_df = pd.DataFrame([computational_costs])
+    computational_costs_df.to_csv(
+            f'computational_costs{sep}PrivateSMOTE_force{sep}{msg}.csv',
+            index=False)
 
 # %%

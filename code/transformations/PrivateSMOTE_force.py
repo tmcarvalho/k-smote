@@ -16,15 +16,23 @@ from random import randrange
 import time
 
 
-def encode(data):
+def keep_numbers(data):
+    """mantain correct data types according to the data"""
+    data_types = data.copy()
     for col in data.columns:
-        try: 
-            data[col] = data[col].apply(lambda x: ast.literal_eval(x))
-        except: pass
-    return data
+        # transform strings to digits
+        if isinstance(data[col].iloc[0], str) and data[col].iloc[0].isdigit():
+            data[col] = data[col].astype(float)
+        # remove trailing zeros
+        if isinstance(data[col].iloc[0], (int, float)):
+            if int(data[col].iloc[0]) == float(data[col].iloc[0]):
+                data_types[col] = data[col].astype(int)
+            else: data[col] = data_types[col].astype(float)
+    return data, data_types
 
 
 def aux_singleouts(key_vars, dt):
+    """create single out variable based on k-anonymity"""
     k = dt.groupby(key_vars)[key_vars[0]].transform(len)
     dt['single_out'] = np.where(k == 1, 1, 0)
     return dt
@@ -76,6 +84,9 @@ class Smote:
         # find the categories for each categorical column in all sample
         self.unique_values = [self.samples.loc[:,col].unique() for col in self.samples.select_dtypes(np.object)]
 
+        # find the minimun value for each numerical column
+        self.min_values = [self.samples.loc[:,col].min() if isinstance(self.samples[col].iloc[0], (int, float)) else np.nan for col in self.samples.columns]
+
         # for each observation find nearest neighbours
         for i in range(len(self.samples)):
             nnarray = neighbors.kneighbors(
@@ -92,9 +103,12 @@ class Smote:
 
             # generate new numerical value for each column
             new_nums_values = [orig_val + np.multiply(random.choice([-1, 1]), random.uniform(0, 1)) \
-                               if neighbor_val==orig_val and isinstance(orig_val, (int, float)) else orig_val + np.multiply(neighbor_val-orig_val, random.uniform(0, 1)) \
-                                if isinstance(orig_val, (int, float)) else orig_val for neighbor_val, orig_val in zip(self.x[nnarray[neighbour]], self.x[i])]
-    
+                               if neighbor_val==orig_val and isinstance(orig_val, (int, float)) and orig_val!=self.min_values[j] \
+                               else orig_val + random.uniform(0, 1) if neighbor_val==orig_val and isinstance(orig_val, (int, float)) and orig_val==self.min_values[j] \
+                                else (orig_val + np.multiply(neighbor_val-orig_val, random.uniform(0, 1)) if isinstance(orig_val, (int, float)) and neighbor_val!=orig_val \
+                                      else orig_val) \
+                                    for j, (neighbor_val, orig_val) in enumerate(zip(self.x[nnarray[neighbour]], self.x[i]))]
+
             if len(self.unique_values) > 0:
                 # find the categories for each categorical column in nearest neighbors sample
                 nn_unique = [self.samples.loc[nnarray[1:self.k+1],col].unique() for col in self.samples.select_dtypes(np.object)]
@@ -107,10 +121,11 @@ class Smote:
                 new_nums_values = [next(iter_cat_calues) if isinstance(val, str) else val for val in new_nums_values]
 
             # assign interpolated values
-            self.synthetic[i, 0:len(new_nums_values)] = np.array(new_nums_values)
+            self.synthetic[self.newindex, 0:len(new_nums_values)] = np.array(new_nums_values)
 
             # assign intact target variable
-            self.synthetic[i, len(new_nums_values)] = self.y[i]
+            self.synthetic[self.newindex, len(new_nums_values)] = self.y[i]
+            self.newindex+=1
 
             N-=1
 
@@ -137,9 +152,9 @@ def PrivateSMOTE_force_(msg):
     index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
     data_idx = list(set(list(data.index)) - set(index))
     data = data.iloc[data_idx, :]
-    
-    # encode string with numbers to numeric
-    data = encode(data) 
+
+    # encode string with numbers to numeric and remove trailing zeros
+    data, data_types = keep_numbers(data)
     
     list_key_vars = pd.read_csv('list_key_vars.csv')
     set_key_vars = ast.literal_eval(
@@ -156,22 +171,23 @@ def PrivateSMOTE_force_(msg):
 
     knn = list(map(int, re.findall(r'\d+', msg.split('_')[3])))[0]
     per = list(map(int, re.findall(r'\d+', msg.split('_')[4])))[0]
-    
+
     new = Smote(X_train, Y_train, y, per, knn).over_sampling()
-    
+
     newDf = pd.DataFrame(new, columns = data.columns[:-1])
     newDf = newDf.astype(dtype = data[data.columns[:-1]].dtypes)
+
     # assign singleout
     newDf['single_out'] = 1
 
     # add non single outs
     newDf = pd.concat(
         [newDf, data.loc[data['single_out']==0]])
-    
-    for col in newDf.columns:
-        if data[col].dtype == np.int64:
+
+    for col in newDf.columns[:-1]:
+        if data_types[col].dtype == np.int64:
             newDf[col] = round(newDf[col], 0).astype(int)
-        if data[col].dtype == np.float64:
+        if data_types[col].dtype == np.float64:
             # get decimal places in float
             dec = str(data[col].values[0])[::-1].find('.')
             newDf[col] = round(newDf[col], dec)

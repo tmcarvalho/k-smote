@@ -3,13 +3,14 @@ This script will apply SMOTE technique in the single out cases.
 """
 # %%
 import psutil
-from os import sep, walk
+from os import sep
 import re
 import ast
 import pandas as pd
 import numpy as np
 import random
 from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import StandardScaler
 import random
 from random import randrange
 import time
@@ -36,20 +37,22 @@ class Smote:
         """Initiate arguments
 
         Args:
-            samples (array): training samples
-            y (1D array): target sample
+            samples (pd.Dataframe): training samples
+            singleout (pd.Series): singleout variable
+            y (pd.Series): target sample
             N (int): number of interpolations per observation
             k (int): number of nearest neighbours
-            ep (float): privacy budget
         """
+        self.samples = samples.reset_index(drop=True)
         self.n_samples = samples.shape[0]
         self.n_attrs = samples.shape[1]
-        self.singleout = singleout
+        self.singleout = singleout.reset_index(drop=True)
         self.y = y
         self.N = N
         self.k = k
-        self.samples = samples
-        self.synthetic = []
+        self.newindex=0
+        # transform all data in ndarray with the same dtypes
+        self.x = np.array(self.samples, dtype=self.samples.dtypes)
 
     def over_sampling(self):
         """find the nearest neighbors and populate with new data
@@ -59,54 +62,57 @@ class Smote:
         """
         N = int(self.N)
 
-        numeric_vars = self.samples.select_dtypes(include=np.number).columns
+        # OHE + standardization for nearest neighbor
+        encoded_data = pd.get_dummies(self.samples, drop_first=True).astype(int)
+        standardized_data = StandardScaler().fit_transform(encoded_data)
+        neighbors = NearestNeighbors(n_neighbors=self.k+1).fit(standardized_data)
 
-        # transform the numerical attributes in ndarray for knn
-        x1 = [self.samples[numeric_vars].iloc[i] for i, _ in enumerate(self.singleout.index)]
-        x1 = np.array(x1)
+        # transform the tager in 1D-array
         self.y = np.array(self.y)
+
+        # inicialize the synthetic samples
+        self.synthetic = np.empty(shape=(self.n_samples * N, self.n_attrs+1), dtype=self.samples.dtypes)
         
-        # transform all data in ndarray
-        x = np.ones((self.n_samples, self.n_attrs))
-        x = [self.samples.iloc[i] for i, _ in enumerate(self.singleout.index)]
-        x = np.array(x)
-        neighbors = NearestNeighbors(n_neighbors=self.k+1).fit(x1)
+        # find the categories for each categorical column in all sample
+        self.unique_values = [self.samples.loc[:,col].unique() for col in self.samples.select_dtypes(np.object)]
 
         # for each observation find nearest neighbours
-        for i, _ in enumerate(x1):
+        for i in range(len(self.samples)):
             nnarray = neighbors.kneighbors(
-                x1[i].reshape(1, -1), return_distance=False)[0]
-            self._populate(N, i, nnarray, x)
+                standardized_data[i].reshape(1, -1), return_distance=False)[0]
+            self._populate(N, i, nnarray)
 
         return self.synthetic
 
-    def _populate(self, N, i, nnarray, x):
-
+    def _populate(self, N, i, nnarray):
         # populate N times
-        for j in range(N):
+        while N!=0:
             # find index of nearest neighbour excluding the observation in comparison
             neighbour = randrange(1, self.k+1)
-            new_sample = []
-            z=0
-            # generate new value from each column
-            for a, b in zip(x[nnarray[neighbour]], x[i]):
-                if str(a).isdigit():
-                    if a-b==0:
-                        new_sample.append(b + np.multiply(random.choice([-1, 1]), random.uniform(0, 1)))
-                    else: new_sample.append(b + np.multiply(a-b, random.uniform(0, 1)))
-                else:
-                    unique_values = self.samples.iloc[:,z].unique()
-                    nn_unique = self.samples.iloc[nnarray[1:self.k+1],z].unique()
-                    if len(nn_unique) == 1 and nn_unique[0] == b:
-                        new_sample.append(random.choice(unique_values))
-                    else: new_sample.append(random.choice(nn_unique))
-                z+=1
+
+            # generate new numerical value for each column
+            new_nums_values = [orig_val + np.multiply(random.choice([-1, 1]), random.uniform(0, 1)) \
+                               if neighbor_val==orig_val and isinstance(orig_val, (int, float)) else orig_val + np.multiply(neighbor_val-orig_val, random.uniform(0, 1)) \
+                                if isinstance(orig_val, (int, float)) else orig_val for neighbor_val, orig_val in zip(self.x[nnarray[neighbour]], self.x[i])]
+    
+            if len(self.unique_values) > 0:
+                # find the categories for each categorical column in nearest neighbors sample
+                nn_unique = [self.samples.loc[nnarray[1:self.k+1],col].unique() for col in self.samples.select_dtypes(np.object)]
+
+                # randomly select a category
+                new_cats_values = [random.choice(self.unique_values[u]) if len(nn_unique[u]) == 1 else random.choice(nn_unique[u]) for u in range(len(self.unique_values))]
+        
+                # replace the old categories
+                iter_cat_calues = iter(new_cats_values)
+                new_nums_values = [next(iter_cat_calues) if isinstance(val, str) else val for val in new_nums_values]
+
+            # assign interpolated values
+            self.synthetic[i, 0:len(new_nums_values)] = np.array(new_nums_values)
 
             # assign intact target variable
-            new_sample.append(self.y[i])
-            # assign interpolated values
-            self.synthetic.append(new_sample)
+            self.synthetic[i, len(new_nums_values)] = self.y[i]
 
+            N-=1
 
 # %% privateSMOTE with "force" - add 1 or -1 when difference is 0
 def PrivateSMOTE_force_(msg):
@@ -143,19 +149,21 @@ def PrivateSMOTE_force_(msg):
     print(keys_nr)
     keys = set_key_vars[keys_nr]
     data = aux_singleouts(keys, data)
-    X_train = data.loc[data['single_out']==1, data.columns[:-2]]
-    Y_train = data.loc[data['single_out']==1, data.columns[-1]]
-    y = data.loc[data['single_out']==1, data.columns[-2]]
+
+    X_train = data.loc[data['single_out']==1, data.columns[:-2]] # training singleout sample
+    Y_train = data.loc[data['single_out']==1, data.columns[-1]] # singleout variable values
+    y = data.loc[data['single_out']==1, data.columns[-2]] # target variable values
 
     knn = list(map(int, re.findall(r'\d+', msg.split('_')[3])))[0]
     per = list(map(int, re.findall(r'\d+', msg.split('_')[4])))[0]
     
     new = Smote(X_train, Y_train, y, per, knn).over_sampling()
-    newDf = pd.DataFrame(new)
-    # restore feature name 
-    newDf.columns = data.columns[:-1]
+    
+    newDf = pd.DataFrame(new, columns = data.columns[:-1])
+    newDf = newDf.astype(dtype = data[data.columns[:-1]].dtypes)
     # assign singleout
-    newDf[data.columns[-1]] = 1
+    newDf['single_out'] = 1
+
     # add non single outs
     newDf = pd.concat(
         [newDf, data.loc[data['single_out']==0]])
@@ -163,17 +171,15 @@ def PrivateSMOTE_force_(msg):
     for col in newDf.columns:
         if data[col].dtype == np.int64:
             newDf[col] = round(newDf[col], 0).astype(int)
-        elif data[col].dtype == np.float64:
+        if data[col].dtype == np.float64:
             # get decimal places in float
             dec = str(data[col].values[0])[::-1].find('.')
             newDf[col] = round(newDf[col], dec)
-        else:    
-            newDf[col] = newDf[col].astype(data[col].dtype)
-        
-        # save oversampled data
-        newDf.to_csv(
-            f'{output_interpolation_folder}{sep}{msg}.csv',
-            index=False)
+
+    # save oversampled data
+    newDf.to_csv(
+        f'{output_interpolation_folder}{sep}{msg}.csv',
+        index=False)
 
     # Store execution costs  
     process = psutil.Process()

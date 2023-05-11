@@ -190,17 +190,17 @@ def PrivateSMOTE_force_(msg):
         f'{output_interpolation_folder}{sep}{msg}.csv',
         index=False)
 
-        # Store execution costs  
-        process = psutil.Process()
-        computational_costs = {'execution_time': time.time()-start,
-                                'memory': process.memory_percent(),
-                                'cpu_time_user': process.cpu_times()[0],
-                                'cpu_time_system': process.cpu_times()[1],
-                                'cpu_percent': process.cpu_percent()}
-        
-        computational_costs_df = pd.DataFrame([computational_costs])
-        computational_costs_df.to_csv(
-                f'computational_costs{sep}PrivateSMOTE_force{sep}{msg}.csv',
-                index=False)
+    # Store execution costs  
+    process = psutil.Process()
+    computational_costs = {'execution_time': time.time()-start,
+                            'memory': process.memory_percent(),
+                            'cpu_time_user': process.cpu_times()[0],
+                            'cpu_time_system': process.cpu_times()[1],
+                            'cpu_percent': process.cpu_percent()}
+    
+    computational_costs_df = pd.DataFrame([computational_costs])
+    computational_costs_df.to_csv(
+            f'computational_costs{sep}PrivateSMOTE_force{sep}{msg}.csv',
+            index=False)
 
 # %%

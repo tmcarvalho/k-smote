@@ -82,10 +82,11 @@ class Smote:
         self.synthetic = np.empty(shape=(self.n_samples * N, self.n_attrs+1), dtype=self.samples.dtypes)
         
         # find the categories for each categorical column in all sample
-        self.unique_values = [self.samples.loc[:,col].unique() for col in self.samples.select_dtypes(np.object)]
+        self.unique_values = [self.samples.loc[:,col].unique() for col in self.samples.select_dtypes(object)]
 
         # find the minimun value for each numerical column
-        self.min_values = [self.samples.loc[:,col].min() if isinstance(self.samples[col].iloc[0], (int, float)) else np.nan for col in self.samples.columns]
+        self.min_values = [self.samples[col].min() if not isinstance(self.samples[col].iloc[0], str) else np.nan for col in self.samples.columns]
+        print( self.min_values)
 
         # for each observation find nearest neighbours
         for i in range(len(self.samples)):
@@ -102,16 +103,16 @@ class Smote:
             neighbour = randrange(1, self.k+1)
 
             # generate new numerical value for each column
-            new_nums_values = [orig_val + np.multiply(random.choice([-1, 1]), random.uniform(0, 1)) \
-                               if neighbor_val==orig_val and isinstance(orig_val, (int, float)) and orig_val!=self.min_values[j] \
-                               else orig_val + random.uniform(0, 1) if neighbor_val==orig_val and isinstance(orig_val, (int, float)) and orig_val==self.min_values[j] \
-                                else (orig_val + np.multiply(neighbor_val-orig_val, random.uniform(0, 1)) if isinstance(orig_val, (int, float)) and neighbor_val!=orig_val \
+            new_nums_values = [(orig_val + np.multiply(random.choice([-1, 1]), random.uniform(0, 1))) \
+                               if (neighbor_val==orig_val and isinstance(orig_val, (int, float)) and orig_val!=self.min_values[j]) \
+                               else (orig_val + random.uniform(0, 1)) if (neighbor_val==orig_val and isinstance(orig_val, (int, float)) and orig_val==self.min_values[j]) 
+                                else (orig_val + np.multiply(neighbor_val-orig_val, random.uniform(0, 1)) if (isinstance(orig_val, (int, float)) and neighbor_val!=orig_val) \
                                       else orig_val) \
                                     for j, (neighbor_val, orig_val) in enumerate(zip(self.x[nnarray[neighbour]], self.x[i]))]
 
             if len(self.unique_values) > 0:
                 # find the categories for each categorical column in nearest neighbors sample
-                nn_unique = [self.samples.loc[nnarray[1:self.k+1],col].unique() for col in self.samples.select_dtypes(np.object)]
+                nn_unique = [self.samples.loc[nnarray[1:self.k+1],col].unique() for col in self.samples.select_dtypes(object)]
 
                 # randomly select a category
                 new_cats_values = [random.choice(self.unique_values[u]) if len(nn_unique[u]) == 1 else random.choice(nn_unique[u]) for u in range(len(self.unique_values))]
@@ -119,9 +120,9 @@ class Smote:
                 # replace the old categories
                 iter_cat_calues = iter(new_cats_values)
                 new_nums_values = [next(iter_cat_calues) if isinstance(val, str) else val for val in new_nums_values]
-
+            
             # assign interpolated values
-            self.synthetic[self.newindex, 0:len(new_nums_values)] = np.array(new_nums_values)
+            self.synthetic[self.newindex, 0:len(new_nums_values)] = new_nums_values
 
             # assign intact target variable
             self.synthetic[self.newindex, len(new_nums_values)] = self.y[i]
@@ -172,42 +173,46 @@ def PrivateSMOTE_force_(msg):
     knn = list(map(int, re.findall(r'\d+', msg.split('_')[3])))[0]
     per = list(map(int, re.findall(r'\d+', msg.split('_')[4])))[0]
 
-    new = Smote(X_train, Y_train, y, per, knn).over_sampling()
+    if X_train.shape[0] > 0 and X_train.shape[0] >= knn:
+        new = Smote(X_train, Y_train, y, per, knn).over_sampling()
+        
+        newDf = pd.DataFrame(new, columns = data.columns[:-1])
+        newDf = newDf.astype(dtype = data[data.columns[:-1]].dtypes)
 
-    newDf = pd.DataFrame(new, columns = data.columns[:-1])
-    newDf = newDf.astype(dtype = data[data.columns[:-1]].dtypes)
+        # assign singleout
+        newDf['single_out'] = 1
 
-    # assign singleout
-    newDf['single_out'] = 1
+        # add non single outs
+        if newDf.shape[0] != data.shape[0]:
+            newDf = pd.concat([newDf, data.loc[data['single_out']==0]]) 
 
-    # add non single outs
-    newDf = pd.concat(
-        [newDf, data.loc[data['single_out']==0]])
+        for col in newDf.columns[:-1]:
+            if data_types[col].dtype == np.int64:
+                newDf[col] = round(newDf[col], 0).astype(int)
+            if data_types[col].dtype == np.float64:
+                # get decimal places in float
+                dec = str(data[col].values[0])[::-1].find('.')
+                newDf[col] = round(newDf[col], dec)
+        
+        minvalues = [newDf[col].min() if not isinstance(newDf[col].iloc[0], str) else np.nan for col in newDf.columns]
+        print(minvalues)
 
-    for col in newDf.columns[:-1]:
-        if data_types[col].dtype == np.int64:
-            newDf[col] = round(newDf[col], 0).astype(int)
-        if data_types[col].dtype == np.float64:
-            # get decimal places in float
-            dec = str(data[col].values[0])[::-1].find('.')
-            newDf[col] = round(newDf[col], dec)
-
-    # save oversampled data
-    newDf.to_csv(
-        f'{output_interpolation_folder}{sep}{msg}.csv',
-        index=False)
-
-    # Store execution costs  
-    process = psutil.Process()
-    computational_costs = {'execution_time': time.time()-start,
-                            'memory': process.memory_percent(),
-                            'cpu_time_user': process.cpu_times()[0],
-                            'cpu_time_system': process.cpu_times()[1],
-                            'cpu_percent': process.cpu_percent()}
-    
-    computational_costs_df = pd.DataFrame([computational_costs])
-    computational_costs_df.to_csv(
-            f'computational_costs{sep}PrivateSMOTE_force{sep}{msg}.csv',
+        # save oversampled data
+        newDf.to_csv(
+            f'{output_interpolation_folder}{sep}{msg}.csv',
             index=False)
+
+        # Store execution costs  
+        process = psutil.Process()
+        computational_costs = {'execution_time': time.time()-start,
+                                'memory': process.memory_percent(),
+                                'cpu_time_user': process.cpu_times()[0],
+                                'cpu_time_system': process.cpu_times()[1],
+                                'cpu_percent': process.cpu_percent()}
+        
+        computational_costs_df = pd.DataFrame([computational_costs])
+        computational_costs_df.to_csv(
+                f'computational_costs{sep}PrivateSMOTE_force{sep}{msg}.csv',
+                index=False)
 
 # %%

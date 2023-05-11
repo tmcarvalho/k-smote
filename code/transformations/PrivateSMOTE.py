@@ -2,315 +2,214 @@
 This script will apply SMOTE technique in the single out cases.
 """
 # %%
-from os import sep, walk
+import psutil
+from os import sep
 import re
 import ast
 import pandas as pd
 import numpy as np
-from collections import defaultdict
-from sklearn.preprocessing import LabelEncoder
 import random
 from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import StandardScaler
 import random
 from random import randrange
+import time
 
-def encode(data):
+
+def keep_numbers(data):
+    """mantain correct data types according to the data"""
+    data_types = data.copy()
     for col in data.columns:
-        try: 
-            data[col] = data[col].apply(lambda x: ast.literal_eval(x))
-        except: pass
-    return data
+        # transform strings to digits
+        if isinstance(data[col].iloc[0], str) and data[col].iloc[0].isdigit():
+            data[col] = data[col].astype(float)
+        # remove trailing zeros
+        if isinstance(data[col].iloc[0], (int, float)):
+            if int(data[col].iloc[0]) == float(data[col].iloc[0]):
+                data_types[col] = data[col].astype(int)
+            else: data[col] = data_types[col].astype(float)
+    return data, data_types
 
 
 def aux_singleouts(key_vars, dt):
+    """create single out variable based on k-anonymity"""
     k = dt.groupby(key_vars)[key_vars[0]].transform(len)
-    dt['single_out'] = None
     dt['single_out'] = np.where(k == 1, 1, 0)
     return dt
 
 
 class Smote:
-    def __init__(self,samples,y,N,k):
+    """Apply Smote
+    """
+    def __init__(self, samples, singleout, y, N, k):
         """Initiate arguments
 
         Args:
-            samples (array): training samples
-            y (1D array): target sample
+            samples (pd.Dataframe): training samples
+            singleout (pd.Series): singleout variable
+            y (pd.Series): target sample
             N (int): number of interpolations per observation
             k (int): number of nearest neighbours
         """
+        self.samples = samples.reset_index(drop=True)
         self.n_samples = samples.shape[0]
-        self.n_attrs=samples.shape[1]
-        self.y=y
-        self.N=N
-        self.k=k
-        self.samples=samples
+        self.n_attrs = samples.shape[1]
+        self.singleout = singleout.reset_index(drop=True)
+        self.y = y
+        self.N = N
+        self.k = k
         self.newindex=0
+        # transform all data in ndarray with the same dtypes
+        self.x = np.array(self.samples, dtype=self.samples.dtypes)
 
     def over_sampling(self):
-        N=int(self.N)
-        self.synthetic = np.zeros((self.n_samples * N, self.n_attrs+1))
-        neighbors=NearestNeighbors(n_neighbors=self.k+1).fit(self.samples)
+        """find the nearest neighbors and populate with new data
+
+        Returns:
+            pd.DataFrame: synthetic data
+        """
+        N = int(self.N)
+
+        # OHE + standardization for nearest neighbor
+        encoded_data = pd.get_dummies(self.samples, drop_first=True).astype(int)
+        standardized_data = StandardScaler().fit_transform(encoded_data)
+        neighbors = NearestNeighbors(n_neighbors=self.k+1).fit(standardized_data)
+
+        # transform the tager in 1D-array
+        self.y = np.array(self.y)
+
+        # inicialize the synthetic samples
+        self.synthetic = np.empty(shape=(self.n_samples * N, self.n_attrs+1), dtype=self.samples.dtypes)
+        
+        # find the categories for each categorical column in all sample
+        self.unique_values = [self.samples.loc[:,col].unique() for col in self.samples.select_dtypes(object)]
+
+        # find the minimun value for each numerical column
+        self.min_values = [self.samples[col].min() if not isinstance(self.samples[col].iloc[0], str) else np.nan for col in self.samples.columns]
+        print( self.min_values)
 
         # for each observation find nearest neighbours
         for i in range(len(self.samples)):
-            nnarray=neighbors.kneighbors(self.samples[i].reshape(1,-1),return_distance=False)[0]
-            self._populate(N,i,nnarray)
+            nnarray = neighbors.kneighbors(
+                standardized_data[i].reshape(1, -1), return_distance=False)[0]
+            self._populate(N, i, nnarray)
 
         return self.synthetic
 
-    def _populate(self,N,i,nnarray):
+    def _populate(self, N, i, nnarray):
         # populate N times
-        for j in range(N):
+        while N!=0:
             # find index of nearest neighbour excluding the observation in comparison
             neighbour = randrange(1, self.k+1)
 
-            difference = self.samples[nnarray[neighbour]] - self.samples[i]
-            # multiply with a weight
-            weight = random.uniform(0, 1)
-            additive = np.multiply(difference,weight)
+            # generate new numerical value for each column
+            new_nums_values = [(orig_val + np.multiply(neighbor_val-orig_val, random.uniform(0, 1)) if (isinstance(orig_val, (int, float))) \
+                                      else orig_val) \
+                                    for neighbor_val, orig_val in zip(self.x[nnarray[neighbour]], self.x[i])]
 
+            if len(self.unique_values) > 0:
+                # find the categories for each categorical column in nearest neighbors sample
+                nn_unique = [self.samples.loc[nnarray[1:self.k+1],col].unique() for col in self.samples.select_dtypes(object)]
+
+                # randomly select a category
+                new_cats_values = [random.choice(self.unique_values[u]) if len(nn_unique[u]) == 1 else random.choice(nn_unique[u]) for u in range(len(self.unique_values))]
+        
+                # replace the old categories
+                iter_cat_calues = iter(new_cats_values)
+                new_nums_values = [next(iter_cat_calues) if isinstance(val, str) else val for val in new_nums_values]
+            
             # assign interpolated values
-            self.synthetic[self.newindex, 0:len(self.synthetic[self.newindex])-1] = self.samples[i]+additive
+            self.synthetic[self.newindex, 0:len(new_nums_values)] = new_nums_values
+
             # assign intact target variable
-            self.synthetic[self.newindex, len(self.synthetic[self.newindex])-1] = self.y[i]
+            self.synthetic[self.newindex, len(new_nums_values)] = self.y[i]
             self.newindex+=1
 
-# %%
-def interpolation_singleouts_A(original_folder, file):
+            N-=1
+
+# %% privateSMOTE with "force" - add 1 or -1 when difference is 0
+def PrivateSMOTE_force_(msg):
     """Generate several interpolated data sets considering all classes.
 
     Args:
-        original_folder (string): path of original folder
-        file (string): name of file
+        msg (str): name of the original file and respective PrivateSMOTE parameters
     """
+    print(msg)
 
-    output_interpolation_folder = '../output/oversampled/smote_singleouts/'
-    data = pd.read_csv(f'{original_folder}/{file}')
-
+    start= time.time()
+    output_interpolation_folder = 'output/oversampled/PrivateSMOTE_force'
+    
     # get 80% of data to synthesise
-    indexes = np.load('../indexes.npy', allow_pickle=True).item()
+    indexes = np.load('indexes.npy', allow_pickle=True).item()
     indexes = pd.DataFrame.from_dict(indexes)
 
-    f = list(map(int, re.findall(r'\d+', file.split('_')[0])))
+    f = list(map(int, re.findall(r'\d+', msg.split('_')[0])))
+    print(str(f[0]))
+    data = pd.read_csv(f'original/{str(f[0])}.csv')
+
     index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
     data_idx = list(set(list(data.index)) - set(index))
     data = data.iloc[data_idx, :]
 
-    # encode string with numbers to numeric
-    data = encode(data) 
-    # apply LabelEncoder to categorical attributes
-    label_encoder_dict = defaultdict(LabelEncoder)
-    data_encoded = data.apply(lambda x: label_encoder_dict[x.name].fit_transform(x) if x.dtype=='object' else x)
-    # remove trailing zeros in integers
-    data_encoded = data_encoded.apply(lambda x: x.astype(int) if all(x%1==0) else x)
-
-    map_dict = dict()
-    for k in data.columns:
-        if data[k].dtype=='object':
-            keys = data[k]
-            values = data_encoded[k]
-            sub_dict = dict(zip(keys, values))
-            map_dict[k] = sub_dict
-
-    list_key_vars = pd.read_csv('../list_key_vars.csv')
+    # encode string with numbers to numeric and remove trailing zeros
+    data, data_types = keep_numbers(data)
+    
+    list_key_vars = pd.read_csv('list_key_vars.csv')
     set_key_vars = ast.literal_eval(
         list_key_vars.loc[list_key_vars['ds']==f[0], 'set_key_vars'].values[0])
 
-    for idx, keys in enumerate(set_key_vars):
-        dt = aux_singleouts(keys, data_encoded)
-        zero = dt.loc[dt[dt.columns[-2]]==0,:]
-        one = dt.loc[dt[dt.columns[-2]]==1,:]
+    keys_nr = list(map(int, re.findall(r'\d+', msg.split('_')[2])))[0]
+    print(keys_nr)
+    keys = set_key_vars[keys_nr]
+    data = aux_singleouts(keys, data)
 
-        X_train_zero = zero.loc[zero['single_out']==1, zero.columns[:-2]]
-        Y_train_zero = zero.loc[zero['single_out']==1, zero.columns[-1]]
-        y_zero = zero.loc[zero['single_out']==1, zero.columns[-2]]
+    X_train = data.loc[data['single_out']==1, data.columns[:-2]] # training singleout sample
+    Y_train = data.loc[data['single_out']==1, data.columns[-1]] # singleout variable values
+    y = data.loc[data['single_out']==1, data.columns[-2]] # target variable values
 
-        X_train_one = one.loc[one['single_out']==1, one.columns[:-2]]
-        Y_train_one = one.loc[one['single_out']==1, one.columns[-1]]
-        y_one = one.loc[one['single_out']==1, one.columns[-2]]
+    knn = list(map(int, re.findall(r'\d+', msg.split('_')[3])))[0]
+    per = list(map(int, re.findall(r'\d+', msg.split('_')[4])))[0]
 
-        # getting the number of singleouts in training set
-        singleouts_zero = Y_train_zero.shape[0]
-        singleouts_one = Y_train_one.shape[0]
+    if X_train.shape[0] > 0 and X_train.shape[0] >= knn:
+        new = Smote(X_train, Y_train, y, per, knn).over_sampling()
+        
+        newDf = pd.DataFrame(new, columns = data.columns[:-1])
+        newDf = newDf.astype(dtype = data[data.columns[:-1]].dtypes)
 
-        # storing the singleouts instances separately
-        x1_zero = np.ones((singleouts_zero, X_train_zero.shape[1]))
-        x1_zero=[X_train_zero.iloc[i] for i, v in enumerate(Y_train_zero) if v==1.0]
-        x1_zero=np.array(x1_zero)
-        x1_one = np.ones((singleouts_one, X_train_one.shape[1]))
-        x1_one=[X_train_one.iloc[i] for i, v in enumerate(Y_train_one) if v==1.0]
-        x1_one=np.array(x1_one)
+        # assign singleout
+        newDf['single_out'] = 1
 
-        y_zero=np.array(y_zero)
-        y_one=np.array(y_one)
+        # add non single outs
+        if newDf.shape[0] != data.shape[0]:
+            newDf = pd.concat([newDf, data.loc[data['single_out']==0]]) 
 
-        knn = [1,3,5]
-        per = [1,2,3]
-        for k in knn:
-            for p in per:
-                if k<len(x1_zero):
-                    new_zero = Smote(x1_zero, y_zero, p, k).over_sampling()
-                    newDf_zero = pd.DataFrame(new_zero)
-                    # restore feature name 
-                    newDf_zero.columns = dt.columns[:-1]
-                    # assign singleout
-                    newDf_zero[dt.columns[-1]] = 1
+        for col in newDf.columns[:-1]:
+            if data_types[col].dtype == np.int64:
+                newDf[col] = round(newDf[col], 0).astype(int)
+            if data_types[col].dtype == np.float64:
+                # get decimal places in float
+                dec = str(data[col].values[0])[::-1].find('.')
+                newDf[col] = round(newDf[col], dec)
+        
+        minvalues = [newDf[col].min() if not isinstance(newDf[col].iloc[0], str) else np.nan for col in newDf.columns]
+        print(minvalues)
 
-                if k<len(x1_one):
-                    new_one = Smote(x1_one, y_one, p, k).over_sampling()
-                    newDf_one = pd.DataFrame(new_one)
-                    newDf_one.columns = dt.columns[:-1]
-                    newDf_one[dt.columns[-1]] = 1
-                
-                # concat two classes
-                if len(x1_zero)==0:
-                    print("class ZERO: zero singleouts - ", idx)
-                    new = newDf_one
-                elif len(x1_one)==0:
-                    print("class ONE: zero singleouts - ", idx)
-                    new = newDf_zero
-                else:
-                    new = pd.concat([newDf_zero, newDf_one])
-                
-                # add non single outs
-                newDf = pd.concat([new, dt.loc[dt['single_out']==0]])
+        # save oversampled data
+        newDf.to_csv(
+            f'{output_interpolation_folder}{sep}{msg}.csv',
+            index=False)
 
-                for col in newDf.columns:
-                    if dt[col].dtype == np.int64:
-                        newDf[col] = round(newDf[col], 0).astype(int)
-                    elif dt[col].dtype == np.float64:
-                        # get decimal places in float
-                        dec = str(dt[col].values[0])[::-1].find('.')
-                        newDf[col] = round(newDf[col], dec)
-                    else:    
-                        newDf[col] = newDf[col].astype(dt[col].dtype)
-                
-                # decoded
-                for key in map_dict.keys():
-                    d = dict(map(reversed, map_dict[key].items()))
-                    # get the closest key in dict as the synthetisation may not create exact values
-                    newDf[key] = newDf[key].apply(lambda x: d.get(x) or d[min(d.keys(), key = lambda key: abs(key-x))])
-                    #newDf[key] = newDf[key].map(d)
-
-                # save oversampled data
-                newDf.to_csv(
-                    f'{output_interpolation_folder}{sep}ds{file.split(".csv")[0]}_smote_QI{idx}_knn{k}_per{p}.csv',
-                    index=False)
-
-# %% privateSMOTE regardless of the class
-def interpolation_singleouts_B(original_folder, file):
-    """Generate several interpolated data sets considering all classes.
-
-    Args:
-        original_folder (string): path of original folder
-        file (string): name of file
-    """
-
-    output_interpolation_folder = '../output/'
-    data = pd.read_csv(f'{original_folder}/{file}')
-
-    # get 80% of data to synthesise
-    indexes = np.load('../indexes.npy', allow_pickle=True).item()
-    indexes = pd.DataFrame.from_dict(indexes)
-
-    f = list(map(int, re.findall(r'\d+', file.split('_')[0])))
-    index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
-    data_idx = list(set(list(data.index)) - set(index))
-    data = data.iloc[data_idx, :].reset_index()
-    indexes = data.sample(frac=.015).index.to_list()
-    data = data.iloc[indexes,:]
-    data.to_csv(f'{output_interpolation_folder}{sep}ds{file}',
-                        index=False)
-    # encode string with numbers to numeric
-    data = encode(data) 
-    # apply LabelEncoder to categorical attributes
-    label_encoder_dict = defaultdict(LabelEncoder)
-    data_encoded = data.apply(lambda x: label_encoder_dict[x.name].fit_transform(x) if x.dtype=='object' else x)
-    # remove trailing zeros in integers
-    data_encoded = data_encoded.apply(lambda x: x.astype(int) if all(x%1==0) else x)
-
-    map_dict = dict()
-    for k in data.columns:
-        if data[k].dtype=='object':
-            keys = data[k]
-            values = data_encoded[k]
-            sub_dict = dict(zip(keys, values))
-            map_dict[k] = sub_dict
-
-    list_key_vars = pd.read_csv('../list_key_vars.csv')
-    set_key_vars = ast.literal_eval(
-        list_key_vars.loc[list_key_vars['ds']==f[0], 'set_key_vars'].values[0])
-
-    for idx, keys in enumerate(set_key_vars):
-        dt = aux_singleouts(keys, data_encoded)
-        X_train = dt.loc[dt['single_out']==1, dt.columns[:-2]]
-        Y_train = dt.loc[dt['single_out']==1, dt.columns[-1]]
-        y = dt.loc[dt['single_out']==1, dt.columns[-2]]
-
-        # getting the number of singleouts in training set
-        singleouts = Y_train.shape[0]
-
-        # storing the singleouts instances separately
-        x1 = np.ones((singleouts, X_train.shape[1]))
-        x1=[X_train.iloc[i] for i, v in enumerate(Y_train) if v==1.0]
-        x1=np.array(x1)
-
-        y=np.array(y)
-
-        knn = [1,3,5]
-        per = [1,2,3]
-        for k in knn:
-            for p in per:
-                try:
-                    new = Smote(x1, y, p, k).over_sampling()
-                    newDf = pd.DataFrame(new)
-                    # restore feature name 
-                    newDf.columns = dt.columns[:-1]
-                    # assign singleout
-                    newDf[dt.columns[-1]] = 1
-                    # add non single outs
-                    newDf = pd.concat([newDf, dt.loc[dt['single_out']==0]])
-                    for col in newDf.columns:
-                        if dt[col].dtype == np.int64:
-                            newDf[col] = round(newDf[col], 0).astype(int)
-                        elif dt[col].dtype == np.float64:
-                            # get decimal places in float
-                            dec = str(dt[col].values[0])[::-1].find('.')
-                            newDf[col] = round(newDf[col], dec)
-                        else:    
-                            newDf[col] = newDf[col].astype(dt[col].dtype)
-                    
-                    # decoded
-                    for key in map_dict.keys():
-                        d = dict(map(reversed, map_dict[key].items()))
-                        newDf[key] = newDf[key].apply(lambda x: d.get(x) or d[min(d.keys(), key = lambda key: abs(key-x))])
-                        # newDf[key] = newDf[key].map(d)
-
-                    # save oversampled data
-                    newDf.to_csv(
-                        f'{output_interpolation_folder}{sep}ds{file.split(".csv")[0]}_smote_QI{idx}_knn{k}_per{p}.csv',
-                        index=False)
-
-                except: # no singleouts
-                    pass
-# %%
-original_folder = '../original'
-_, _, input_files = next(walk(f'{original_folder}'))
-
-not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87]
-# %%
-for idx,file in enumerate(input_files):
-    if int(file.split(".csv")[0]) not in not_considered_files:
-        print(idx)
-        print(file)
-        interpolation_singleouts_A(original_folder, file)
-
-# %%
-for idx,file in enumerate(input_files):
-    if int(file.split(".csv")[0]) in [33]:
-        print(idx)
-        print(file)
-        interpolation_singleouts_B(original_folder, file)
+        # Store execution costs  
+        process = psutil.Process()
+        computational_costs = {'execution_time': time.time()-start,
+                                'memory': process.memory_percent(),
+                                'cpu_time_user': process.cpu_times()[0],
+                                'cpu_time_system': process.cpu_times()[1],
+                                'cpu_percent': process.cpu_percent()}
+        
+        computational_costs_df = pd.DataFrame([computational_costs])
+        computational_costs_df.to_csv(
+                f'computational_costs{sep}PrivateSMOTE_force{sep}{msg}.csv',
+                index=False)
 
 # %%

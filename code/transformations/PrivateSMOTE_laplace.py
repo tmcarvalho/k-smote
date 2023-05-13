@@ -183,8 +183,8 @@ def PrivateSMOTE_laplace_(msg):
 
     knn = list(map(int, re.findall(r'\d+', msg.split('_')[3])))[0]
     per = list(map(int, re.findall(r'\d+', msg.split('_')[4])))[0]
-    ep = list(map(int, re.findall(r'\d+', msg.split('_')[5])))[0]
-    print(ep)
+    # ep = list(map(int, re.findall(r'\d+', msg.split('_')[5])))[0]
+    ep = 5
     if X_train.shape[0] > 0 and X_train.shape[0] >= knn:
         new = Smote(X_train, Y_train, y, per, knn, ep).over_sampling()
         

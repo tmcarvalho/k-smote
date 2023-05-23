@@ -7,7 +7,7 @@ import functools
 import threading
 import argparse
 import pika
-from apply_models import modeling_ppt, modeling_singleouts, modeling_smote_under_over, modeling_gans
+from apply_models import modeling_privatesmote_resampling_and_gans, modeling_ppt
 
 #%%
 parser = argparse.ArgumentParser(description='Master Example')
@@ -38,14 +38,10 @@ def ack_message(ch, delivery_tag, work_sucess):
 
 
 def modeling(file):
-    if args.type == 'ppt':
+    if args.type != 'ppt':
+        modeling_privatesmote_resampling_and_gans(file, args)
+    else:
         modeling_ppt(file, args)
-    if args.type == 'smote_under_over':
-        modeling_smote_under_over(file, args)
-    if args.type == 'singleouts':
-        modeling_singleouts(file, args)
-    if args.type == 'gans':
-        modeling_gans(file, args)    
 
 # %%
 def do_work(conn, ch, delivery_tag, body):
@@ -88,8 +84,8 @@ connection.close()
 
 
 # find . -name ".DS_Store" -delete
-# python3 code/task.py  --input_folder "output/oversampled/TVAE"
-# python3 code/worker.py --type "ppt" --input_folder "PPT_ARX/Cleaned" --output_folder "output/modeling/PPT_ARX"
-# python3 code/worker.py --type "gans" --input_folder "output/oversampled/TVAE" --output_folder "output/modeling/TVAE"
-# python3 code/worker.py --type "smote_under_over" --input_folder "output/oversampled/borderlineSmote" --output_folder "output/modeling/borderlineSmote"
-# python3 code/worker.py --type "singleouts" --input_folder "output/oversampled/borderlineSmote" --output_folder "output/modeling/borderlineSmote"
+# python3 code/modeling/task.py  --input_folder "output/oversampled/PrivateSMOTE_force_laplace"
+# python3 code/modeling/worker.py --type "ppt" --input_folder "PPT_ARX/Cleaned" --output_folder "output/modeling/PPT_ARX"
+# python3 code/modeling/worker.py --type "gans" --input_folder "output/oversampled/TVAE" --output_folder "output/modeling/TVAE"
+# python3 code/modeling/worker.py --type "smote_under_over" --input_folder "output/oversampled/borderlineSmote" --output_folder "output/modeling/borderlineSmote"
+# python3 code/modeling/worker.py --type "PrivateSMOTE" --input_folder "output/oversampled/PrivateSMOTE_force_laplace" --output_folder "output/modeling/PrivateSMOTE_force_laplace"

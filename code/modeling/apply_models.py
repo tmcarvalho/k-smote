@@ -106,6 +106,3 @@ def modeling_privatesmote_resampling_and_gans(file, args):
     #if (y_train.value_counts().nunique() != 1):
     results = evaluate_model(x_train, x_test, y_train, y_test)
     save_results(file, args, results)
-
-
-    

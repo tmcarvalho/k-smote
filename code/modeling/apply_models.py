@@ -95,7 +95,7 @@ def modeling_privatesmote_resampling_and_gans(file, args):
     orig_data = orig_data.apply(LabelEncoder().fit_transform)
     data = data.apply(LabelEncoder().fit_transform)
 
-    if args.privateSMOTE == 'yes':
+    if args.type == 'PrivateSMOTE':
         x_train, y_train = data.iloc[:, :-2], data.iloc[:, -2]
     else:
         x_train, y_train = data.iloc[:, :-1], data.iloc[:, -1]

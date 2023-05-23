@@ -10,6 +10,7 @@ import argparse
 import gc
 import pika
 from PrivateSMOTE_laplace import PrivateSMOTE_laplace_
+from PrivateSMOTE_force_laplace import PrivateSMOTE_force_laplace_
 
 #%%
 parser = argparse.ArgumentParser(description='Master Example')
@@ -43,8 +44,8 @@ def do_work(conn, ch, delivery_tag, body):
     msg = body.decode('utf-8')
     if args.type == 'PrivateSMOTE_laplace':
         work_sucess = PrivateSMOTE_laplace_(msg)
-    # if args.type == 'PrivateSMOTE_laplace_force':
-    #     work_sucess = PrivateSMOTE_laplace_(msg)
+    if args.type == 'PrivateSMOTE_force_laplace':
+        work_sucess = PrivateSMOTE_force_laplace_(msg)
     gc.collect()
     os.system('find . -name "__pycache__" -type d -exec rm -rf "{}" +')
     os.system('find . -name "*.pyc"| xargs rm -f "{}"')
@@ -64,14 +65,14 @@ def on_message(ch, method_frame, _header_frame, body, args):
 connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost', heartbeat=0
 ))
 channel = connection.channel()
-channel.queue_declare(queue='task_queue_privatesmote_laplace', durable=True, arguments={"dead-letter-exchange":"dlx"})
+channel.queue_declare(queue='task_queue_privatesmote_force_laplace', durable=True, arguments={"dead-letter-exchange":"dlx"})
 print(' [*] Waiting for messages. To exit press CTRL+C')
 
 channel.basic_qos(prefetch_count=1)
 
 threads = []
 on_message_callback = functools.partial(on_message, args=(connection, threads))
-channel.basic_consume('task_queue_privatesmote_laplace', on_message_callback)
+channel.basic_consume('task_queue_privatesmote_force_laplace', on_message_callback)
 
 try:
     channel.start_consuming()
@@ -88,3 +89,4 @@ connection.close()
 # find . -name ".DS_Store" -delete
 # python3 code/transformations/task_privateSMOTE_laplace.py  --input_folder "original" 
 # python3 code/transformations/worker_privateSMOTE_laplace.py --type "PrivateSMOTE_laplace"
+# python3 code/transformations/worker_privateSMOTE_laplace.py --type "PrivateSMOTE_force_laplace"

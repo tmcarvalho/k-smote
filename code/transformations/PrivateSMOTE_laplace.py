@@ -41,28 +41,33 @@ def aux_singleouts(key_vars, dt):
 class Smote:
     """Apply Smote
     """
-    def __init__(self, samples, singleout, y, N, k, ep):
+    def __init__(self, samples, N, k, ep):
         """Initiate arguments
 
         Args:
-            samples (pd.Dataframe): training samples
-            singleout (pd.Series): singleout variable
+            data (pd.Dataframe): all data
             y (pd.Series): target sample
             N (int): number of interpolations per observation
             k (int): number of nearest neighbours
             ep (float): privacy budget (epsilon)
         """
         self.samples = samples.reset_index(drop=True)
-        self.n_samples = samples.shape[0]
-        self.n_attrs = samples.shape[1]
-        self.singleout = singleout.reset_index(drop=True)
-        self.y = y
         self.N = N
         self.k = k
         self.ep = ep
         self.newindex=0
-        # transform all data in ndarray with the same dtypes
-        self.x = np.array(self.samples, dtype=self.samples.dtypes)
+
+        # singleout samples that will be replaced
+        self.X_train = self.samples.loc[self.samples['single_out']==1, self.samples.columns[:-2]]
+        # target variable values
+        self.y = self.samples.loc[:, self.samples.columns[-2]]
+        # drop singlout and target variables to knn
+        self.data_knn = self.samples.loc[:, self.samples.columns[:-2]]
+        # nr of samples and attributs to synthetize
+        self.n_samples = self.X_train.shape[0]
+        self.n_attrs = self.X_train.shape[1]
+        # transform singleout samples in ndarray with the same dtypes
+        self.x = np.array(self.data_knn, dtype=self.data_knn.dtypes)
 
     def over_sampling(self):
         """find the nearest neighbors and populate with new data
@@ -72,8 +77,8 @@ class Smote:
         """
         N = int(self.N)
 
-        # OHE + standardization for nearest neighbor
-        encoded_data = pd.get_dummies(self.samples, drop_first=True).astype(int)
+        # OHE + standardization for nearest neighbor using all data
+        encoded_data = pd.get_dummies(self.data_knn, drop_first=True).astype(int)
         standardized_data = StandardScaler().fit_transform(encoded_data)
         neighbors = NearestNeighbors(n_neighbors=self.k+1).fit(standardized_data)
 
@@ -84,24 +89,23 @@ class Smote:
         self.synthetic = np.empty(shape=(self.n_samples * N, self.n_attrs+1), dtype=self.samples.dtypes)
         
         # find the categories for each categorical column in all sample
-        self.unique_values = [self.samples.loc[:,col].unique() for col in self.samples.select_dtypes(object)]
+        self.unique_values = [self.data_knn.loc[:,col].unique() for col in self.data_knn.select_dtypes(object)]
+        print("INITIAL")
+        # find the minimun value for each numerical column
+        self.min_values = [self.data_knn[col].min() if not isinstance(self.data_knn[col].iloc[0], str) else np.nan for col in self.data_knn.columns]
+        print(self.min_values)
 
-        # find the minimun value for each numerical column: TODO not used line
-        print("MIN VALUES of original")
-        self.min_values = [self.samples[col].min() if not isinstance(self.samples[col].iloc[0], str) else np.nan for col in self.samples.columns]
-        print( self.min_values)
-        print("MAX VALUES of original")
-        self.max_values = [self.samples[col].max() if not isinstance(self.samples[col].iloc[0], str) else np.nan for col in self.samples.columns]
-        print( self.max_values)
-        # find the mean values for each numerical column
-        self.mean_values = [self.samples[col].mean() if not isinstance(self.samples[col].iloc[0], str) else np.nan for col in self.samples.columns]
+        # find the maximum value for each numerical column
+        self.max_values = [self.data_knn[col].max() if not isinstance(self.data_knn[col].iloc[0], str) else np.nan for col in self.data_knn.columns]
+        print(self.max_values)
 
         # for each observation find nearest neighbours
-        for i in range(len(self.samples)):
-            nnarray = neighbors.kneighbors(
-                standardized_data[i].reshape(1, -1), return_distance=False)[0]
-            self._populate(N, i, nnarray)
-
+        for i, _ in enumerate(standardized_data):
+            if i in self.X_train.index:
+                # print(i)
+                nnarray = neighbors.kneighbors(
+                    standardized_data[i].reshape(1, -1), return_distance=False)[0]
+                self._populate(N, i, nnarray)
         return self.synthetic
 
     def _populate(self, N, i, nnarray):
@@ -118,12 +122,12 @@ class Smote:
             # generate new numerical value for each column
             new_nums_values = [orig_val + control_noise[j] if (isinstance(orig_val, (int, float)) and 
                                 self.min_values[j] <= orig_val + control_noise[j] <= self.max_values[j]) \
-                                      else orig_val - control_noise[j] if isinstance(orig_val, (int, float)) \
+                                      else orig_val - control_noise[j] if (isinstance(orig_val, (int, float)) and ((self.min_values[j] > orig_val + control_noise[j] > self.max_values[j]))) \
                                 else orig_val for j, orig_val in enumerate(self.x[i])]
 
             if len(self.unique_values) > 0:
                 # find the categories for each categorical column in nearest neighbors sample
-                nn_unique = [self.samples.loc[nnarray[1:self.k+1],col].unique() for col in self.samples.select_dtypes(object)]
+                nn_unique = [self.samples.loc[nnarray[1:self.k+1],col].unique() for col in self.data_knn.select_dtypes(object)]
 
                 # randomly select a category
                 new_cats_values = [random.choice(self.unique_values[u]) if len(nn_unique[u]) == 1 else random.choice(nn_unique[u]) for u in range(len(self.unique_values))]
@@ -141,7 +145,7 @@ class Smote:
 
             N-=1
 
-# %% privateSMOTE with "force" - add 1 or -1 when difference is 0
+# %% 
 def PrivateSMOTE_laplace_(msg):
     """Generate several interpolated data sets considering all classes.
 
@@ -177,57 +181,49 @@ def PrivateSMOTE_laplace_(msg):
     keys = set_key_vars[keys_nr]
     data = aux_singleouts(keys, data)
 
-    X_train = data.loc[data['single_out']==1, data.columns[:-2]] # training singleout sample
-    Y_train = data.loc[data['single_out']==1, data.columns[-1]] # singleout variable values
-    y = data.loc[data['single_out']==1, data.columns[-2]] # target variable values
-
     knn = list(map(int, re.findall(r'\d+', msg.split('_')[3])))[0]
     per = list(map(int, re.findall(r'\d+', msg.split('_')[4])))[0]
-    # ep = list(map(int, re.findall(r'\d+', msg.split('_')[5])))[0]
     ep = 5
-    if X_train.shape[0] > 0 and X_train.shape[0] >= knn:
-        new = Smote(X_train, Y_train, y, per, knn, ep).over_sampling()
-        
-        newDf = pd.DataFrame(new, columns = data.columns[:-1])
-        newDf = newDf.astype(dtype = data[data.columns[:-1]].dtypes)
+    new = Smote(data, per, knn, ep).over_sampling()
+    
+    newDf = pd.DataFrame(new, columns = data.columns[:-1])
+    newDf = newDf.astype(dtype = data[data.columns[:-1]].dtypes)
+    # assign singleout
+    newDf['single_out'] = 1
 
-        # assign singleout
-        newDf['single_out'] = 1
+    # add non single outs
+    if newDf.shape[0] != data.shape[0]:
+        newDf = pd.concat([newDf, data.loc[data['single_out']==0]]) 
 
-        # add non single outs
-        if newDf.shape[0] != data.shape[0]:
-            newDf = pd.concat([newDf, data.loc[data['single_out']==0]]) 
+    for col in newDf.columns[:-1]:
+        if data_types[col].dtype == np.int64:
+            newDf[col] = round(newDf[col], 0).astype(int)
+        if data_types[col].dtype == np.float64:
+            # get decimal places in float
+            dec = str(data[col].values[0])[::-1].find('.')
+            newDf[col] = round(newDf[col], dec)
+    print("TRASNFORMED")
+    minvalues = [newDf[col].min() if not isinstance(newDf[col].iloc[0], str) else np.nan for col in newDf.columns]
+    print(minvalues)
+    maxvalues = [newDf[col].max() if not isinstance(newDf[col].iloc[0], str) else np.nan for col in newDf.columns]
+    print(maxvalues)
 
-        for col in newDf.columns[:-1]:
-            if data_types[col].dtype == np.int64:
-                newDf[col] = round(newDf[col], 0).astype(int)
-            if data_types[col].dtype == np.float64:
-                # get decimal places in float
-                dec = str(data[col].values[0])[::-1].find('.')
-                newDf[col] = round(newDf[col], dec)
-        print("MIN VALUES of transfomerd")
-        minvalues = [newDf[col].min() if not isinstance(newDf[col].iloc[0], str) else np.nan for col in newDf.columns]
-        print(minvalues)
-        print("MAX VALUES of transfomerd")
-        maxvalues = [newDf[col].max() if not isinstance(newDf[col].iloc[0], str) else np.nan for col in newDf.columns]
-        print(maxvalues)
+    # save oversampled data
+    newDf.to_csv(
+        f'{output_interpolation_folder}{sep}{msg}.csv',
+        index=False)
 
-        # save oversampled data
-        newDf.to_csv(
-            f'{output_interpolation_folder}{sep}{msg}.csv',
+    # Store execution costs  
+    process = psutil.Process()
+    computational_costs = {'execution_time': time.time()-start,
+                            'memory': process.memory_percent(),
+                            'cpu_time_user': process.cpu_times()[0],
+                            'cpu_time_system': process.cpu_times()[1],
+                            'cpu_percent': process.cpu_percent()}
+    
+    computational_costs_df = pd.DataFrame([computational_costs])
+    computational_costs_df.to_csv(
+            f'computational_costs{sep}PrivateSMOTE_laplace{sep}{msg}.csv',
             index=False)
-
-        # Store execution costs  
-        process = psutil.Process()
-        computational_costs = {'execution_time': time.time()-start,
-                                'memory': process.memory_percent(),
-                                'cpu_time_user': process.cpu_times()[0],
-                                'cpu_time_system': process.cpu_times()[1],
-                                'cpu_percent': process.cpu_percent()}
-        
-        computational_costs_df = pd.DataFrame([computational_costs])
-        computational_costs_df.to_csv(
-                f'computational_costs{sep}PrivateSMOTE_laplace{sep}{msg}.csv',
-                index=False)
 
 # %%

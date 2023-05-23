@@ -23,7 +23,7 @@ def put_file_queue(ch, file_name):
     """
     ch.basic_publish(
         exchange='',
-        routing_key='task_queue_privatesmote',
+        routing_key='task_queue_privatesmote_force',
         body=file_name,
         properties=pika.BasicProperties(
             delivery_mode=2,  # make message persistent
@@ -37,10 +37,10 @@ channel = connection.channel()
 
 channel.exchange_declare(exchange='dlx', exchange_type='direct')
 
-channel.queue_declare(queue='task_queue_privatesmote', durable=True, arguments={"dead-letter-exchange": "dlx"})
+channel.queue_declare(queue='task_queue_privatesmote_force', durable=True, arguments={"dead-letter-exchange": "dlx"})
 dl_queue = channel.queue_declare(queue='dl')
 
-channel.queue_bind(exchange='dlx', routing_key='task_queue_privatesmote', queue=dl_queue.method.queue)
+channel.queue_bind(exchange='dlx', routing_key='task_queue_privatesmote_force', queue=dl_queue.method.queue)
 
 knn = [1,3,5]
 per = [1,2,3]
@@ -49,7 +49,7 @@ files = files = next(os.walk(args.input_folder))[2]
 for file in files:
     f = int(file.split('.')[0])
     if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87]:
-        print(file)
+        # print(file)
         for idx in range(5):
             for k in knn:
                 for p in per:

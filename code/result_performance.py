@@ -36,7 +36,7 @@ def percentage_difference_org(baseline_folder, candidate_folder, technique):
             # calculate the percentage difference
             # 100 * (Sc - Sb) / Sb
         
-            if (technique == 'privateSMOTE') or (technique == 'deep_learning') or (technique == 'PPT'):
+            if ('privateSMOTE' in technique) or (technique == 'deep_learning') or (technique == 'PPT'):
                 best_candidate_cv = candidate_result_cv_train.loc[candidate_result_cv_train['rank_test_roc_auc_curve'] == 1,:]
                 candidate_result_cv_best = candidate_result_cv.iloc[best_candidate_cv.index,:]
                 candidate_result_cv_best['test_roc_auc_perdif'] = 100 * (candidate_result_cv_best['test_roc_auc'].values[0] - baseline_result_cv_best['test_roc_auc'].values[0]) / baseline_result_cv_best['test_roc_auc'].values[0]
@@ -94,17 +94,31 @@ baseorg_deeplearn = percentage_difference_org(orig_folder, deeplearn_folder, 'de
 # baseorg_smote_singleouts = percentage_difference_org(orig_folder, smote_singleouts_folder, 'privateSMOTE A')
 
 # %% smote_singleouts_scratch
-smote_singleouts_scratch_folder = '../output/modeling/smote_singleouts_scratch/'
-baseorg_smote_singleouts_scratch = percentage_difference_org(orig_folder, smote_singleouts_scratch_folder, 'privateSMOTE')
+# smote_singleouts_scratch_folder = '../output/modeling/smote_singleouts_scratch/'
+# baseorg_smote_singleouts_scratch = percentage_difference_org(orig_folder, smote_singleouts_scratch_folder, 'privateSMOTE')
+privatesmote_folder = '../output/modeling/PrivateSMOTE/'
+baseorg_privatesmote_scratch = percentage_difference_org(orig_folder, privatesmote_folder, 'privateSMOTE')
+
+# %%
+privatesmote_force_folder = '../output/modeling/PrivateSMOTE_force/'
+baseorg_privatesmote_force = percentage_difference_org(orig_folder, privatesmote_force_folder, 'privateSMOTE_force')
+
+# %%
+privatesmote_laplace_folder = '../output/modeling/PrivateSMOTE_laplace/'
+baseorg_privatesmote_laplace = percentage_difference_org(orig_folder, privatesmote_laplace_folder, 'privateSMOTE_laplace')
+
+# %%
+privatesmote_force_laplace_folder = '../output/modeling/PrivateSMOTE_force_laplace/'
+baseorg_privatesmote_force_laplace = percentage_difference_org(orig_folder, privatesmote_force_laplace_folder, 'privateSMOTE_force_laplace')
 
 # %% concat all data sets
-results_baseorg_cv = pd.concat([baseorg_ppt, baseorg_resampling, baseorg_deeplearn, baseorg_smote_singleouts_scratch])
+results_baseorg_cv = pd.concat([baseorg_ppt, baseorg_resampling, baseorg_deeplearn, baseorg_privatesmote_scratch, baseorg_privatesmote_force, baseorg_privatesmote_laplace, baseorg_privatesmote_force_laplace])
 # %%
 results_baseorg_cv = results_baseorg_cv.reset_index(drop=True)
 # %%
-# results_baseorg_cv.to_csv('../output/test_cv_roc_auc.csv', index=False)
+# results_baseorg_cv.to_csv('../output/test_cv_roc_auc_newprivatesmote.csv', index=False)
 # %%
-results_baseorg_cv = pd.read_csv('../output/test_cv_roc_auc.csv')
+# results_baseorg_cv = pd.read_csv('../output/test_cv_roc_auc_newprivatesmote.csv')
 # %%
 #results_baseorg_cv['test_roc_auc_perdif'] = results_baseorg_cv['test_roc_auc_perdif'].fillna(0)
 #results_max_prSmote = results_baseorg_cv.loc[results_baseorg_cv.technique=='privateSMOTE A',:].reset_index(drop=True)
@@ -118,15 +132,16 @@ results_max.loc[results_max['technique']=='Bordersmote', 'technique'] = 'Borderl
 results_max.loc[results_max['technique']=='Smote', 'technique'] = 'SMOTE'
 results_max.loc[results_max['technique']=='copulaGAN', 'technique'] = 'Copula GAN'
 results_max.loc[results_max['technique']=='privateSMOTE', 'technique'] = 'PrivateSMOTE'
+results_max.loc[results_max['technique']=='privateSMOTE_force', 'technique'] = 'PrivateSMOTE Force'
+results_max.loc[results_max['technique']=='privateSMOTE_laplace', 'technique'] = r'$\epsilon$-PrivateSMOTE'
+results_max.loc[results_max['technique']=='privateSMOTE_force_laplace', 'technique'] =  r'$\epsilon$-PrivateSMOTE Force'
 
 # %%
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'PrivateSMOTE']
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'PrivateSMOTE', 'PrivateSMOTE Force', r'$\epsilon$-PrivateSMOTE', r'$\epsilon$-PrivateSMOTE Force']
 # %%
 sns.set_style("darkgrid")
 plt.figure(figsize=(12,8))
 ax = sns.boxplot(data=results_max, x='technique', y='test_roc_auc_perdif', palette='Spectral_r', order=order)
-# ax.set(ylim=(-60, 30))
-#ax.set_yscale("log")
 sns.set(font_scale=1.5)
 plt.xticks(rotation=45)
 plt.xlabel("")
@@ -135,6 +150,29 @@ plt.ylabel("Percentage difference of predictive performance (AUC)")
 plt.autoscale(True)
 plt.show()
 # figure = ax.get_figure()
-# figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performance.pdf', bbox_inches='tight')
+# figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performance_all.pdf', bbox_inches='tight')
+
+# %%
+PROPS = {
+    'boxprops':{'facecolor':'lightsteelblue', 'edgecolor':'steelblue'},
+    'medianprops':{'color':'darkcyan'},
+    'whiskerprops':{'color':'steelblue'},
+    'capprops':{'color':'steelblue'}
+}
+privsmote = results_max.loc[results_max.technique.str.contains('PrivateSMOTE')]
+sns.set_style("darkgrid")
+plt.figure(figsize=(8,6))
+ax = sns.boxplot(data=privsmote, x='technique', y='test_roc_auc_perdif',order=order, **PROPS)
+# ax.set(ylim=(-60, 30))
+#ax.set_yscale("log")
+sns.set(font_scale=1.1)
+plt.xticks(rotation=45)
+plt.xlabel("")
+plt.ylabel("Percentage difference of predictive performance (AUC)")
+#plt.yscale('symlog')
+plt.autoscale(True)
+plt.show()
+#figure = ax.get_figure()
+#figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performance_privateSMOTE.pdf', bbox_inches='tight')
 
 # %%

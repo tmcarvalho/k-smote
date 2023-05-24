@@ -146,5 +146,5 @@ def apply_in_resampling_and_gans(transf_file, args):
         risk_per, max_score = privacy_risk_resampling_and_gans(transf_file, orig_data, args, set_key_vars[i], i)
         total_risk = pd.DataFrame.from_dict(risk_per)
         total_risk.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_qi{i}_per.csv', index=False) 
-        max_score.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_max.csv', index=False)
+        max_score.to_csv(f'{args.output_folder}/{transf_file.split(".csv")[0]}_qi{i}_max.csv', index=False)
         gc.collect()

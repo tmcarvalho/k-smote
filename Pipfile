@@ -14,8 +14,8 @@ recordlinkage = "*"
 xgboost = "*"
 pika = "*"
 scipy = "*"
-sdv = {path = "./sdv"}
 icecream = "*"
+sdv = "==0.17.1"
 
 [dev-packages]
 ipykernel = "*"

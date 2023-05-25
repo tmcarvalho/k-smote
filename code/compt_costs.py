@@ -27,7 +27,7 @@ for name, grp in grp_dataset:
       bbox_inches='tight')
 # %%
 ############### privateSMOTE
-privatesmote = pd.read_csv('../PwrData_2022-9-21_20-7-17_privateSMOTEscratch.csv')
+privatesmote = pd.read_csv('../computational_costs/PwrData_2022-9-21_20-7-17_privateSMOTEscratch.csv')
 privatesmote_clean = privatesmote.loc[privatesmote['Elapsed Time (sec)'] < 1703]
 
 privatesmote_clean['Elapsed Time (min)'] = privatesmote_clean['Elapsed Time (sec)']/60
@@ -47,11 +47,13 @@ plt.figure(figsize=(20,12))
 sns.lineplot(data=privatesmote_clean, x="Elapsed Time (min)", y="CPU Utilization(%)")
 sns.set(font_scale=2)
 # %%
+privatesmote_clean['Cumulative Processor Energy_0(Joules)'].max()
+# %%
 privatesmote_clean_temp = privatesmote_clean[['Elapsed Time (sec)', 'CPU Max Temperature_0(C)']]
 privatesmote_clean_temp['Technique'] = 'privateSMOTE'
 # %%
 ############## privateSMOTE scratch
-privatesmote_scratch = pd.read_csv('../PwrData_2022-9-21_20-7-17_privateSMOTEscratch.csv')
+privatesmote_scratch = pd.read_csv('../computational_costs/PwrData_2022-9-21_20-7-17_privateSMOTEscratch.csv')
 privatesmote_scratch_clean = privatesmote_scratch.loc[privatesmote_scratch['Elapsed Time (sec)'] < 1720]
 
 privatesmote_scratch_clean['Elapsed Time (min)'] = privatesmote_scratch_clean['Elapsed Time (sec)']/60
@@ -79,7 +81,7 @@ sns.lineplot(data=privatesmote_scratch_clean, x="Elapsed Time (min)", y="Cumulat
 sns.set(font_scale=2)
 # %%
 ############## TVAE
-tvae = pd.read_csv('../PwrData_2022-9-22_20-15-55_TVAE.csv')
+tvae = pd.read_csv('../computational_costs/PwrData_2022-9-22_20-15-55_TVAE.csv')
 # %%
 tvae_clean = tvae.loc[tvae['Elapsed Time (sec)'] < 19850]
 # %%
@@ -109,7 +111,7 @@ sns.lineplot(data=tvae_clean, x="Elapsed Time (min)", y="Cumulative Processor En
 sns.set(font_scale=2)
 
 # %% ############# CTGAN
-ctgan = pd.read_csv('../PwrData_2022-9-23_7-26-51_CTGAN.csv')
+ctgan = pd.read_csv('../computational_costs/PwrData_2022-9-23_7-26-51_CTGAN.csv')
 # %%
 ctgan_clean = ctgan.loc[ctgan['Elapsed Time (sec)'] < 57300]
 # %%
@@ -119,9 +121,12 @@ ctgan_clean['Elapsed Time (min)'] = ctgan_clean['Elapsed Time (min)'].astype(int
 plt.figure(figsize=(25,12))
 sns.lineplot(data=ctgan_clean, x="Elapsed Time (min)", y="CPU Max Temperature_0(C)")
 sns.set(font_scale=2)
-
+# %%
+ctgan_clean['Elapsed Time (min)'].max()
+# %%
+ctgan_clean["Cumulative Processor Energy_0(Joules)"].max()
 # %% ############# CopulaGAN
-copula_gan = pd.read_csv('../PwrData_2022-9-28_21-1-44_CopulaGAN.csv')
+copula_gan = pd.read_csv('../computational_costs/PwrData_2022-9-28_21-1-44_CopulaGAN.csv')
 # %%
 copula_gan_clean = copula_gan.loc[copula_gan['Elapsed Time (sec)'] < 56000]
 # %%
@@ -133,7 +138,7 @@ sns.lineplot(data=copula_gan_clean, x="Elapsed Time (min)", y="CPU Max Temperatu
 sns.set(font_scale=2)
 
 # %% ############# Gaussian Copula
-gauss_copula = pd.read_csv('../PwrData_2022-9-30_21-11-28_GaussianCopula.csv')
+gauss_copula = pd.read_csv('../computational_costs/PwrData_2022-9-30_21-11-28_GaussianCopula.csv')
 # %%
 gauss_copula_clean = gauss_copula.loc[gauss_copula['Elapsed Time (sec)'] < 49]
 # %%
@@ -169,4 +174,25 @@ g = sns.lineplot(data=all, x="Elapsed Time (min)", y="Package Temperature_0(C)",
     sizes=(.25))
 #g.set_yscale("log")
 sns.set(font_scale=2)
+# %%
+################### PrivateSMOTE Force Laplace
+privatesmote_force_laplace = pd.read_csv('../computational_costs/PwrData_2023-5-23_21-47-37_PrivateSMOTE_force_laplace.csv')
+# %%
+privatesmote_force_laplace_clean = privatesmote_force_laplace.loc[privatesmote_force_laplace['Elapsed Time (sec)'] < 7500]
+# %%
+plt.figure(figsize=(20,12))
+sns.lineplot(data=privatesmote_force_laplace_clean, x="Elapsed Time (sec)", y="Processor Power_0(Watt)")
+sns.set(font_scale=2)
+# %%
+privatesmote_force_laplace_clean['Elapsed Time (min)'] = privatesmote_force_laplace_clean['Elapsed Time (sec)']/60
+privatesmote_force_laplace_clean['Elapsed Time (min)'] = privatesmote_force_laplace_clean['Elapsed Time (min)'].astype(int)
+# %%
+plt.figure(figsize=(25,12))
+sns.lineplot(data=privatesmote_force_laplace_clean, x="Elapsed Time (min)", y="CPU Max Temperature_0(C)")
+sns.set(font_scale=2)
+# %%
+privatesmote_force_laplace_clean['Cumulative Processor Energy_0(Joules)'].max()
+# %%
+privatesmote_force_laplace_clean['Elapsed Time (min)'].max()
+
 # %%

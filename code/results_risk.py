@@ -10,7 +10,6 @@ from matplotlib import pyplot as plt
 def concat_each_rl(folder, technique):
     _, _, input_files = next(walk(f'{folder}'))
     concat_results = pd.DataFrame()
-
     for file in input_files:
         if technique == 'PPT':
             risk = pd.read_csv(f'{folder}/{file}')
@@ -22,7 +21,7 @@ def concat_each_rl(folder, technique):
             risk['ds_complete']=file
             concat_results = pd.concat([concat_results, risk])
 
-        if (technique == 'privateSMOTE') and (file != 'total_risk.csv') and ('per' in file.split('_')[5]):
+        if (technique == 'PrivateSMOTE') and (file != 'total_risk.csv') and ('_per.' in file):
             risk = pd.read_csv(f'{folder}/{file}')    
             risk['ds_complete']=file
             concat_results = pd.concat([concat_results, risk])
@@ -38,15 +37,19 @@ risk_deeplearning= concat_each_rl('../output/record_linkage/deep_learning', 'res
 
 # %%
 # risk_privateSMOTEA = concat_each_rl('../output/record_linkage/smote_singleouts', 'privateSMOTE')
-# %% 
-risk_privateSMOTEB = concat_each_rl('../output/record_linkage/smote_singleouts_scratch', 'privateSMOTE')
+# risk_privateSMOTEB = concat_each_rl('../output/record_linkage/smote_singleouts_scratch', 'privateSMOTE')
 
+# %% 
+risk_privateSMOTE = concat_each_rl('../output/record_linkage/PrivateSMOTE', 'PrivateSMOTE')
+
+# %%
+risk_privateSMOTE_laplace = concat_each_rl('../output/record_linkage/PrivateSMOTE_laplace', 'PrivateSMOTE')
 # %%
 risk_ppt = risk_ppt.reset_index(drop=True)
 risk_resampling = risk_resampling.reset_index(drop=True)
 risk_deeplearning = risk_deeplearning.reset_index(drop=True)
-#risk_privateSMOTEA = risk_privateSMOTEA.reset_index(drop=True)
-risk_privateSMOTEB = risk_privateSMOTEB.reset_index(drop=True)
+risk_privateSMOTE = risk_privateSMOTE.reset_index(drop=True)
+risk_privateSMOTE_laplace = risk_privateSMOTE_laplace.reset_index(drop=True)
 # %% find best configurations to apply in the test set
 # risk_ppt_best = risk_ppt.copy()
 # risk_ppt_best['qi'] = risk_ppt_best['ds'].apply(lambda x: x.split('_')[2])
@@ -59,24 +62,60 @@ risk_privateSMOTEB = risk_privateSMOTEB.reset_index(drop=True)
 risk_ppt['technique'] = 'PPT'
 risk_resampling['technique'] = risk_resampling['ds'].apply(lambda x: x.split('_')[1].title())
 risk_deeplearning['technique'] = risk_deeplearning['ds'].apply(lambda x: x.split('_')[1])
-# risk_privateSMOTEA['technique'] = 'privateSMOTE A'
-risk_privateSMOTEB['technique'] = 'privateSMOTE'
+risk_privateSMOTE['technique'] = 'privateSMOTE'
+risk_privateSMOTE_laplace['technique'] = 'privateSMOTE laplace'
 # %%
 results = []
-results = pd.concat([risk_ppt, risk_resampling, risk_deeplearning, risk_privateSMOTEB])
+results = pd.concat([risk_ppt, risk_resampling, risk_deeplearning, risk_privateSMOTE, risk_privateSMOTE_laplace])
 results = results.reset_index(drop=True)
 
 # %%
 results['dsn'] = results['ds'].apply(lambda x: x.split('_')[0])
 
 # %%
-#results.to_csv('../output/rl_results.csv', index=False)
-results = pd.read_csv('../output/rl_results.csv')
+# results.to_csv('../output/rl_results_newprivatesmote.csv', index=False)
+# results = pd.read_csv('../output/rl_results.csv')
+# %%
+results_risk_max = results.copy()
+results_risk_max = results.loc[results.groupby(['dsn', 'technique'])['privacy_risk_100'].idxmin()].reset_index(drop=True)
 
+# %%
+results_risk_max = results_risk_max.loc[results_risk_max['technique']!='Over']
+results_risk_max.loc[results_risk_max['technique']=='Under', 'technique'] = 'RUS'
+results_risk_max.loc[results_risk_max['technique']=='Bordersmote', 'technique'] = 'BorderlineSMOTE'
+results_risk_max.loc[results_risk_max['technique']=='Smote', 'technique'] = 'SMOTE'
+results_risk_max.loc[results_risk_max['technique']=='copulaGAN', 'technique'] = 'Copula GAN'
+results_risk_max.loc[results_risk_max['technique']=='privateSMOTE', 'technique'] = 'PrivateSMOTE'
+results_risk_max.loc[results_risk_max['technique']=='privateSMOTE laplace', 'technique'] = 'PrivateSMOTE Laplace'
+
+# %%
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'PrivateSMOTE', 'PrivateSMOTE Laplace']
+# %%
+sns.set_style("darkgrid")
+plt.figure(figsize=(20,10))
+ax = sns.boxplot(data=results_risk_max,
+    x='technique', y='privacy_risk_100', order=order, color='c')
+# ax.set(ylim=(0, 30))
+sns.set(font_scale=2.5)
+ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1), ncol=3, title='', borderaxespad=0., frameon=False)
+ax.set_yscale("symlog")
+ax.set_ylim(-0.2,150)
+plt.xticks(rotation=45)
+plt.xlabel("")
+plt.ylabel("Re-identification Risk (%)")
+plt.show()
+#figure = ax.get_figure()
+#figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/reIDrisk.pdf', bbox_inches='tight')
+
+# %%
+results.loc[(results.technique=='PrivateSMOTE')].max()
+
+#################################
+# %%
 # %%
 priv=results.copy()
 # %%
-predictive_results = pd.read_csv('../output/test_cv_roc_auc.csv')
+predictive_results = pd.read_csv('../output/test_cv_roc_auc_newprivatesmote.csv')
 
 # %%
 predictive_results_max = predictive_results.loc[predictive_results.groupby(['ds', 'technique'])['test_roc_auc_perdif'].idxmax()].reset_index(drop=True)
@@ -95,6 +134,17 @@ results = results.loc[results['flag']==1]
 results_max = results.loc[results.groupby(['dsn', 'technique'])['privacy_risk_100'].idxmin()].reset_index(drop=True)
 
 # %%
+test = results_max.loc[results_max['technique']=='privateSMOTE']
+
+for t in test.ds:
+    d = pd.read_csv(f'../output/oversampled/PrivateSMOTE/{t}.csv')
+    print(d.shape)
+    print(t)
+    print(d.nunique())
+
+
+ ####################
+# %%
 results_melted = results_max.melt(id_vars=['dsn', 'technique'], value_vars=['privacy_risk_50', 'privacy_risk_70', 'privacy_risk_90', 'privacy_risk_100'])
 # %%
 results_melted = results_melted.loc[results_melted['technique']!='Over']
@@ -103,9 +153,10 @@ results_melted.loc[results_melted['technique']=='Bordersmote', 'technique'] = 'B
 results_melted.loc[results_melted['technique']=='Smote', 'technique'] = 'SMOTE'
 results_melted.loc[results_melted['technique']=='copulaGAN', 'technique'] = 'Copula GAN'
 results_melted.loc[results_melted['technique']=='privateSMOTE', 'technique'] = 'PrivateSMOTE'
+results_melted.loc[results_melted['technique']=='privateSMOTE laplace', 'technique'] = 'PrivateSMOTE Laplace'
 
 # %%
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'PrivateSMOTE']
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'PrivateSMOTE', 'PrivateSMOTE Laplace']
 # %%
 g = sns.FacetGrid(results_melted, col='variable', col_wrap=1, height=4.5, aspect=1.5, margin_titles=True)
 g.map(sns.boxplot, 'technique', 'value', palette='muted', order=order)
@@ -273,4 +324,95 @@ axes[0].autoscale_view(scaley=True)
 axes[1].autoscale_view(scaley=True)
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/riskfirst_pair.pdf', bbox_inches='tight')
 
+# %%
+###################### MAX ###########################
+
+def concat_each_rl(folder, technique):
+    _, _, input_files = next(walk(f'{folder}'))
+    concat_results = pd.DataFrame()
+    #max_risk = pd.DataFrame()
+    #max_risk['singleouts'] = None
+    for file in input_files:
+        if technique == 'PPT':
+            risk = pd.read_csv(f'{folder}/{file}')
+            risk['ds_complete']=file
+            concat_results = pd.concat([concat_results, risk])
+
+        if (technique == 'resampling_gans') and (file != 'total_risk.csv') and ('rl' not in file):
+            risk = pd.read_csv(f'{folder}/{file}')    
+            risk['ds_complete']=file
+            concat_results = pd.concat([concat_results, risk])
+
+        if (technique == 'PrivateSMOTE') and (file != 'total_risk.csv') and ('_max.' in file):
+            try:
+                risk = pd.read_csv(f'{folder}/{file}') 
+            except:
+                risk = pd.DataFrame()
+                # risk['risk']=0 
+                # print("empty")
+            
+            if risk.empty:
+                max_score = 0
+            else:
+                #print(risk.loc[risk.groupby('level_0').transforme('size')])
+                #print(risk.info())
+                #print(risk)
+                max_score = risk.groupby(['level_0']).size()
+                # print(sum([i for i in max_score if i==1]))
+                max_score = sum([i for i in max_score if i==1])
+                # print(max_risk)
+                #risk = risk.loc[risk.size==1]
+            max_risk = pd.DataFrame([{'singleouts': max_score, 'ds_complete': file}])
+            # max_risk['ds_complete']=file
+            concat_results = pd.concat([concat_results, max_risk])
+
+    return concat_results
+
+# %%
+risk_ppt = concat_each_rl('../output/record_linkage/PPT_ARX', 'PPT')
+# %%
+risk_resampling= concat_each_rl('../output/record_linkage/re-sampling', 'resampling_gans')
+# %%
+risk_deeplearning= concat_each_rl('../output/record_linkage/deep_learning', 'resampling_gans')
+
+# %%
+# risk_privateSMOTEA = concat_each_rl('../output/record_linkage/smote_singleouts', 'privateSMOTE')
+# risk_privateSMOTEB = concat_each_rl('../output/record_linkage/smote_singleouts_scratch', 'privateSMOTE')
+
+# %% 
+risk_privateSMOTE = concat_each_rl('../output/record_linkage/PrivateSMOTE', 'PrivateSMOTE')
+
+# %%
+risk_privateSMOTE_laplace = concat_each_rl('../output/record_linkage/PrivateSMOTE_laplace', 'PrivateSMOTE')
+# %%
+# risk_ppt = risk_ppt.reset_index(drop=True)
+# risk_resampling = risk_resampling.reset_index(drop=True)
+# risk_deeplearning = risk_deeplearning.reset_index(drop=True)
+# %%
+risk_privateSMOTE = risk_privateSMOTE.reset_index(drop=True)
+risk_privateSMOTE_laplace = risk_privateSMOTE_laplace.reset_index(drop=True)
+
+
+# %%
+risk_privateSMOTE['technique'] = 'privateSMOTE'
+risk_privateSMOTE_laplace['technique'] = 'privateSMOTE laplace'
+# %%
+results = []
+results = pd.concat([risk_privateSMOTE, risk_privateSMOTE_laplace])
+results = results.reset_index(drop=True)
+
+# %%
+results['dsn'] = results['ds_complete'].apply(lambda x: x.split('_')[0])
+
+# %%
+folder = '../output/oversampled/PrivateSMOTE'
+_, _, input_files = next(walk(f'{folder}'))
+
+for idx, file in enumerate(results.ds_complete):
+    f = [x for x in input_files if x.split('.csv')[0] in file]
+    print(f)
+    print(file)
+    data = pd.read_csv(f'{folder}/{f[0]}')
+    results['len_data'] = data.shape[0]
+    results['risk'] = results['singleouts'] * 100 / data.shape[0]
 # %%

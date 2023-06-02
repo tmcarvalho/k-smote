@@ -4,27 +4,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
-# %%
-all_results = pd.read_csv('../output/predictiveresults.csv')
-# %%
-# tvae = all_results.loc[all_results['technique'] == 'TVAE']
 
-# %%
-grp_dataset = all_results.groupby('ds')
-for name, grp in grp_dataset:
-    # print(name)
-    # print(grp['qi'].nunique())
-    sns.set_style('darkgrid')
-    sns.set(font_scale=1.5)
-    g = sns.FacetGrid(grp,row='ds', height=8, aspect=1.5)
-    g.map(sns.boxplot, "technique", "mean_test_f1_weighted_perdif","model",
-    palette='muted').add_legend()
-    plt.xticks(rotation=45)
-    #g.set_axis_labels("Nearest Neighbours", "Fscore")
-    g.set_titles("{row_name}")
-    g.savefig(
-      f'{os.path.dirname(os.getcwd())}/output/plots/each/{name}_fscore.pdf',
-      bbox_inches='tight')
 # %%
 ############### privateSMOTE
 privatesmote = pd.read_csv('../computational_costs/PwrData_2022-9-21_20-7-17_privateSMOTEscratch.csv')
@@ -194,5 +174,26 @@ sns.set(font_scale=2)
 privatesmote_force_laplace_clean['Cumulative Processor Energy_0(Joules)'].max()
 # %%
 privatesmote_force_laplace_clean['Elapsed Time (min)'].max()
+
+# %%
+################### DPART
+dpart = pd.read_csv('../computational_costs/PwrData_2023-6-2_14-33-55_dpart.csv')
+# %%
+dpart_clean = dpart.loc[dpart['Elapsed Time (sec)'] < 101]
+# %%
+plt.figure(figsize=(20,12))
+sns.lineplot(data=dpart_clean, x="Elapsed Time (sec)", y="Processor Power_0(Watt)")
+sns.set(font_scale=2)
+# %%
+dpart_clean['Elapsed Time (min)'] = dpart_clean['Elapsed Time (sec)']/60
+dpart_clean['Elapsed Time (min)'] = dpart_clean['Elapsed Time (min)'].astype(int)
+# %%
+plt.figure(figsize=(25,12))
+sns.lineplot(data=dpart_clean, x="Elapsed Time (min)", y="CPU Max Temperature_0(C)")
+sns.set(font_scale=2)
+# %%
+dpart_clean['Cumulative Processor Energy_0(Joules)'].max()
+# %%
+dpart_clean['Elapsed Time (min)'].max()
 
 # %%

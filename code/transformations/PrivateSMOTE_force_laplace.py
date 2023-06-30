@@ -12,6 +12,7 @@ import random
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 import random
+from scipy import stats
 from random import randrange
 import time
 
@@ -26,7 +27,7 @@ def keep_numbers(data):
         # remove trailing zeros
         if isinstance(data[col].iloc[0], (int, float)):
             if int(data[col].iloc[0]) == float(data[col].iloc[0]):
-                data_types[col] = data[col].astype(int)
+                data[col] = data[col].astype(int)
             else: data[col] = data_types[col].astype(float)
     return data, data_types
 
@@ -34,7 +35,13 @@ def keep_numbers(data):
 def aux_singleouts(key_vars, dt):
     """create single out variable based on k-anonymity"""
     k = dt.groupby(key_vars)[key_vars[0]].transform(len)
-    dt['single_out'] = np.where(k == 1, 1, 0)
+    dt['single_out'] = np.where(k < 3 , 1, 0)
+    return dt
+
+def remove_outliers(key_vars, dt):
+    newdf = dt[key_vars].select_dtypes(include=np.number)
+    newdf = newdf[(np.abs(stats.zscore(newdf)) < 3).all(axis=1)]
+    dt = dt[dt.index.isin(newdf.index)]
     return dt
 
 
@@ -162,7 +169,7 @@ def PrivateSMOTE_force_laplace_(msg):
     print(msg)
 
     start= time.time()
-    output_interpolation_folder = 'output/oversampled/PrivateSMOTE_force_laplace'
+    output_interpolation_folder = 'output/oversampled/PrivateSMOTE_force_laplace_k3'
     
     # get 80% of data to synthesise
     indexes = np.load('indexes.npy', allow_pickle=True).item()
@@ -186,6 +193,9 @@ def PrivateSMOTE_force_laplace_(msg):
     keys_nr = list(map(int, re.findall(r'\d+', msg.split('_')[2])))[0]
     print(keys_nr)
     keys = set_key_vars[keys_nr]
+    # print(data.shape)
+    # data = remove_outliers(keys, data)
+    # print(data.shape)
     data = aux_singleouts(keys, data)
 
     knn = list(map(int, re.findall(r'\d+', msg.split('_')[3])))[0]
@@ -214,18 +224,5 @@ def PrivateSMOTE_force_laplace_(msg):
     newDf.to_csv(
         f'{output_interpolation_folder}{sep}{msg}.csv',
         index=False)
-
-    # Store execution costs  
-    process = psutil.Process()
-    computational_costs = {'execution_time': time.time()-start,
-                            'memory': process.memory_percent(),
-                            'cpu_time_user': process.cpu_times()[0],
-                            'cpu_time_system': process.cpu_times()[1],
-                            'cpu_percent': process.cpu_percent()}
-    
-    computational_costs_df = pd.DataFrame([computational_costs])
-    computational_costs_df.to_csv(
-            f'computational_costs{sep}PrivateSMOTE_force_laplace{sep}{msg}.csv',
-            index=False)
 
 # %%

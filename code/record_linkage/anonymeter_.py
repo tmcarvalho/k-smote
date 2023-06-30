@@ -49,10 +49,6 @@ def anonymeter_linkability(file, args):
         except: pass
         transf_data = orig_data.astype(dtype = orig_data.dtypes)
 
-    # select singleouts in PrivateSMOTE
-    # if (args.type=='PrivateSMOTE'):
-    #     orig_data = aux_singleouts(keys, orig_data)
-    #     transf_data = transf_data.loc[transf_data['single_out']==1]
     if args.type=='resampling_and_gans':
         for i in range(len(set_key_vars)):
             try:
@@ -89,24 +85,3 @@ def anonymeter_linkability(file, args):
                     f'{args.output_folder}/{file}',
                     index=False)
         except: pass
-
-def keep_numbers(data):
-    """mantain correct data types according to the data"""
-    data_types = data.copy()
-    for col in data.columns:
-        # transform strings to digits
-        if isinstance(data[col].iloc[0], str) and data[col].iloc[0].isdigit():
-            data[col] = data[col].astype(float)
-        # remove trailing zeros
-        if isinstance(data[col].iloc[0], (int, float)):
-            if int(data[col].iloc[0]) == float(data[col].iloc[0]):
-                data_types[col] = data[col].astype(int)
-            else: data[col] = data_types[col].astype(float)
-    return data, data_types
-
-
-def aux_singleouts(key_vars, dt):
-    """create single out variable based on k-anonymity"""
-    k = dt.groupby(key_vars)[key_vars[0]].transform(len)
-    dt['single_out'] = np.where(k == 1, 1, 0)
-    return dt

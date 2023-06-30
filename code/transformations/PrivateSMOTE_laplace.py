@@ -26,7 +26,7 @@ def keep_numbers(data):
         # remove trailing zeros
         if isinstance(data[col].iloc[0], (int, float)):
             if int(data[col].iloc[0]) == float(data[col].iloc[0]):
-                data_types[col] = data[col].astype(int)
+                data[col] = data[col].astype(int)
             else: data[col] = data_types[col].astype(float)
     return data, data_types
 
@@ -34,7 +34,7 @@ def keep_numbers(data):
 def aux_singleouts(key_vars, dt):
     """create single out variable based on k-anonymity"""
     k = dt.groupby(key_vars)[key_vars[0]].transform(len)
-    dt['single_out'] = np.where(k == 1, 1, 0)
+    dt['single_out'] = np.where(k < 3, 1, 0)
     return dt
 
 

@@ -14,11 +14,15 @@ from sklearn.preprocessing import StandardScaler
 import random
 from scipy import stats
 from random import randrange
-import time
+import argparse
 
+parser = argparse.ArgumentParser(description='Master Example')
+# parser.add_argument('--input_folder', type=str, help='Input folder', default="./input")
+parser.add_argument('--input_file', type=str, default="none")
+args = parser.parse_args()
 
 def keep_numbers(data):
-    """mantain correct data types according to the data"""
+    """fix data types according to the data"""
     data_types = data.copy()
     for col in data.columns:
         # transform strings to digits
@@ -160,22 +164,21 @@ class Smote:
             N-=1
 
 # %% 
-def PrivateSMOTE_force_laplace_(msg):
+def PrivateSMOTE_force_laplace_(input_file):
     """Generate several interpolated data sets considering all classes.
 
     Args:
         msg (str): name of the original file and respective PrivateSMOTE parameters
     """
-    print(msg)
+    print(input_file)
 
-    start= time.time()
-    output_interpolation_folder = 'output/oversampled/PrivateSMOTE_force_laplace_k3'
+    output_interpolation_folder = 'output/oversampled/5-PrivateSMOTE'
     
     # get 80% of data to synthesise
     indexes = np.load('indexes.npy', allow_pickle=True).item()
     indexes = pd.DataFrame.from_dict(indexes)
 
-    f = list(map(int, re.findall(r'\d+', msg.split('_')[0])))
+    f = list(map(int, re.findall(r'\d+', input_file.split('_')[0])))
     print(str(f[0]))
     data = pd.read_csv(f'original/{str(f[0])}.csv')
 
@@ -190,7 +193,7 @@ def PrivateSMOTE_force_laplace_(msg):
     set_key_vars = ast.literal_eval(
         list_key_vars.loc[list_key_vars['ds']==f[0], 'set_key_vars'].values[0])
 
-    keys_nr = list(map(int, re.findall(r'\d+', msg.split('_')[2])))[0]
+    keys_nr = list(map(int, re.findall(r'\d+', input_file.split('_')[2])))[0]
     print(keys_nr)
     keys = set_key_vars[keys_nr]
     # print(data.shape)
@@ -198,8 +201,8 @@ def PrivateSMOTE_force_laplace_(msg):
     # print(data.shape)
     data = aux_singleouts(keys, data)
 
-    knn = list(map(int, re.findall(r'\d+', msg.split('_')[3])))[0]
-    per = list(map(int, re.findall(r'\d+', msg.split('_')[4])))[0]
+    knn = list(map(int, re.findall(r'\d+', input_file.split('_')[3])))[0]
+    per = list(map(int, re.findall(r'\d+', input_file.split('_')[4])))[0]
     ep = 5
     new = Smote(data, per, knn, ep).over_sampling()
     
@@ -222,7 +225,8 @@ def PrivateSMOTE_force_laplace_(msg):
 
     # save oversampled data
     newDf.to_csv(
-        f'{output_interpolation_folder}{sep}{msg}.csv',
+        f'{output_interpolation_folder}{sep}{input_file}.csv',
         index=False)
 
-# %%
+
+PrivateSMOTE_force_laplace_(args.input_file)

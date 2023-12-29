@@ -196,4 +196,10 @@ dpart_clean['Cumulative Processor Energy_0(Joules)'].max()
 # %%
 dpart_clean['Elapsed Time (min)'].max()
 
+# %% New results from VM
+import pandas as pd
+
+# Reading JSON data from a file
+costs_5PS= pd.read_json("../output/comp_costs/5-PrivateSMOTE.json")
+
 # %%

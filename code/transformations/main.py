@@ -85,15 +85,22 @@ def do_work(conn, ch, delivery_tag, body):
             # The subprocess is still running
             print("Subprocess is still running...")
 
-        # Capture the output using communicate()
+        # Wait for the process to finish and capture output
         stdout, stderr = process.communicate()
 
-        # Print the captured output
+        # Check the return code
+        return_code = process.returncode
+
+        # Print captured output and return code
+        print("Standard Output:")
         print(stdout)
 
-        work_success = process.returncode == 0
+        print("\nStandard Error:")
+        print(stderr)
 
-    print(work_success)
+        print("\nReturn Code:", return_code)    
+
+    # print(work_success)
 
     # Measure resource consumption after running the script
     measure_resource_consumption(msg)

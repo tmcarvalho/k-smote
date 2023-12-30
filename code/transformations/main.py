@@ -1,5 +1,8 @@
 import subprocess
 import time
+import re
+import pandas as pd
+import ast
 import os
 import functools
 import threading
@@ -77,10 +80,22 @@ def do_work(conn, ch, delivery_tag, body):
     measure_resource_consumption(msg)
 
     if 'PrivateSMOTE' in args.type:
+        f = list(map(int, re.findall(r'\d+', msg.split('_')[0])))
+        list_key_vars = pd.read_csv('list_key_vars.csv')
+        set_key_vars = ast.literal_eval(
+            list_key_vars.loc[list_key_vars['ds']==f[0], 'set_key_vars'].values[0])
+
+        keys_nr = list(map(int, re.findall(r'\d+', msg.split('_')[2])))[0]
+        print(keys_nr)
+        keys = set_key_vars[keys_nr]
+        keys_str = ','.join(keys)
+        
         # Use subprocess.Popen to run the script asynchronously
-        process = subprocess.Popen(['python3', 'code/transformations/PrivateSMOTE_force_laplace.py', '--input_file', msg], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        process = subprocess.Popen(['python3', 'code/transformations/PrivateSMOTE_force_laplace.py', '--input_file', msg, '--key_vars', keys_str], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=False)
+    
     if args.type == 'SDV':
         process = subprocess.Popen(['python3', 'code/transformations/deep_learning.py', '--input_file', msg], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    
     if args.type == 'Synthcity':
         process = subprocess.Popen(['python3', 'code/transformations/deep_learning.py', '--input_file', msg], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 

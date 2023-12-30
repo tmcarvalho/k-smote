@@ -5,24 +5,22 @@ This script will apply SMOTE technique in the single out cases.
 import cupy as cp
 from os import sep
 import re
-import ast
 import pandas as pd
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler, LabelEncoder
-from scipy import stats
 from random import randrange
 import argparse
 
 parser = argparse.ArgumentParser(description='Master Example')
 # parser.add_argument('--input_folder', type=str, help='Input folder', default="./input")
 parser.add_argument('--input_file', type=str, default="none")
+parser.add_argument('--key_vars', type=str, default="none")
 args = parser.parse_args()
 
 
 def keep_numbers(data):
     """fix data types according to the data"""
-    data_types = data.copy()
     for col in data.columns:
         # transform numerical strings to digits
         if isinstance(data[col].iloc[0], str) and data[col].iloc[0].isdigit():
@@ -31,8 +29,7 @@ def keep_numbers(data):
         if isinstance(data[col].iloc[0], (int, float)):
             if int(data[col].iloc[0]) == float(data[col].iloc[0]):
                 data[col] = data[col].astype(int)
-            else: data[col] = data_types[col].astype(float)
-    return data, data_types
+    return data
 
 
 def aux_singleouts(key_vars, dt):
@@ -42,26 +39,25 @@ def aux_singleouts(key_vars, dt):
     return dt
 
 
-def check_and_adjust_data_types(origDF, newDf, data_types):
+def check_and_adjust_data_types(origDF, newDf):
     for col in newDf.columns[:-1]:
-        if data_types[col].dtype == np.int64:
+        if origDF[col].dtype == np.int64:
             newDf[col] = round(newDf[col], 0).astype(int)
-        elif data_types[col].dtype == np.float64:
-            # Adjust the trailing values for float columns
+        elif origDF[col].dtype == np.float64:
+            # origDF the trailing values for float columns
             dec = str(origDF[col].values[0])[::-1].find('.')
             newDf[col] = round(newDf[col], dec)
     return newDf
 
 
-class PrivSmote:
-    """Apply Smote
+class PrivateSMOTE:
+    """Apply PrivateSMOTE
     """
     def __init__(self, samples, N, k, ep):
         """Initiate arguments
 
         Args:
-            data (pd.Dataframe): all data
-            y (pd.Series): target sample
+            samples (pd.Dataframe): all data
             N (int): number of interpolations per observation
             k (int): number of nearest neighbours
             ep (float): privacy budget (epsilon)
@@ -78,7 +74,7 @@ class PrivSmote:
         # target variable values
         # self.y = self.prepare_target_variable(self.samples.loc[:, self.samples.columns[-2]])
         self.y = cp.array(self.samples.loc[:, self.samples.columns[-2]])
-        print(self.y)
+
         # drop singlout and target variables to knn
         self.data_knn = self.samples.loc[:, self.samples.columns[:-2]]
         print("all data: ", self.data_knn.shape)
@@ -171,7 +167,7 @@ class PrivSmote:
             noise = [cp.multiply(
                             neighbor_val - orig_val,
                             cp.random.laplace(0, 1 / self.ep, size=None))
-                            if cp.issubdtype(orig_val, (cp.float64, cp.int64))
+                            if cp.issubdtype(orig_val, (cp.floating, cp.integer))
                             else orig_val
                             for (neighbor_val, orig_val) in zip(self.x[nnarray[neighbour]], self.x[i])]
             
@@ -225,7 +221,7 @@ class PrivSmote:
             N -= 1
 
 # %% 
-def PrivateSMOTE_force_laplace_(input_file):
+def PrivateSMOTE_force_laplace_(input_file, keys):
     """Generate several interpolated data sets considering all classes.
 
     Args:
@@ -248,24 +244,17 @@ def PrivateSMOTE_force_laplace_(input_file):
     data = data.iloc[data_idx, :]
 
     # encode string with numbers to numeric and remove trailing zeros
-    data, data_types = keep_numbers(data)
-    
-    list_key_vars = pd.read_csv('list_key_vars.csv')
-    set_key_vars = ast.literal_eval(
-        list_key_vars.loc[list_key_vars['ds']==f[0], 'set_key_vars'].values[0])
-
-    keys_nr = list(map(int, re.findall(r'\d+', input_file.split('_')[2])))[0]
-    print(keys_nr)
-    keys = set_key_vars[keys_nr]
+    data = keep_numbers(data)
 
     # print(data.shape)
-    data = aux_singleouts(keys, data)
+    keys_list = keys.split(',')
+    data = aux_singleouts(keys_list, data)
 
     # encoded target
-    label_encoder = LabelEncoder()
+    target_encoder = LabelEncoder()
     def enc_dec(target, action):
         if isinstance(target, object):
-            target = label_encoder.fit_transform(target) if action=='encode' else label_encoder.inverse_transform(target)
+            target = target_encoder.fit_transform(target) if action=='encode' else target_encoder.inverse_transform(target)
         return target
 
     data[data.columns[-2]] = enc_dec(data[data.columns[-2]], 'encode')
@@ -274,7 +263,8 @@ def PrivateSMOTE_force_laplace_(input_file):
     per = list(map(int, re.findall(r'\d+', input_file.split('_')[4])))[0]
     ep = list(map(float, re.findall(r'\d+', input_file.split('_')[1])))[0]
 
-    new = PrivSmote(data, per, knn, ep).over_sampling()
+    new = PrivateSMOTE(data, per, knn, ep).over_sampling()
+
     # Convert synthetic data back to a Pandas DataFrame
     newDf = pd.DataFrame(cp.asnumpy(new), columns=data.columns[:-1])
     newDf = newDf.astype(dtype=data[data.columns[:-1]].dtypes)
@@ -285,8 +275,8 @@ def PrivateSMOTE_force_laplace_(input_file):
         newDf = pd.concat([newDf, data.loc[data['single_out'] == 0]])
 
     # Check and adjust data types and trailing values
-    newDf = check_and_adjust_data_types(data, newDf, data_types)
+    newDf = check_and_adjust_data_types(data, newDf)
     
     newDf.to_csv(f'{output_interpolation_folder}{sep}{input_file}.csv', index=False)
 
-PrivateSMOTE_force_laplace_(args.input_file)
+PrivateSMOTE_force_laplace_(args.input_file, args.key_vars)

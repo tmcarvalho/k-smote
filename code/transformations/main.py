@@ -8,14 +8,18 @@ import json
 import pika
 import psutil
 import GPUtil
-
-# Record start time
-start_time = time.time()
+from multiprocessing import Process, cpu_count, Manager
 
 # Argument parsing
 parser = argparse.ArgumentParser(description='Master Example')
 parser.add_argument('--type', type=str, help='transformation type', default="none")
 args = parser.parse_args()
+
+# List to store resource usage information
+# resource_usage_data = Manager().list()
+# print(resource_usage_data)
+# Record start time
+start_time = time.time()
 
 # List to store resource usage information
 resource_usage_data = []
@@ -43,7 +47,6 @@ def ack_message(ch, delivery_tag, work_success):
 def measure_resource_consumption(file):
     # Measure CPU usage
     cpu_percent = psutil.cpu_percent(interval=1)
-
     # Measure GPU usage
     gpu_percent = GPUtil.getGPUs()[0].load * 100
 
@@ -103,7 +106,7 @@ def do_work(conn, ch, delivery_tag, body):
     # print(work_success)
 
     # Measure resource consumption after running the script
-    measure_resource_consumption(msg)
+    # measure_resource_consumption(msg)
 
 
     # After subprocess completion, store resource usage data in a JSON file
@@ -112,7 +115,7 @@ def do_work(conn, ch, delivery_tag, body):
 
     os.system('find . -name "__pycache__" -type d -exec rm -rf "{}" +')
     os.system('find . -name "*.pyc"| xargs rm -f "{}"')
-    cb = functools.partial(ack_message, ch, delivery_tag, work_success)
+    cb = functools.partial(ack_message, ch, delivery_tag, process)
     conn.add_callback_threadsafe(cb)
 
 def on_message(ch, method_frame, _header_frame, body, args):

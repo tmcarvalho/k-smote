@@ -76,41 +76,34 @@ def do_work(conn, ch, delivery_tag, body):
     # Measure resource consumption before running the script
     measure_resource_consumption(msg)
 
-    if args.type == 'PrivateSMOTE_force_laplace':
+    if 'PrivateSMOTE' in args.type:
         # Use subprocess.Popen to run the script asynchronously
         process = subprocess.Popen(['python3', 'code/transformations/PrivateSMOTE_force_laplace.py', '--input_file', msg], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if args.type == 'SDV':
+        process = subprocess.Popen(['python3', 'code/transformations/deep_learning.py', '--input_file', msg], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if args.type == 'Synthcity':
+        process = subprocess.Popen(['python3', 'code/transformations/deep_learning.py', '--input_file', msg], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
-        # Poll the subprocess while it's running
-        while process.poll() is None:
-            # Measure resource consumption during the script execution
-            measure_resource_consumption(msg)
-            #time.sleep(1)  # Adjust the interval as needed
-            # The subprocess is still running
-            print("Subprocess is still running...")
+    # Poll the subprocess while it's running
+    while process.poll() is None:
+        # Measure resource consumption during the script execution
+        measure_resource_consumption(msg)
+        #time.sleep(1)  # Adjust the interval as needed
+        # The subprocess is still running
+        print("Subprocess is still running...")
 
-        # Wait for the process to finish and capture output
-        stdout, stderr = process.communicate()
+    # Wait for the process to finish and capture output
+    stdout, stderr = process.communicate()
 
-        # Check the return code
-        return_code = process.returncode
+    # Print captured output and return code
+    print("Standard Output:")
+    print(stdout)
 
-        # Print captured output and return code
-        print("Standard Output:")
-        print(stdout)
-
-        print("\nStandard Error:")
-        print(stderr)
-
-        print("\nReturn Code:", return_code)    
-
-    # print(work_success)
-
-    # Measure resource consumption after running the script
-    # measure_resource_consumption(msg)
-
+    print("\nStandard Error:")
+    print(stderr)
 
     # After subprocess completion, store resource usage data in a JSON file
-    with open(f'output/comp_costs/5-PrivateSMOTE.json', 'w') as json_file:
+    with open(f'output/comp_costs/{msg}.json', 'w') as json_file:
         json.dump(resource_usage_data, json_file, indent=2)
 
     os.system('find . -name "__pycache__" -type d -exec rm -rf "{}" +')
@@ -129,14 +122,14 @@ def on_message(ch, method_frame, _header_frame, body, args):
 # Connection setup
 connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost', heartbeat=0))
 channel = connection.channel()
-channel.queue_declare(queue='task_queue_privatesmote_force_laplace', durable=True, arguments={"dead-letter-exchange": "dlx"})
+channel.queue_declare(queue='task_queue_transf', durable=True, arguments={"dead-letter-exchange": "dlx"})
 print(' [*] Waiting for messages. To exit press CTRL+C')
 
 channel.basic_qos(prefetch_count=1)
 
 threads = []
 on_message_callback = functools.partial(on_message, args=(connection, threads))
-channel.basic_consume('task_queue_privatesmote_force_laplace', on_message_callback)
+channel.basic_consume('task_queue_transf', on_message_callback)
 
 try:
     channel.start_consuming()
@@ -148,3 +141,7 @@ for thread in threads:
     thread.join()
 
 connection.close()
+
+# find . -name ".DS_Store" -delete
+# python3 code/transformations/task_transf.py  --input_folder "original" --type "PrivateSMOTE"
+# python3 code/transformations/main.py --type "PrivateSMOTE"

@@ -277,7 +277,7 @@ def PrivateSMOTE_force_laplace_(input_file):
 
     knn = list(map(int, re.findall(r'\d+', input_file.split('_')[3])))[0]
     per = list(map(int, re.findall(r'\d+', input_file.split('_')[4])))[0]
-    ep = 5
+    ep = list(map(float, re.findall(r'\d+', input_file.split('_')[1])))[0]
 
     new = PrivSmote(data, per, knn, ep).over_sampling()
     # Convert synthetic data back to a Pandas DataFrame

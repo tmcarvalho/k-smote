@@ -41,11 +41,6 @@ def aux_singleouts(key_vars, dt):
     dt['single_out'] = np.where(k < 3 , 1, 0)
     return dt
 
-def remove_outliers(key_vars, dt):
-    newdf = dt[key_vars].select_dtypes(include=np.number)
-    newdf = newdf[(np.abs(stats.zscore(newdf)) < 3).all(axis=1)]
-    dt = dt[dt.index.isin(newdf.index)]
-    return dt
 
 def check_and_adjust_data_types(origDF, newDf, data_types):
     for col in newDf.columns[:-1]:

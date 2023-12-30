@@ -5,6 +5,20 @@ from collections import defaultdict
 from sklearn.preprocessing import LabelEncoder
 from imblearn.over_sampling import BorderlineSMOTE
 
+def keep_numbers(data):
+    """fix data types according to the data"""
+    data_types = data.copy()
+    for col in data.columns:
+        # transform numerical strings to digits
+        if isinstance(data[col].iloc[0], str) and data[col].iloc[0].isdigit():
+            data[col] = data[col].astype(float)
+        # remove trailing zeros
+        if isinstance(data[col].iloc[0], (int, float)):
+            if int(data[col].iloc[0]) == float(data[col].iloc[0]):
+                data[col] = data[col].astype(int)
+            else: data[col] = data_types[col].astype(float)
+    return data, data_types
+
 # %%
 def interpolation(original_folder, file):
     """Generate several interpolated data sets.
@@ -16,6 +30,9 @@ def interpolation(original_folder, file):
     output_interpolation_folder = '../output/oversampled/borderlineSmote'
 
     data = pd.read_csv(f'{original_folder}/{file}')
+    # encode string with numbers to numeric and remove trailing zeros
+    data, data_types = keep_numbers(data)
+
     label_encoder_dict = defaultdict(LabelEncoder)
     data_encoded = data.apply(lambda x: label_encoder_dict[x.name].fit_transform(x))
     map_dict = dict()

@@ -11,10 +11,10 @@ from imblearn.over_sampling import SMOTE, BorderlineSMOTE
 
 
 def keep_numbers(data):
-    """mantain correct data types according to the data"""
+    """fix data types according to the data"""
     data_types = data.copy()
     for col in data.columns:
-        # transform strings to digits
+        # transform numerical strings to digits
         if isinstance(data[col].iloc[0], str) and data[col].iloc[0].isdigit():
             data[col] = data[col].astype(float)
         # remove trailing zeros

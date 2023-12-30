@@ -12,6 +12,21 @@ parser = argparse.ArgumentParser(description='Master Example')
 parser.add_argument('--input_file', type=str, default="none")
 args = parser.parse_args()
 
+
+def keep_numbers(data):
+    """fix data types according to the data"""
+    data_types = data.copy()
+    for col in data.columns:
+        # transform numerical strings to digits
+        if isinstance(data[col].iloc[0], str) and data[col].iloc[0].isdigit():
+            data[col] = data[col].astype(float)
+        # remove trailing zeros
+        if isinstance(data[col].iloc[0], (int, float)):
+            if int(data[col].iloc[0]) == float(data[col].iloc[0]):
+                data[col] = data[col].astype(int)
+            else: data[col] = data_types[col].astype(float)
+    return data, data_types
+
 # %%
 epochs=[100, 200]
 batch_size=[50, 100]
@@ -42,6 +57,9 @@ def synth(msg):
         index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
         data_idx = list(set(list(data.index)) - set(index))
         data = data.iloc[data_idx, :]
+
+        # encode string with numbers to numeric and remove trailing zeros
+        data, _ = keep_numbers(data)
 
         # transform target to string because integer targets are not well synthesised
         data[data.columns[-1]] = data[data.columns[-1]].astype(str)

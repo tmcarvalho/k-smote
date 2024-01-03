@@ -2,6 +2,7 @@
 This script will apply SMOTE technique in the single out cases.
 """
 # %%
+# Import necessary libraries
 import cupy as cp
 from os import sep
 import re
@@ -9,216 +10,237 @@ import pandas as pd
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler, LabelEncoder
-from random import randrange
 import argparse
 
+# Parse command-line arguments
 parser = argparse.ArgumentParser(description='Master Example')
-# parser.add_argument('--input_folder', type=str, help='Input folder', default="./input")
 parser.add_argument('--input_file', type=str, default="none")
 parser.add_argument('--key_vars', type=str, default="none")
 args = parser.parse_args()
 
+# Set CuPy memory allocator to use a memory pool
+# cp.cuda.set_allocator(cp.cuda.MemoryPool().malloc)
 
 def keep_numbers(data):
-    """fix data types according to the data"""
+    """Fix data types according to the data"""
     for col in data.columns:
-        # transform numerical strings to digits
+        # Transform numerical strings to digits
         if isinstance(data[col].iloc[0], str) and data[col].iloc[0].isdigit():
             data[col] = data[col].astype(float)
-        # remove trailing zeros
+        # Remove trailing zeros
         if isinstance(data[col].iloc[0], (int, float)):
             if int(data[col].iloc[0]) == float(data[col].iloc[0]):
                 data[col] = data[col].astype(int)
     return data
 
-
 def aux_singleouts(key_vars, dt):
-    """create single out variable based on k-anonymity"""
+    """Create single out variable based on k-anonymity"""
     k = dt.groupby(key_vars)[key_vars[0]].transform(len)
-    dt['single_out'] = np.where(k < 3 , 1, 0)
+    dt['single_out'] = np.where(k < 3, 1, 0)
     return dt
 
-
 def check_and_adjust_data_types(origDF, newDf):
-    for col in newDf.columns[:-1]:
+    for col in newDf.columns[:-2]:
         if origDF[col].dtype == np.int64:
             newDf[col] = round(newDf[col], 0).astype(int)
         elif origDF[col].dtype == np.float64:
-            # origDF the trailing values for float columns
+            # Handle trailing values for float columns
             dec = str(origDF[col].values[0])[::-1].find('.')
-            newDf[col] = round(newDf[col], dec)
+            newDf[col] = round(newDf[col], int(dec))
     return newDf
 
-
 class PrivateSMOTE:
-    """Apply PrivateSMOTE
-    """
+    """Apply PrivateSMOTE"""
     def __init__(self, samples, N, k, ep):
-        """Initiate arguments
-
-        Args:
-            samples (pd.Dataframe): all data
-            N (int): number of interpolations per observation
-            k (int): number of nearest neighbours
-            ep (float): privacy budget (epsilon)
-        """
+        """Initiate arguments"""
         self.samples = samples.reset_index(drop=True)
-        self.N = N
+        self.N = int(N)
         self.k = k
         self.ep = ep
         self.newindex = 0
 
-        # singleout samples that will be replaced
-        self.X_train = self.samples.loc[self.samples['single_out'] == 1, self.samples.columns[:-2]]
-        print("n singleouts: ", self.X_train.shape)
-        # target variable values
-        # self.y = self.prepare_target_variable(self.samples.loc[:, self.samples.columns[-2]])
+        # Single out samples that will be replaced
+        self.X_train_shape = self.samples.loc[self.samples['single_out'] == 1, self.samples.columns[:-2]].shape
+        print("n singleouts: ", self.X_train_shape)
+        # Target variable values
         self.y = cp.array(self.samples.loc[:, self.samples.columns[-2]])
 
-        # drop singlout and target variables to knn
-        self.data_knn = self.samples.loc[:, self.samples.columns[:-2]]
-        print("all data: ", self.data_knn.shape)
-        print(set(self.data_knn.dtypes))
-        # nr of samples and attributs to synthetize
-        self.n_samples = self.X_train.shape[0]
-        self.n_attrs = self.X_train.shape[1]
-        # transform singleout samples in ndarray
-        self.x = cp.array(self.data_knn)
+        # Initialize the synthetic samples with the number of samples and attributes
+        self.synthetic = cp.empty(shape=(self.X_train_shape[0] * N, self.X_train_shape[1] + 1), dtype='float32')
 
+        # Create CuPy vector with bool values, where true corresponds to object dtype
+        self.is_object_type = cp.array(self.samples[self.samples.columns[:-2]].dtypes == 'object')
+
+        print(set(self.samples[self.samples.columns[:-2]].dtypes))
+        # self.is_object_type = cp.array(self.samples.select_dtypes(include=['object']).columns)
         
-    def prepare_target_variable(self, target_variable):
-        # Convert non-numeric values to numeric
-        if isinstance(self.samples[target_variable], object):
-            label_encoder = LabelEncoder()
-            self.samples[target_variable] = label_encoder.fit_transform(self.samples[target_variable])
-        return cp.array(self.samples[target_variable])
 
-    def prepare_categorical_variables(self, data):
-        # One-hot encode categorical columns
-        data_encoded = pd.get_dummies(data, drop_first=True)
-        return cp.array(data_encoded)
+    def enc_data(self):
+        if cp.any(self.is_object_type):
+            print("CuPy Vector:", self.is_object_type)
+            self.label_encoders = {}
+            self.label_encoder = LabelEncoder()
+            enc_samples = self.samples.loc[:,self.samples.columns[:-2]].copy()
+            print(enc_samples.head())
+            # Get the column names that are of object type
+            print(cp.asnumpy(cp.where(self.is_object_type)[0]))
+            self.object_columns = enc_samples.columns[cp.asnumpy(self.is_object_type)]
+            self.unique_values = {}
+            print(self.object_columns)
+            print(type(self.object_columns))
+            # One-hot encode categorical columns
+            dummie_data = cp.array(pd.get_dummies(enc_samples, drop_first=True))
+            self.neighbors = self.nearest_neighbours(dummie_data)
+            print(self.neighbors)
+            # Label encode the object-type columns
+            enc_samples = cp.array(self.encode_categorical_columns(enc_samples))
+            # enc_samples[self.object_columns] = enc_samples[self.object_columns].apply(
+            #     lambda col: cp.array(self.label_encoder.fit_transform(cp.asnumpy(col))).get())
+            # print(enc_samples.head())
+            # Transform encoding samples into ndarray
+            # enc_samples = cp.array(enc_samples)
+            print(type(enc_samples))
+            # Get unique values for each object column
+            #self.unique_values = [cp.unique(enc_samples[:,i]) for i in cp.where(self.is_object_type)[0]]
+            print(self.unique_values)
+
+            # FOR CONTROL
+            unique_values_ = [self.samples.loc[:,col].unique() for col in self.samples[self.object_columns]]
+            print(unique_values_)
+
+            return enc_samples
+        else:
+            print("ONLY NUMBERS")
+            # Drop singlout and target variables to knn
+            print("all data: ", self.samples.loc[:, self.samples.columns[:-2]].shape)
+            print(set(self.samples.loc[:, self.samples.columns[:-2]].dtypes))
+            self.neighbors = self.nearest_neighbours(cp.array(self.samples.loc[:, self.samples.columns[:-2]]))
+
+            return cp.array(self.samples.loc[:, self.samples.columns[:-2]])
+
+    def encode_categorical_columns(self, data):
+        for col in self.object_columns:
+            label_encoder = LabelEncoder()
+            data[col] = cp.array(label_encoder.fit_transform(data[col])).get()
+            self.label_encoders[col] = label_encoder
+            self.unique_values[col] = cp.unique(data[col])
+        return data
+
+    def decode_categorical_columns(self, encoded_data):
+        # Inverse transform the column
+        for col_name in self.object_columns:
+            encoded_data[col_name] = self.label_encoders[col_name].inverse_transform(encoded_data[col_name].astype(int))
+        return encoded_data
+    
+    def nearest_neighbours(self, data):
+        print(type(data))
+        # Standardize the data
+        self.standardized_data = StandardScaler().fit_transform(data.get())
+        nearestn = NearestNeighbors(n_neighbors=self.k + 1).fit(self.standardized_data)
+        return nearestn
 
     def over_sampling(self):
-        """find the nearest neighbors and populate with new data
-
-        Returns:
-            pd.DataFrame: synthetic data
-        """
+        """Find the nearest neighbors and populate with new data"""
         N = int(self.N)
-        # OHE + standardization for nearest neighbor using all data
-        encoded_data = self.prepare_categorical_variables(self.data_knn)
+        self.x = self.enc_data()
+        print(type(self.x))
+        # Find the minimum value for each numerical column
+        self.min_values = [self.x[:, i].min() if not self.is_object_type[i] else cp.nan for i in range(self.x.shape[1])]
+        # Find the maximum value for each numerical column
+        self.max_values = [self.x[:, i].max() if not self.is_object_type[i] else cp.nan for i in range(self.x.shape[1])]
+        # Find the standard deviation value for each numerical column
+        self.std_values = [cp.std(self.x[:, i]) if not self.is_object_type[i] else cp.nan for i in range(self.x.shape[1])]
+        
+        # For each observation find nearest neighbours
+        for i, _ in enumerate(cp.asnumpy(self.standardized_data)):
+            if i in self.samples.loc[self.samples['single_out'] == 1, self.samples.columns[:-2]].index:
+                nnarray = self.neighbors.kneighbors(cp.asnumpy(self.standardized_data[i].reshape(1, -1)),
+                                               return_distance=False)[0]
+                self._populate(N, i, cp.array(nnarray))
 
-        # Convert Cupy array to NumPy array
-        encoded_data_numpy = cp.asnumpy(encoded_data)
+        self.synthetic = cp.asnumpy(self.synthetic)
 
-        # Standardize the data using NumPy array
-        standardized_data = StandardScaler().fit_transform(encoded_data_numpy)
-
-        neighbors = NearestNeighbors(n_neighbors=self.k + 1).fit(standardized_data)
-
-        # inicialize the synthetic samples
-        self.synthetic = cp.empty(shape=(self.n_samples * N, self.n_attrs + 1), dtype='float32')
-
-        # find the categories for each categorical column in all sample
-        self.unique_values = [cp.unique(self.data_knn.loc[:, col]) for col in self.data_knn.select_dtypes(object)]
-        #print(self.unique_values)
-        # find the minimun value for each numerical column
-        self.min_values = [self.data_knn[col].min() if not isinstance(self.data_knn[col].iloc[0], str) else cp.nan for col in
-                           self.data_knn.columns]
-        #print(self.min_values)
-        # find the maximum value for each numerical column
-        self.max_values = [self.data_knn[col].max() if not isinstance(self.data_knn[col].iloc[0], str) else cp.nan for col
-                           in self.data_knn.columns]
-        #print(self.max_values)
-        # find the standard deviation value for each numerical column
-        self.std_values = [cp.std(self.data_knn[col]) if not isinstance(self.data_knn[col].iloc[0], str) else cp.nan for
-                           col in self.data_knn.columns]
-
-        # for each observation find nearest neighbours
-        for i, _ in enumerate(cp.asnumpy(standardized_data)):
-            if i in self.X_train.index:
-                #print(i)
-                nnarray = neighbors.kneighbors(cp.asnumpy(standardized_data[i].reshape(1, -1)),
-                                               return_distance=False)[0]  # Convert to NumPy array before querying
-                #print(nnarray)
-                self._populate(N, i, nnarray)
-        return cp.asnumpy(self.synthetic)  # Convert back to NumPy array before returning
+        # Convert synthetic data back to a Pandas DataFrame
+        new = pd.DataFrame(self.synthetic, columns=self.samples.columns[:-1])
+        new = new.astype(dtype=self.samples[self.samples.columns[:-1]].dtypes)
+        if cp.any(self.is_object_type):
+            new = self.decode_categorical_columns(new)
+        
+        print(new.head())
+        return new
 
     def _populate(self, N, i, nnarray):
-        # populate N times
+        # Populate N times
         while N != 0:
-            # find index of nearest neighbour excluding the observation in comparison
-            neighbour = randrange(1, self.k + 1)
+            # Find index of nearest neighbour excluding the observation in comparison
+            neighbour = cp.random.randint(1, self.k + 1)
+
+            # print(neighbour)
             # print(len(self.x[i]))
             # print(self.x[i])
             # print(self.x[nnarray[neighbour]])
-            # print(neighbour)
-            # print(cp.random.laplace(0, 1 / self.ep, size=None))
-            # control flip (with standard deviation) for equal neighbor and original values 
+
+            # print(self.min_values)
+            # Control flip (with standard deviation) for equal neighbor and original values 
             flip = [cp.multiply(cp.multiply(
                             cp.random.choice([-1, 1], size=1), std),
                             cp.random.laplace(0, 1 / self.ep, size=None))
-                            if cp.issubdtype(orig_val, (cp.floating, cp.integer))
+                            if not cp.isnan(std)
                             else orig_val
                             for std, orig_val in zip(self.std_values, self.x[i])]
-            #print(flip)
-
-            # without flip when neighbour is different from original
+            # Without flip when neighbour is different from original
             noise = [cp.multiply(
                             neighbor_val - orig_val,
-                            cp.random.laplace(0, 1 / self.ep, size=None))
-                            if cp.issubdtype(orig_val, (cp.floating, cp.integer))
+                            cp.random.laplace(0, 1 / self.ep))
+                            if not cp.isnan(self.min_values[j])
                             else orig_val
-                            for (neighbor_val, orig_val) in zip(self.x[nnarray[neighbour]], self.x[i])]
-            
-            #print(noise)
-            # generate new numerical value for each column
+                            for j, (neighbor_val, orig_val) in enumerate(zip(self.x[nnarray[neighbour]], self.x[i]))]
+            # Generate new numerical value for each column
             new_nums_values = [orig_val + flip[j]
                     if neighbor_val == orig_val 
-                    and cp.issubdtype(orig_val, (cp.floating, cp.integer)) 
+                    and not cp.isnan(self.min_values[j]) 
                     and self.min_values[j] <= orig_val + flip[j] <= self.max_values[j]
                     else orig_val - flip[j]
-                    if neighbor_val == orig_val and cp.issubdtype( orig_val, (cp.floating, cp.integer)) 
+                    if neighbor_val == orig_val and not cp.isnan(self.min_values[j]) 
                     and (self.min_values[j] > orig_val + flip[j]
                     or orig_val + flip[j] > self.max_values[j])
                     else orig_val + noise[j]
-                    if neighbor_val != orig_val and cp.issubdtype(orig_val, (cp.floating, cp.integer)) 
+                    if neighbor_val != orig_val and not cp.isnan(self.min_values[j])
                     and self.min_values[j] <= orig_val + noise[j] <= self.max_values[j]
                     else orig_val - noise[j]
-                    if neighbor_val != orig_val and cp.issubdtype(orig_val, (cp.floating, cp.integer)) 
+                    if neighbor_val != orig_val and not cp.isnan(self.min_values[j])
                     and (self.min_values[j] > orig_val + noise[j] > self.max_values[j])
                     else orig_val
                     for j, (neighbor_val, orig_val) in enumerate(zip(self.x[nnarray[neighbour]], self.x[i]))]
-
             #print(new_nums_values)
-            if len(self.unique_values) > 0:
-                # find the categories for each categorical column in nearest neighbors sample
-                nn_unique = [cp.unique( self.samples.loc[nnarray[1 : self.k + 1], col]) 
-                            for col in self.data_knn.select_dtypes("object")]
-
-                # randomly select a category
-                new_cats_values = [cp.random.choice(self.unique_values[u], size=None)
-                                if len(nn_unique[u]) == 1
-                                else cp.random.choice(nn_unique[u], size=None)
-                                for u in range(len(self.unique_values))]
+            # Replace the old categories if there are categorical columns
+            if cp.any(self.is_object_type):
+                #print(self.x[nnarray[1 : self.k + 1]])
+                nn_unique = [cp.unique(self.x[nnarray[1 : self.k + 1], col]) 
+                            for col in cp.where(self.is_object_type)[0]]
+                #print(nn_unique)
+                #print(type(nn_unique))
+                #print(list(self.unique_values.values())[0])
+                # randomly select a category from all existent categories if there is just one category in nn_unique else select from nn_unique
+                new_cats_values = [cp.random.choice(list(self.unique_values.values())[u], size=1) if len(nn_unique[u]) == 1 else cp.random.choice(nn_unique[u], size=1) for u in range(len(self.unique_values))]
 
                 # replace the old categories
-                iter_cat_calues = iter(new_cats_values)
-                new_nums_values = [next(iter_cat_calues)
-                                if cp.issubdtype(val, cp.character)
-                                else val
-                                for val in new_nums_values]
-                        
+                iter_cat_values = iter(new_cats_values)
+                #print(new_nums_values)
+                new_nums_values = [next(iter_cat_values) if cp.isnan(self.min_values[j]) else val for j, val in enumerate(new_nums_values)]
+                #print(new_nums_values)
+
             # Concatenate the arrays along axis=0
             synthetic_array = cp.hstack(new_nums_values)
                     
-            # assign interpolated values
+            # Assign interpolated values
             self.synthetic[self.newindex, 0 : synthetic_array.shape[0]] = synthetic_array
-            
-            # assign intact target variable
+            #asdfe
+            # Assign intact target variable
             self.synthetic[self.newindex, synthetic_array.shape[0]] = self.y[i]
             self.newindex += 1
             N -= 1
+
 
 # %% 
 def PrivateSMOTE_force_laplace_(input_file, keys):
@@ -251,25 +273,22 @@ def PrivateSMOTE_force_laplace_(input_file, keys):
     data = aux_singleouts(keys_list, data)
 
     # encoded target
-    target_encoder = LabelEncoder()
-    def enc_dec(target, action):
-        if isinstance(target, object):
-            target = target_encoder.fit_transform(target) if action=='encode' else target_encoder.inverse_transform(target)
-        return target
-
-    data[data.columns[-2]] = enc_dec(data[data.columns[-2]], 'encode')
+    tgt_obj = data[data.columns[-2]].dtypes == 'object'
+    if tgt_obj:
+        print(tgt_obj)
+        target_encoder = LabelEncoder()
+        data[data.columns[-2]] = target_encoder.fit_transform(data[data.columns[-2]]) 
 
     knn = list(map(int, re.findall(r'\d+', input_file.split('_')[3])))[0]
     per = list(map(int, re.findall(r'\d+', input_file.split('_')[4])))[0]
     ep = list(map(float, re.findall(r'\d+', input_file.split('_')[1])))[0]
-
-    new = PrivateSMOTE(data, per, knn, ep).over_sampling()
-
+    print(data.head())
+    newDf = PrivateSMOTE(data, per, knn, ep).over_sampling()
+    print(type(newDf))
     # Convert synthetic data back to a Pandas DataFrame
-    newDf = pd.DataFrame(cp.asnumpy(new), columns=data.columns[:-1])
-    newDf = newDf.astype(dtype=data[data.columns[:-1]].dtypes)
     newDf = pd.concat([newDf, pd.DataFrame({'single_out': [1] * newDf.shape[0]})], axis=1)
-    newDf[newDf.columns[-2]] = enc_dec(newDf[newDf.columns[-2]], 'decode')
+    if tgt_obj:
+         newDf[newDf.columns[-2]] = target_encoder.inverse_transform(newDf[newDf.columns[-2]])
 
     if newDf.shape[0] != data.shape[0]:
         newDf = pd.concat([newDf, data.loc[data['single_out'] == 0]])

@@ -11,7 +11,6 @@ import json
 import pika
 import psutil
 import GPUtil
-from multiprocessing import Process, cpu_count, Manager
 
 # Argument parsing
 parser = argparse.ArgumentParser(description='Master Example')
@@ -56,6 +55,12 @@ def measure_resource_consumption(file):
     # Measure RAM usage
     ram_percent = psutil.virtual_memory().percent
 
+    # Measure temperature
+    # cpu_temperature = psutil.sensors_temperatures()["cpu_thermal"][0]
+
+    # Measure GPU temperature
+    gpu_temperature = GPUtil.getGPUs()[0].temperature
+
     # Measure elapsed time
     elapsed_time = time.time() - start_time
 
@@ -66,6 +71,8 @@ def measure_resource_consumption(file):
         'cpu_percent': cpu_percent,
         'gpu_percent': gpu_percent,
         'ram_percent': ram_percent,
+        # 'cpu_temperature': cpu_temperature.current,
+        'gpu_temperature': gpu_temperature
     }
 
     # Print and store resource usage
@@ -75,7 +82,7 @@ def measure_resource_consumption(file):
 
 def do_work(conn, ch, delivery_tag, body):
     msg = body.decode('utf-8')
-    
+
     # Measure resource consumption before running the script
     measure_resource_consumption(msg)
 

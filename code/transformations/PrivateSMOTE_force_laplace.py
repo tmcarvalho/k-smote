@@ -18,9 +18,6 @@ parser.add_argument('--input_file', type=str, default="none")
 parser.add_argument('--key_vars', type=str, default="none")
 args = parser.parse_args()
 
-# Set CuPy memory allocator to use a memory pool
-# cp.cuda.set_allocator(cp.cuda.MemoryPool().malloc)
-
 def keep_numbers(data):
     """Fix data types according to the data"""
     for col in data.columns:
@@ -72,50 +69,33 @@ class PrivateSMOTE:
         self.is_object_type = cp.array(self.samples[self.samples.columns[:-2]].dtypes == 'object')
 
         print(set(self.samples[self.samples.columns[:-2]].dtypes))
-        # self.is_object_type = cp.array(self.samples.select_dtypes(include=['object']).columns)
-        
+
 
     def enc_data(self):
         if cp.any(self.is_object_type):
-            print("CuPy Vector:", self.is_object_type)
             self.label_encoders = {}
             self.label_encoder = LabelEncoder()
             enc_samples = self.samples.loc[:,self.samples.columns[:-2]].copy()
-            print(enc_samples.head())
+
             # Get the column names that are of object type
-            print(cp.asnumpy(cp.where(self.is_object_type)[0]))
             self.object_columns = enc_samples.columns[cp.asnumpy(self.is_object_type)]
             self.unique_values = {}
-            print(self.object_columns)
-            print(type(self.object_columns))
-            # One-hot encode categorical columns
+            
+            # One-hot encode categorical columns for knn
             dummie_data = cp.array(pd.get_dummies(enc_samples, drop_first=True))
             self.neighbors = self.nearest_neighbours(dummie_data)
-            print(self.neighbors)
+
             # Label encode the object-type columns
             enc_samples = cp.array(self.encode_categorical_columns(enc_samples))
-            # enc_samples[self.object_columns] = enc_samples[self.object_columns].apply(
-            #     lambda col: cp.array(self.label_encoder.fit_transform(cp.asnumpy(col))).get())
-            # print(enc_samples.head())
-            # Transform encoding samples into ndarray
-            # enc_samples = cp.array(enc_samples)
-            print(type(enc_samples))
-            # Get unique values for each object column
-            #self.unique_values = [cp.unique(enc_samples[:,i]) for i in cp.where(self.is_object_type)[0]]
-            print(self.unique_values)
 
             # FOR CONTROL
-            unique_values_ = [self.samples.loc[:,col].unique() for col in self.samples[self.object_columns]]
-            print(unique_values_)
-
+            #unique_values_ = [self.samples.loc[:,col].unique() for col in self.samples[self.object_columns]]
+            #print(unique_values_)
             return enc_samples
+        
         else:
-            print("ONLY NUMBERS")
             # Drop singlout and target variables to knn
-            print("all data: ", self.samples.loc[:, self.samples.columns[:-2]].shape)
-            print(set(self.samples.loc[:, self.samples.columns[:-2]].dtypes))
             self.neighbors = self.nearest_neighbours(cp.array(self.samples.loc[:, self.samples.columns[:-2]]))
-
             return cp.array(self.samples.loc[:, self.samples.columns[:-2]])
 
     def encode_categorical_columns(self, data):
@@ -133,7 +113,6 @@ class PrivateSMOTE:
         return encoded_data
     
     def nearest_neighbours(self, data):
-        print(type(data))
         # Standardize the data
         self.standardized_data = StandardScaler().fit_transform(data.get())
         nearestn = NearestNeighbors(n_neighbors=self.k + 1).fit(self.standardized_data)
@@ -143,7 +122,6 @@ class PrivateSMOTE:
         """Find the nearest neighbors and populate with new data"""
         N = int(self.N)
         self.x = self.enc_data()
-        print(type(self.x))
         # Find the minimum value for each numerical column
         self.min_values = [self.x[:, i].min() if not self.is_object_type[i] else cp.nan for i in range(self.x.shape[1])]
         # Find the maximum value for each numerical column
@@ -165,8 +143,6 @@ class PrivateSMOTE:
         new = new.astype(dtype=self.samples[self.samples.columns[:-1]].dtypes)
         if cp.any(self.is_object_type):
             new = self.decode_categorical_columns(new)
-        
-        print(new.head())
         return new
 
     def _populate(self, N, i, nnarray):
@@ -175,12 +151,6 @@ class PrivateSMOTE:
             # Find index of nearest neighbour excluding the observation in comparison
             neighbour = cp.random.randint(1, self.k + 1)
 
-            # print(neighbour)
-            # print(len(self.x[i]))
-            # print(self.x[i])
-            # print(self.x[nnarray[neighbour]])
-
-            # print(self.min_values)
             # Control flip (with standard deviation) for equal neighbor and original values 
             flip = [cp.multiply(cp.multiply(
                             cp.random.choice([-1, 1], size=1), std),
@@ -212,15 +182,12 @@ class PrivateSMOTE:
                     and (self.min_values[j] > orig_val + noise[j] > self.max_values[j])
                     else orig_val
                     for j, (neighbor_val, orig_val) in enumerate(zip(self.x[nnarray[neighbour]], self.x[i]))]
-            #print(new_nums_values)
+
             # Replace the old categories if there are categorical columns
             if cp.any(self.is_object_type):
-                #print(self.x[nnarray[1 : self.k + 1]])
                 nn_unique = [cp.unique(self.x[nnarray[1 : self.k + 1], col]) 
                             for col in cp.where(self.is_object_type)[0]]
-                #print(nn_unique)
-                #print(type(nn_unique))
-                #print(list(self.unique_values.values())[0])
+                
                 # randomly select a category from all existent categories if there is just one category in nn_unique else select from nn_unique
                 new_cats_values = [cp.random.choice(list(self.unique_values.values())[u], size=1) if len(nn_unique[u]) == 1 else cp.random.choice(nn_unique[u], size=1) for u in range(len(self.unique_values))]
 
@@ -235,7 +202,7 @@ class PrivateSMOTE:
                     
             # Assign interpolated values
             self.synthetic[self.newindex, 0 : synthetic_array.shape[0]] = synthetic_array
-            #asdfe
+
             # Assign intact target variable
             self.synthetic[self.newindex, synthetic_array.shape[0]] = self.y[i]
             self.newindex += 1
@@ -275,16 +242,15 @@ def PrivateSMOTE_force_laplace_(input_file, keys):
     # encoded target
     tgt_obj = data[data.columns[-2]].dtypes == 'object'
     if tgt_obj:
-        print(tgt_obj)
         target_encoder = LabelEncoder()
         data[data.columns[-2]] = target_encoder.fit_transform(data[data.columns[-2]]) 
 
     knn = list(map(int, re.findall(r'\d+', input_file.split('_')[3])))[0]
     per = list(map(int, re.findall(r'\d+', input_file.split('_')[4])))[0]
     ep = list(map(float, re.findall(r'\d+', input_file.split('_')[1])))[0]
-    print(data.head())
+
     newDf = PrivateSMOTE(data, per, knn, ep).over_sampling()
-    print(type(newDf))
+
     # Convert synthetic data back to a Pandas DataFrame
     newDf = pd.concat([newDf, pd.DataFrame({'single_out': [1] * newDf.shape[0]})], axis=1)
     if tgt_obj:

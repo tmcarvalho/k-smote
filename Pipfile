@@ -15,7 +15,9 @@ xgboost = "*"
 pika = "*"
 scipy = "*"
 icecream = "*"
-sdv = "==0.17.1"
+synthcity = "*"
+sdv = "*"
+numba = "*"
 
 [dev-packages]
 ipykernel = "*"

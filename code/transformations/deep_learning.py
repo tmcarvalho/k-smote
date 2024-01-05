@@ -1,6 +1,6 @@
 # %%
 import argparse
-from os import sep, walk
+from os import sep
 import re
 import pandas as pd
 import numpy as np

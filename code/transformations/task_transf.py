@@ -45,48 +45,50 @@ files = files = next(os.walk(args.input_folder))[2]
 if args.type == 'PrivateSMOTE':
     knn = [1,3,5]
     per = [1,2,3]
-    epislon = [0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 10.0]
+    epislon = [0.1, 0.5, 1.0, 5.0, 10.0]
 
     for file in files:
-        f = int(file.split('.')[0])
-        #if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87]:
-        if f in [33]:
+        f = int(file.split('.csv')[0])
+        if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87, 100,43]:
+        # if f in [32]:
             print(file)
             for idx in range(5):
                 for k in knn:
                     for p in per:
-                        # for ep in epislon:
-                        print(f'ds{file.split(".")[0]}_{epislon[6]}-privateSMOTE_QI{idx}_knn{k}_per{p}')
-                        put_file_queue(channel, f'ds{file.split(".")[0]}_{epislon[6]}-privateSMOTE_QI{idx}_knn{k}_per{p}')
+                        for ep in epislon:
+                            print(f'ds{file.split(".")[0]}_{ep}-privateSMOTE_QI{idx}_knn{k}_per{p}')
+                            put_file_queue(channel, f'ds{file.split(".")[0]}_{ep}-privateSMOTE_QI{idx}_knn{k}_per{p}')
 
 if args.type == 'SDV':
     epochs=[100, 200]
     batch_size=[50, 100]
 
     for file in files:
-        f = int(file.split('.')[0])
+        f = int(file.split('.csv')[0])
         if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87, 100,43]:
+        # if f in [2]:
             print(file)
             for technique in ['CTGAN', 'CopulaGAN', 'TVAE']:
                 for ep in epochs:
                     for bs in batch_size:
-                        print(f'ds{file.split(".")[0]}_{technique}_QI{idx}_ep{ep}_bs{bs}')
-                        put_file_queue(channel, f'ds{file.split(".")[0]}_{technique}_QI{idx}_ep{ep}_bs{bs}')
+                        print(f'ds{file.split(".")[0]}_{technique}_ep{ep}_bs{bs}')
+                        put_file_queue(channel, f'ds{file.split(".")[0]}_{technique}_ep{ep}_bs{bs}')
 
 if args.type == 'Synthcity':
     n_iter=[100, 200]
     batch_size_=[50, 100]
-    epsilon=[0.1, 0.25, 0.5, 0.75, 1.0]
+    epsilon=[0.01, 0.1, 0.5, 1.0]
 
     for file in files:
-        f = int(file.split('.')[0])
+        f = int(file.split('.csv')[0])
         if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87, 100,43]:
+        # if f in [2]:
             print(file)
             for technique in ['dpgan', 'pategan']:
                     for epo in n_iter:
                         for bs in batch_size_:
                             for epi in epsilon:
-                                print(f'ds{file.split(".")[0]}_{technique}_QI{idx}_epo{epo}_bs{bs}_epi{epi}')
-                                put_file_queue(channel, f'ds{file.split(".")[0]}_{technique}_QI{idx}_epo{epo}_bs{bs}_epi{epi}')
+                                print(f'ds{file.split(".")[0]}_{technique}_epo{epo}_bs{bs}_epi{epi}')
+                                put_file_queue(channel, f'ds{file.split(".")[0]}_{technique}_epo{epo}_bs{bs}_epi{epi}')
 
 connection.close()

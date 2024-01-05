@@ -20,11 +20,6 @@ args = parser.parse_args()
 # List to store resource usage information
 # resource_usage_data = Manager().list()
 # print(resource_usage_data)
-# Record start time
-start_time = time.time()
-
-# List to store resource usage information
-resource_usage_data = []
 
 def ack_message(ch, delivery_tag, work_success):
     """Acknowledge message
@@ -46,7 +41,7 @@ def ack_message(ch, delivery_tag, work_success):
         # log and/or do something that makes sense for your app in this case.
         pass
 
-def measure_resource_consumption(file):
+def measure_resource_consumption(file, start_time, resource_usage_data):
     # Measure CPU usage
     cpu_percent = psutil.cpu_percent(interval=1)
     # Measure GPU usage
@@ -76,15 +71,20 @@ def measure_resource_consumption(file):
     }
 
     # Print and store resource usage
-    print(resource_usage)
     resource_usage_data.append(resource_usage)
-
+    # print(resource_usage)
 
 def do_work(conn, ch, delivery_tag, body):
     msg = body.decode('utf-8')
+    # Record start time
+    start_time = time.time() 
+    # List to store resource usage information
+    resource_usage_data = []   
 
     # Measure resource consumption before running the script
-    measure_resource_consumption(msg)
+    measure_resource_consumption(msg, start_time, resource_usage_data)
+
+    process = None
 
     if 'PrivateSMOTE' in args.type:
         f = list(map(int, re.findall(r'\d+', msg.split('_')[0])))
@@ -98,21 +98,21 @@ def do_work(conn, ch, delivery_tag, body):
         keys_str = ','.join(keys)
         
         # Use subprocess.Popen to run the script asynchronously
-        process = subprocess.Popen(['python3', 'code/transformations/PrivateSMOTE_force_laplace.py', '--input_file', msg, '--key_vars', keys_str], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=False)
+        process = subprocess.Popen(['python3', 'code/transformations/PrivateSMOTE_force_laplace_cpu.py', '--input_file', msg, '--key_vars', keys_str], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=False)
     
     if args.type == 'SDV':
         process = subprocess.Popen(['python3', 'code/transformations/deep_learning.py', '--input_file', msg], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     
     if args.type == 'Synthcity':
-        process = subprocess.Popen(['python3', 'code/transformations/deep_learning.py', '--input_file', msg], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        process = subprocess.Popen(['python3', 'code/transformations/city.py', '--input_file', msg], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     # Poll the subprocess while it's running
     while process.poll() is None:
         # Measure resource consumption during the script execution
-        measure_resource_consumption(msg)
+        measure_resource_consumption(msg, start_time, resource_usage_data)
         #time.sleep(1)  # Adjust the interval as needed
         # The subprocess is still running
-        print("Subprocess is still running...")
+        # print("Subprocess is still running...")
 
     # Wait for the process to finish and capture output
     stdout, stderr = process.communicate()
@@ -132,6 +132,7 @@ def do_work(conn, ch, delivery_tag, body):
     os.system('find . -name "*.pyc"| xargs rm -f "{}"')
     cb = functools.partial(ack_message, ch, delivery_tag, process)
     conn.add_callback_threadsafe(cb)
+
 
 def on_message(ch, method_frame, _header_frame, body, args):
     (conn, thrds) = args

@@ -5,7 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 
-# %%
+# %% OLD RESULTS
 ############### privateSMOTE
 privatesmote = pd.read_csv('../computational_costs/PwrData_2022-9-21_20-7-17_privateSMOTEscratch.csv')
 privatesmote_clean = privatesmote.loc[privatesmote['Elapsed Time (sec)'] < 1703]
@@ -201,5 +201,22 @@ import pandas as pd
 
 # Reading JSON data from a file
 costs_5PS= pd.read_json("../output/comp_costs/5-PrivateSMOTE.json")
+
+# %%
+################################
+#         NEW RESULTS          #
+################################
+import json
+comp_costs_files = next(os.walk('../output/comp_costs'))[2]
+
+# %%
+all_costs = pd.DataFrame()
+for file in comp_costs_files:
+    dict= pd.read_json(f'../output/comp_costs/{file}')
+    # df = pd.DataFrame.from_dict(dict, orient="index")
+    all_costs = pd.concat([all_costs, dict])
+
+# %%
+summary_costs = all_costs.groupby('file').agg({'elapsed_time': 'max', 'cpu_percent': 'mean', 'gpu_percent': 'mean', 'ram_percent': 'mean', 'gpu_temperature': 'mean'})
 
 # %%

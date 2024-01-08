@@ -27,6 +27,8 @@ def coverage_(technique):
                     num_columns = orig_data.select_dtypes(include=np.number).columns
                     if f == 37: # because SDV models returns real states instead of numbers as in the original data
                         transf_data.rename(columns = {'state':'code_number','phone_number':'number', 'voice_mail_plan':'voice_plan'}, inplace = True) 
+                    if f == 55:
+                        transf_data.rename(columns = {'state':'code_number'}, inplace = True) 
 
                     # print(num_columns)
                     for col in num_columns:

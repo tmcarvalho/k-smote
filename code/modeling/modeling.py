@@ -113,7 +113,7 @@ def evaluate_model(x_train, x_test, y_train, y_test):
         score_cv['test_accuracy'].append(accuracy_score(y_test, clf))
         score_cv['test_f1_weighted'].append(f1_score(y_test, clf, average='weighted'))
         score_cv['test_gmean'].append(geometric_mean_score(y_test, clf))
-        score_cv['test_roc_auc'].append(roc_auc_score(y_test, clf))
+        score_cv['test_roc_auc'].append(roc_auc_score(y_test, clf, max_fpr=0.001))
 
 
     score_cv = pd.DataFrame(score_cv)

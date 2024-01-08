@@ -76,6 +76,7 @@ def measure_resource_consumption(file, start_time, resource_usage_data):
 
 def do_work(conn, ch, delivery_tag, body):
     msg = body.decode('utf-8')
+    print(msg)
     # Record start time
     start_time = time.time() 
     # List to store resource usage information
@@ -132,7 +133,6 @@ def do_work(conn, ch, delivery_tag, body):
     os.system('find . -name "*.pyc"| xargs rm -f "{}"')
     cb = functools.partial(ack_message, ch, delivery_tag, process)
     conn.add_callback_threadsafe(cb)
-
 
 def on_message(ch, method_frame, _header_frame, body, args):
     (conn, thrds) = args

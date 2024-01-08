@@ -87,9 +87,6 @@ class PrivateSMOTE:
             # Label encode the object-type columns
             enc_samples = np.array(self.encode_categorical_columns(enc_samples))
 
-            # FOR CONTROL
-            #unique_values_ = [self.samples.loc[:,col].unique() for col in self.samples[self.object_columns]]
-            #print(unique_values_)
             return enc_samples
         
         else:
@@ -127,7 +124,7 @@ class PrivateSMOTE:
         self.max_values = [self.x[:, i].max() if not self.is_object_type[i] else np.nan for i in range(self.x.shape[1])]
         # Find the standard deviation value for each numerical column
         self.std_values = [np.std(self.x[:, i]) if not self.is_object_type[i] else np.nan for i in range(self.x.shape[1])]
-        
+
         # Get the indices of observations that need oversampling
         single_out_indices = self.samples.loc[self.samples['single_out'] == 1, self.samples.columns[:-2]].index
 
@@ -161,6 +158,7 @@ class PrivateSMOTE:
                             if not np.isnan(std)
                             else orig_val
                             for std, orig_val in zip(self.std_values, self.x[i])]
+
             # Without flip when neighbour is different from original
             noise = [np.multiply(
                             neighbor_val - orig_val,
@@ -168,6 +166,7 @@ class PrivateSMOTE:
                             if not np.isnan(self.min_values[j])
                             else orig_val
                             for j, (neighbor_val, orig_val) in enumerate(zip(self.x[nnarray[neighbour]], self.x[i]))]
+
             # Generate new numerical value for each column
             new_nums_values = [orig_val + flip[j]
                     if neighbor_val == orig_val 
@@ -196,9 +195,9 @@ class PrivateSMOTE:
 
                 # replace the old categories
                 iter_cat_values = iter(new_cats_values)
-                #print(new_nums_values)
+
                 new_nums_values = [next(iter_cat_values) if np.isnan(self.min_values[j]) else val for j, val in enumerate(new_nums_values)]
-                #print(new_nums_values)
+
 
             # Concatenate the arrays along axis=0
             synthetic_array = np.hstack(new_nums_values)
@@ -251,16 +250,17 @@ def PrivateSMOTE_force_laplace_(input_file, keys):
     knn = list(map(int, re.findall(r'\d+', input_file.split('_')[3])))[0]
     per = list(map(int, re.findall(r'\d+', input_file.split('_')[4])))[0]
     ep = list(map(float, re.findall(r'\d+\.\d+', input_file.split('_')[1])))[0]
-    print(ep)
+
     newDf = PrivateSMOTE(data, per, knn, ep).over_sampling()
 
     # Convert synthetic data back to a Pandas DataFrame
     newDf = pd.concat([newDf, pd.DataFrame({'single_out': [1] * newDf.shape[0]})], axis=1)
+    if newDf.shape[0] != data.shape[0]:
+        newDf = pd.concat([newDf, data.loc[data['single_out'] == 0]])
+
     if tgt_obj:
          newDf[newDf.columns[-2]] = target_encoder.inverse_transform(newDf[newDf.columns[-2]])
 
-    if newDf.shape[0] != data.shape[0]:
-        newDf = pd.concat([newDf, data.loc[data['single_out'] == 0]])
 
     # Check and adjust data types and trailing values
     newDf = check_and_adjust_data_types(data, newDf)

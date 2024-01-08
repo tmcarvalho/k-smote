@@ -41,7 +41,7 @@ def synth_city(msg):
     output_interpolation_folder = 'output/oversampled/city_data'
 
     f = list(map(int, re.findall(r'\d+', msg.split('_')[0])))
-    data = pd.read_csv(f'data/original/{str(f[0])}.csv')
+    data = pd.read_csv(f'original/{str(f[0])}.csv')
 
     # get 80% of data to synthesise
     indexes = np.load('indexes.npy', allow_pickle=True).item()
@@ -78,10 +78,6 @@ def synth_city(msg):
     new_data.to_csv(
         f'{output_interpolation_folder}{sep}{msg}.csv',
         index=False)
-    # except Exception:
-    #     with open('output/failed_file_synth.txt', 'a') as failed_file:
-    #         #  Save the name of the failed file to a text file
-    #         failed_file.write(f'{msg} --- city\n')
 
 
 synth_city(args.input_file)

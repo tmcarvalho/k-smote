@@ -40,7 +40,7 @@ dl_queue = channel.queue_declare(queue='dl')
 
 channel.queue_bind(exchange='dlx', routing_key='task_queue_transf', queue=dl_queue.method.queue)
 
-files = files = next(os.walk(args.input_folder))[2]
+files = next(os.walk(args.input_folder))[2]
 
 if args.type == 'PrivateSMOTE':
     knn = [1,3,5]
@@ -50,14 +50,14 @@ if args.type == 'PrivateSMOTE':
     for file in files:
         f = int(file.split('.csv')[0])
         if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87, 100,43]:
-        # if f in [32]:
+        # if f in [37]:
             print(file)
-            for idx in range(5):
+            for idx in range(3):
                 for k in knn:
                     for p in per:
                         for ep in epislon:
                             print(f'ds{file.split(".")[0]}_{ep}-privateSMOTE_QI{idx}_knn{k}_per{p}')
-                            put_file_queue(channel, f'ds{file.split(".")[0]}_{ep}-privateSMOTE_QI{idx}_knn{k}_per{p}')
+                            put_file_queue(channel, f'ds{file.split(".")[0]}_{ep}-privateSMOTE_QI{idx}_knn{k}_per{p}')   
 
 if args.type == 'SDV':
     epochs=[100, 200]
@@ -66,7 +66,7 @@ if args.type == 'SDV':
     for file in files:
         f = int(file.split('.csv')[0])
         if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87, 100,43]:
-        # if f in [2]:
+        # if f in [55]:
             print(file)
             for technique in ['CTGAN', 'CopulaGAN', 'TVAE']:
                 for ep in epochs:
@@ -77,7 +77,7 @@ if args.type == 'SDV':
 if args.type == 'Synthcity':
     n_iter=[100, 200]
     batch_size_=[50, 100]
-    epsilon=[0.01, 0.1, 0.5, 1.0]
+    epsilon=[0.1, 0.5, 1.0, 5.0]
 
     for file in files:
         f = int(file.split('.csv')[0])

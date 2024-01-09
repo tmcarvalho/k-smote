@@ -59,3 +59,5 @@ def coverage_(technique):
 stats = coverage_(args.input_folder)       
 df = pd.DataFrame(stats)
 df.to_csv(f'output/coverage_{args.input_folder}.csv', index=False)
+
+# python3 code/coverage.py --input_folder "PrivateSMOTE"

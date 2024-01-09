@@ -88,7 +88,7 @@ mean_cols.loc[(mean_cols["Range Coverage"]<0.35) & (mean_cols["technique"]=='dpg
 low_range_privsmote = mean_cols.loc[(mean_cols["Range Coverage"]<0.9) & (mean_cols["technique"]=='PrivateSMOTE')]
 low_range_privsmote.groupby('dsn').size()
 # %%
-similarity_privsmote = mean_cols.loc[(mean_cols["Statistic similarity"]<0.9) & (mean_cols["technique"]=='PrivateSMOTE')]
+similarity_privsmote = mean_cols.loc[(mean_cols["Statistic similarity"]<0.85) & (mean_cols["technique"]=='PrivateSMOTE')]
 similarity_privsmote.groupby('dsn').size()
 # %% ds51_0.5-privateSMOTE_QI2_knn1_per1.csv
 priv = pd.read_csv('../output/oversampled/PrivateSMOTE/ds51_0.5-privateSMOTE_QI2_knn1_per1.csv')

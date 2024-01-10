@@ -96,7 +96,7 @@ original_folder = '../../original'
 # _, _, input_files = next(walk(f'{original_folder}'))
 input_files = [f for f in os.listdir(original_folder) if f.endswith('.csv')]
 
-not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87]
+not_considered_files = [0,1,3,13,23,28,34,36,40,48,54,66,87, 100,43]
 for idx,file in enumerate(input_files):
     if int(file.split(".csv")[0]) not in not_considered_files:
         print(idx)

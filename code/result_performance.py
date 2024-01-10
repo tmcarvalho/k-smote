@@ -160,5 +160,3 @@ plt.show()
 #figure = ax.get_figure()
 #figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performance_privateSMOTE.pdf', bbox_inches='tight')
 
-# %%
-# TODO: scatterplot with linkability and the auc

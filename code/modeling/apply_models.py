@@ -90,6 +90,11 @@ def modeling_privatesmote_resampling_and_gans(file, args):
     print(orig_file)
     orig_data = pd.read_csv(f'{orig_folder}/{orig_file[0]}')
     data = pd.read_csv(f'{args.input_folder}/{file}')
+    if f[0] == 37: # because SDV models returns real states instead of numbers as in the original data
+        data.rename(columns = {'state':'code_number','phone_number':'number', 'voice_mail_plan':'voice_plan'}, inplace = True)
+    
+    if f[0] == 55:
+        data.rename(columns = {'state':'code_number'}, inplace = True) 
 
     # prepare data to modeling
     orig_data = orig_data.apply(LabelEncoder().fit_transform)

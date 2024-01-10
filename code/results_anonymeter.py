@@ -20,77 +20,59 @@ def concat_each_file(folder):
     return concat_results
 
 # %%
-risk_ppt = concat_each_file('../output/anonymeter/PPT_ARX_')
+risk_ppt = concat_each_file('../output/anonymeter/PPT_ARX')
 # %%
-risk_resampling= concat_each_file('../output/anonymeter/re-sampling_')
+risk_resampling= concat_each_file('../output/anonymeter/re-sampling')
 # %%
-risk_deeplearning= concat_each_file('../output/anonymeter/deep_learning_')
+risk_deeplearning= concat_each_file('../output/anonymeter/deep_learning')
 # %%
-risk_privateSMOTE = concat_each_file('../output/anonymeter/PrivateSMOTE_k3')
+risk_city = concat_each_file('../output/anonymeter/city')
 # %%
-risk_privateSMOTE_out = concat_each_file('../output/anonymeter/PrivateSMOTE_k3out')
-# %%
-risk_privateSMOTE_force = concat_each_file('../output/anonymeter/PrivateSMOTE_force_k3')
-# %%
-risk_privateSMOTE_laplace = concat_each_file('../output/anonymeter/PrivateSMOTE_laplace_k3')
-# %%
-risk_privateSMOTE_force_laplace = concat_each_file('../output/anonymeter/PrivateSMOTE_force_laplace_k3')
-# %%
-risk_privateSMOTE_force_laplace_outliers = concat_each_file('../output/anonymeter/PrivateSMOTE_force_laplace_k3out')
-# %%
-risk_dpart_independent = concat_each_file('../output/anonymeter/dpart_independent_')
-# %%
-risk_dpart_synthpop = concat_each_file('../output/anonymeter/dpart_synthpop_')
-# %%
-risk_ppt = risk_ppt.reset_index(drop=True)
-risk_resampling = risk_resampling.reset_index(drop=True)
-risk_deeplearning = risk_deeplearning.reset_index(drop=True)
-risk_privateSMOTE = risk_privateSMOTE.reset_index(drop=True)
-risk_privateSMOTE_out = risk_privateSMOTE_out.reset_index(drop=True)
-risk_privateSMOTE_force = risk_privateSMOTE_force.reset_index(drop=True)
-risk_privateSMOTE_laplace = risk_privateSMOTE_laplace.reset_index(drop=True)
-risk_privateSMOTE_force_laplace = risk_privateSMOTE_force_laplace.reset_index(drop=True)
-risk_privateSMOTE_force_laplace_outliers = risk_privateSMOTE_force_laplace_outliers.reset_index(drop=True)
-risk_dpart_independent = risk_dpart_independent.reset_index(drop=True)
-risk_dpart_synthpop = risk_dpart_synthpop.reset_index(drop=True)
+risk_privateSMOTE = concat_each_file('../output/anonymeter/PrivateSMOTE')
+# TODO: run all QIs
 # %%
 risk_ppt['technique'] = 'PPT'
 risk_resampling['technique'] = risk_resampling['ds_complete'].apply(lambda x: x.split('_')[1].title())
 risk_deeplearning['technique'] = risk_deeplearning['ds_complete'].apply(lambda x: x.split('_')[1])
-risk_privateSMOTE['technique'] = 'PrivateSMOTE'
-risk_privateSMOTE_out['technique'] = 'PrivateSMOTE *'
-risk_privateSMOTE_force['technique'] = 'PrivateSMOTE Force'
-risk_privateSMOTE_laplace['technique'] = r'$\epsilon$-PrivateSMOTE'
-risk_privateSMOTE_force_laplace['technique'] = r'$\epsilon$-PrivateSMOTE Force'
-risk_privateSMOTE_force_laplace_outliers['technique'] = r'$\epsilon$-PrivateSMOTE Force *'
-risk_dpart_independent['technique'] = 'Independent'
-risk_dpart_synthpop['technique'] = 'Synthpop'
+risk_city['technique'] = risk_city['ds_complete'].apply(lambda x: x.split('_')[1].upper())
+risk_privateSMOTE['technique'] = r'$\epsilon$-PrivateSMOTE'
+
 # %%
-results = []
-results = pd.concat([risk_ppt, risk_resampling, risk_deeplearning, risk_privateSMOTE, risk_privateSMOTE_force,
-                     risk_privateSMOTE_laplace, risk_privateSMOTE_force_laplace, risk_privateSMOTE_out,
-                     risk_privateSMOTE_force_laplace_outliers, risk_dpart_independent, risk_dpart_synthpop])
-results = results.reset_index(drop=True)
+results = pd.concat([risk_ppt, risk_resampling, risk_deeplearning, risk_city, risk_privateSMOTE
+                    ]).reset_index(drop=True)
 # %%
 results['dsn'] = results['ds_complete'].apply(lambda x: x.split('_')[0])
 # %%
-results = results.loc[results['technique']!='Over']
 results.loc[results['technique']=='Under', 'technique'] = 'RUS'
 results.loc[results['technique']=='Bordersmote', 'technique'] = 'BorderlineSMOTE'
 results.loc[results['technique']=='Smote', 'technique'] = 'SMOTE'
-results.loc[results['technique']=='copulaGAN', 'technique'] = 'Copula GAN'
-# %%
-# results.to_csv('../output/anonymeter_k3.csv', index=False)
-# %%
-results_risk_max = results.copy()
-results_risk_max = results.loc[results.groupby(['dsn', 'technique'])['value'].idxmin()].reset_index(drop=True)
+results.loc[results['technique']=='CopulaGAN', 'technique'] = 'Copula GAN'
 
 # %%
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'Independent', 'Synthpop', 'PrivateSMOTE','PrivateSMOTE *', 'PrivateSMOTE Force', r'$\epsilon$-PrivateSMOTE', r'$\epsilon$-PrivateSMOTE Force', r'$\epsilon$-PrivateSMOTE Force *']
-# %%  BETTER IN PRIVACY
+results.to_csv('../output_analysis/anonymeter.csv', index=False)
+# %%
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
+# %%
 sns.set_style("darkgrid")
 plt.figure(figsize=(20,10))
-ax = sns.boxplot(data=results_risk_max,
+ax = sns.boxplot(data=results,
+    x='technique', y='value', order=order, color='c')
+sns.set(font_scale=2.5)
+ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1), ncol=3, title='', borderaxespad=0., frameon=False)
+#ax.set_yscale("symlog")
+#ax.set_ylim(-0.2,150)
+plt.xticks(rotation=45)
+plt.xlabel("")
+plt.ylabel("Re-identification Risk")
+plt.show()
+# figure = ax.get_figure()
+# figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/anonymeter_k5.pdf', bbox_inches='tight')
+
+# %%  BETTER IN PRIVACY
+results_risk_min = results.loc[results.groupby(['dsn', 'technique'])['value'].idxmin()].reset_index(drop=True)
+sns.set_style("darkgrid")
+plt.figure(figsize=(20,10))
+ax = sns.boxplot(data=results_risk_min,
     x='technique', y='value', order=order, color='c')
 sns.set(font_scale=2.5)
 ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1), ncol=3, title='', borderaxespad=0., frameon=False)
@@ -107,9 +89,8 @@ plt.show()
 #####################################
 #         PERFORMANCE FIRST         #
 #####################################
-priv_results = pd.read_csv('../output/anonymeter_k3.csv')
-# priv_results = results.copy()
-predictive_results = pd.read_csv('../output/test_cv_roc_auc_newprivatesmote_k3.csv')
+priv_results = pd.read_csv('../output_analysis/anonymeter.csv')
+predictive_results = pd.read_csv('../output_analysis/modeling_results.csv')
 
 # %% remove ds38, ds43, ds100
 priv_results = priv_results.loc[~priv_results.dsn.isin(['ds38', 'ds43', 'ds100'])]

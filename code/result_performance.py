@@ -17,40 +17,41 @@ def join_allresults(candidate_folder, technique):
     _,_,candidate_result_files = next(walk(f'{candidate_folder}/test/'))
 
     for transf_file in candidate_result_files:
-        candidate_result_cv_train = pd.read_csv(f'{candidate_folder}/validation/{transf_file}')
-        candidate_result_test = pd.read_csv(f'{candidate_folder}/test/{transf_file}')
-        # select the best model in CV
-        best_cv = candidate_result_cv_train.iloc[[candidate_result_cv_train['mean_test_roc_auc_curve'].idxmax()]]
-        # use the best model in CV to get the results of it in out of sample
-        best_test = candidate_result_test.iloc[best_cv.index,:]
+        try:
+            candidate_result_cv_train = pd.read_csv(f'{candidate_folder}/validation/{transf_file}')
+            candidate_result_test = pd.read_csv(f'{candidate_folder}/test/{transf_file}')
+            # select the best model in CV
+            best_cv = candidate_result_cv_train.iloc[[candidate_result_cv_train['mean_test_roc_auc_curve'].idxmax()]]
+            # use the best model in CV to get the results of it in out of sample
+            best_test = candidate_result_test.iloc[best_cv.index,:]
 
-        # save oracle results in out of sample
-        oracle_candidate = candidate_result_test.loc[candidate_result_test['test_roc_auc'].idxmax(),'test_roc_auc']
-        oracle_candidate_fscore = candidate_result_test.loc[candidate_result_test['test_f1_weighted'].idxmax(),'test_f1_weighted']
-        best_test['test_roc_auc_oracle'] = oracle_candidate
-        best_test['test_fscore_oracle'] = oracle_candidate_fscore
+            # save oracle results in out of sample
+            oracle_candidate = candidate_result_test.loc[candidate_result_test['test_roc_auc'].idxmax(),'test_roc_auc']
+            oracle_candidate_fscore = candidate_result_test.loc[candidate_result_test['test_f1_weighted'].idxmax(),'test_f1_weighted']
+            best_test['test_roc_auc_oracle'] = oracle_candidate
+            best_test['test_fscore_oracle'] = oracle_candidate_fscore
 
-        # get technique
-        if technique=='resampling':
-            best_test.loc[:, 'technique'] = transf_file.split('_')[1].title()
-        elif technique=='deep_learning':
-            best_test.loc[:, 'technique'] = transf_file.split('_')[1]
-        elif technique=='city':
-            best_test.loc[:, 'technique'] = transf_file.split('_')[1].upper()
-        else:
-            best_test.loc[:, 'technique'] = technique
- 
-        # get dataset number
-        best_test['ds'] = transf_file.split('_')[0]
-        best_test['ds_complete'] = transf_file
+            # get technique
+            if technique=='resampling':
+                best_test.loc[:, 'technique'] = transf_file.split('_')[1].title()
+            elif technique=='deep_learning':
+                best_test.loc[:, 'technique'] = transf_file.split('_')[1]
+            elif technique=='city':
+                best_test.loc[:, 'technique'] = transf_file.split('_')[1].upper()
+            else:
+                best_test.loc[:, 'technique'] = technique
+    
+            # get dataset number
+            best_test['ds'] = transf_file.split('_')[0]
+            best_test['ds_complete'] = transf_file
 
-        # concat each test result
-        if c == 0:
-            concat_results_test = best_test
-            c += 1
-        else:     
-            concat_results_test = pd.concat([concat_results_test, best_test])
-
+            # concat each test result
+            if c == 0:
+                concat_results_test = best_test
+                c += 1
+            else:     
+                concat_results_test = pd.concat([concat_results_test, best_test])
+        except: pass
     return concat_results_test    
 
 # %% 
@@ -62,7 +63,7 @@ ppt = join_allresults('../output/modeling/PPT_ARX/', 'PPT')
 resampling = join_allresults('../output/modeling/re-sampling/', 'resampling')
 
 # %% deep learning
-deeplearn = join_allresults('../output/modeling/deep_learning/' 'deep_learning')
+deeplearn = join_allresults('../output/modeling/deep_learning/', 'deep_learning')
 
 # %% synthcity
 city = join_allresults('../output/modeling/city/', 'city')
@@ -71,7 +72,7 @@ city = join_allresults('../output/modeling/city/', 'city')
 privatesmote = join_allresults('../output/modeling/PrivateSMOTE/', 'PrivateSMOTE')
 
 # %% concat all data sets
-results = pd.concat([orig, ppt, privatesmote, #resampling, deeplearn, city,
+results = pd.concat([orig, ppt, privatesmote, deeplearn, #resampling, city,
                      ]).reset_index(drop=True)
 # %%
 results.loc[results['technique']=='Under', 'technique'] = 'RUS'
@@ -160,3 +161,5 @@ plt.show()
 #figure = ax.get_figure()
 #figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performance_privateSMOTE.pdf', bbox_inches='tight')
 
+
+# %%

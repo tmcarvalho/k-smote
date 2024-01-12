@@ -13,7 +13,7 @@ predictive_results = pd.read_csv('../output_analysis/modeling_results.csv')
 # %%
 priv_results['ds_complete'] = priv_results['ds_complete'].apply(lambda x: re.sub(r'_qi[0-9]','', x) if (('TVAE' in x) or ('CTGAN' in x) or ('copulaGAN' in x) or ('dpgan' in x) or ('pategan' in x) or ('smote' in x) or ('under' in x)) else x)
 
-priv_util = priv_results.merge(predictive_results, on=['technique', 'ds_complete'], how='left')
+priv_util = priv_results.merge(predictive_results, on=['technique', 'ds_complete', 'ds'], how='left')
 # %%
 privsmote = priv_util.loc[priv_util.technique.str.contains('PrivateSMOTE')].reset_index(drop=True)
 privsmote['epsilon'] = np.nan
@@ -30,10 +30,23 @@ sns.scatterplot(x="roc_auc_perdif",
                     hue_order=hue_order,
                     data=privsmote)
 # %%
+privsmote_ds16 = privsmote.loc[privsmote.ds=='ds14']
+
+ax = sns.lmplot(x="roc_auc_perdif",
+                    y="value",
+                    hue='epsilon',
+                    hue_order=hue_order,
+                    data=privsmote_ds16)
+plt.ylabel("Re-identification Risk")
+plt.xlabel("Percentage difference of predictive performance (AUC)")
+# ax.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_ds14.pdf', bbox_inches='tight')
+
+# %%
 ppt = priv_util.loc[priv_util.technique.str.contains('PPT')].reset_index(drop=True)
 sns.scatterplot(x="roc_auc_perdif",
                     y="value",
                     data=ppt)
+
 # %%
 ###########################
 #       MAX UTILITY       #
@@ -53,7 +66,6 @@ priv_performance = priv_performance.dropna()
 # %%
 priv_performance_best = priv_performance.loc[priv_performance.groupby(['dsn', 'technique'])['value'].idxmin()].reset_index(drop=True)
 
-# %
 # %%
 order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
 
@@ -72,7 +84,6 @@ plt.show()
 # figure = ax.get_figure()
 # figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/anonymeter_k5_predictiveperformance.pdf', bbox_inches='tight')
 
-# %%
 # %%
 #####################################
 #         PERFORMANCE FIRST         #
@@ -192,5 +203,37 @@ axes[1].use_sticky_edges = False
 axes[0].autoscale_view(scaley=True)
 axes[1].autoscale_view(scaley=True)
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/risk_performance_rocauc.pdf', bbox_inches='tight')
+
+# %%
+##################### PARETO FRONT ####################
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import f1_score
+
+# Assuming 'accuracy_values' and 'linkability_risk_values' are your lists
+accuracy_values = [0.8, 0.85, 0.9, 0.92, 0.88]
+linkability_risk_values = [0.2, 0.15, 0.1, 0.08, 0.12]
+
+# Calculate F1 score for each point on the curve
+f1_scores = [f1_score([1 if acc >= threshold else 0 for acc in accuracy_values], [1 if risk <= threshold else 0 for risk in linkability_risk_values]) for threshold in linkability_risk_values]
+
+# Find the index of the maximum F1 score
+optimal_index = np.argmax(f1_scores)
+
+# Plotting the tradeoff curve with the optimal point
+plt.figure(figsize=(8, 8))
+plt.plot(linkability_risk_values, accuracy_values, marker='o', linestyle='-', color='b', label='Tradeoff Curve')
+plt.scatter([linkability_risk_values[optimal_index]], [accuracy_values[optimal_index]], color='red', label='Optimal Point')
+plt.title('Tradeoff between Accuracy and Linkability Risk')
+plt.xlabel('Linkability Risk')
+plt.ylabel('Accuracy')
+plt.grid(True)
+plt.legend()
+plt.show()
+
+# Display the optimal threshold and corresponding F1 score
+optimal_threshold = linkability_risk_values[optimal_index]
+optimal_f1_score = f1_scores[optimal_index]
+print(f"Optimal Tradeoff Point: Linkability Risk = {optimal_threshold}, Accuracy = {accuracy_values[optimal_index]}, F1 Score = {optimal_f1_score}")
 
 # %%

@@ -6,9 +6,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 # %%
-coverage_privsmote = pd.read_csv('../output/coverage_PrivateSMOTE.csv')
-coverage_deep_learning = pd.read_csv('../output/coverage_deep_learning.csv')
-coverage_city = pd.read_csv('../output/coverage_city_data.csv')
+coverage_privsmote = pd.read_csv('../output_analysis/coverage_PrivateSMOTE.csv')
+coverage_deep_learning = pd.read_csv('../output_analysis/coverage_deep_learning.csv')
+coverage_city = pd.read_csv('../output_analysis/coverage_city_data.csv')
 
 # %%
 results = pd.concat([coverage_privsmote, coverage_city, coverage_deep_learning])

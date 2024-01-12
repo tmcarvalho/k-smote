@@ -41,7 +41,7 @@ risk_privateSMOTE['technique'] = r'$\epsilon$-PrivateSMOTE'
 results = pd.concat([risk_ppt, risk_resampling, risk_deeplearning, risk_city, risk_privateSMOTE
                     ]).reset_index(drop=True)
 # %%
-results['dsn'] = results['ds_complete'].apply(lambda x: x.split('_')[0])
+results['ds'] = results['ds_complete'].apply(lambda x: x.split('_')[0])
 # %%
 results.loc[results['technique']=='Under', 'technique'] = 'RUS'
 results.loc[results['technique']=='Bordersmote', 'technique'] = 'BorderlineSMOTE'
@@ -50,6 +50,9 @@ results.loc[results['technique']=='CopulaGAN', 'technique'] = 'Copula GAN'
 
 # %%
 # results.to_csv('../output_analysis/anonymeter.csv', index=False)
+
+# %%
+results = pd.read_csv('../output_analysis/anonymeter.csv')
 # %%
 order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
 # %%
@@ -69,7 +72,7 @@ plt.show()
 # figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/anonymeter_k5.pdf', bbox_inches='tight')
 
 # %%  BETTER IN PRIVACY
-results_risk_min = results.loc[results.groupby(['dsn', 'technique'])['value'].idxmin()].reset_index(drop=True)
+results_risk_min = results.loc[results.groupby(['ds', 'technique'])['value'].idxmin()].reset_index(drop=True)
 sns.set_style("darkgrid")
 plt.figure(figsize=(20,10))
 ax = sns.boxplot(data=results_risk_min,
@@ -85,3 +88,34 @@ plt.show()
 # figure = ax.get_figure()
 # figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/anonymeter_k5.pdf', bbox_inches='tight')
 
+
+# %%
+privsmote = results.loc[results.technique.str.contains('PrivateSMOTE')].reset_index(drop=True)
+privsmote['epsilon'] = np.nan
+for idx, file in enumerate(privsmote.ds_complete):
+    if 'privateSMOTE' in file:
+        privsmote['epsilon'][idx] = str(list(map(float, re.findall(r'\d+\.\d+', file.split('_')[1])))[0])
+        
+# %%
+PROPS = {
+    'boxprops':{'facecolor':'#00BFC4', 'edgecolor':'black'},
+    'medianprops':{'color':'black'},
+    'whiskerprops':{'color':'black'},
+    'capprops':{'color':'black'}
+}
+privsmote_max = privsmote.loc[privsmote.groupby(['ds', 'epsilon'])['value'].idxmin()]
+
+ep_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
+sns.set_style("darkgrid")
+plt.figure(figsize=(8,7))
+ax = sns.boxplot(data=privsmote_max, x='epsilon', y='value', order=ep_order, **PROPS)
+sns.set(font_scale=1.5)
+plt.xticks(rotation=45)
+plt.xlabel("")
+plt.ylabel("Re-identification Risk")
+# ax.set_xlim(0,1.02)
+plt.show()
+# figure = ax.get_figure()
+# figure.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_epsilons_risk.pdf', bbox_inches='tight')
+
+# %%

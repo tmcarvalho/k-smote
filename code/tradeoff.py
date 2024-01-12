@@ -95,13 +95,10 @@ plt.show()
 priv_results = pd.read_csv('../output_analysis/anonymeter.csv')
 predictive_results = pd.read_csv('../output_analysis/modeling_results.csv')
 
-# %% remove ds38, ds43, ds100
-priv_results = priv_results.loc[~priv_results.dsn.isin(['ds38', 'ds43', 'ds100'])]
-predictive_results = predictive_results.loc[~predictive_results.ds.isin(['ds38', 'ds43', 'ds100'])]
 # %%
 predictive_results_max = predictive_results.loc[predictive_results.groupby(['ds', 'technique'])['roc_auc_perdif'].idxmax()].reset_index(drop=True)
 # %% remove "qi" from privacy results file to merge the tables correctly
-priv_results['ds_complete'] = priv_results['ds_complete'].apply(lambda x: re.sub(r'_qi[0-9]','', x) if (('TVAE' in x) or ('CTGAN' in x) or ('copulaGAN' in x) or ('dpart' in x) or ('synthpop' in x) or ('smote' in x) or ('under' in x)) else x)
+priv_results['ds_complete'] = priv_results['ds_complete'].apply(lambda x: re.sub(r'_qi[0-9]','', x) if (('TVAE' in x) or ('CTGAN' in x) or ('copulaGAN' in x) or ('dpgan' in x) or ('pategan' in x) or ('smote' in x) or ('under' in x)) else x)
 
 # %%
 priv_performance = pd.merge(priv_results, predictive_results_max, how='left')
@@ -109,7 +106,7 @@ priv_performance = pd.merge(priv_results, predictive_results_max, how='left')
 priv_performance = priv_performance.dropna()
 
 # %%
-priv_performance_best = priv_performance.loc[priv_performance.groupby(['dsn', 'technique'])['value'].idxmin()].reset_index(drop=True)
+priv_performance_best = priv_performance.loc[priv_performance.groupby(['ds', 'technique'])['value'].idxmin()].reset_index(drop=True)
 
 # %%
 order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'Independent', 'Synthpop', 'PrivateSMOTE','PrivateSMOTE *', 'PrivateSMOTE Force', r'$\epsilon$-PrivateSMOTE', r'$\epsilon$-PrivateSMOTE Force', r'$\epsilon$-PrivateSMOTE Force *']
@@ -129,7 +126,7 @@ plt.show()
 # figure = ax.get_figure()
 # figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/anonymeter_k5_predictiveperformance.pdf', bbox_inches='tight')
 
-# %% PRIVATE SMOTE VERSIONS BLUES
+# %% 
 PROPS = {
     'boxprops':{'facecolor':'#00BFC4', 'edgecolor':'black'},
     'medianprops':{'color':'black'},
@@ -139,7 +136,7 @@ PROPS = {
 
 # %% 
 # BEST PERFORMANCE WITH BEST PRIVATESMOTE VERSION 
-order_performance_bestprivsmote = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'Independent', 'Synthpop', r'$\epsilon$-PrivateSMOTE']
+order_performance_bestprivsmote = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
 
 sns.set_style("darkgrid")
 fig, axes = plt.subplots(1, 2, figsize=(25,8.8))
@@ -172,16 +169,17 @@ axes[1].autoscale_view(scaley=True)
 # BEST IN PRIVACY WITH BEST IN PERFORMANCE
 #bestpriv_results = results.loc[results.groupby(['dsn','value'])['value'].min()]
 # %%
-bestpriv_results = priv_results[(priv_results['value'] == priv_results.groupby(['dsn', 'technique'])['value'].transform('min'))]
+bestpriv_results = priv_results[(priv_results['value'] == priv_results.groupby(['ds', 'technique'])['value'].transform('min'))]
 
 # %%
 performance_priv = pd.merge(bestpriv_results, predictive_results, how='left')
 
+performance_priv=performance_priv.dropna()
 # %%
 pred_ = performance_priv.loc[performance_priv.groupby(['ds', 'technique'])['roc_auc_perdif'].idxmax()].reset_index(drop=True)
 
 # %%
-order_privsmote_bestperformance = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'Independent','Synthpop', r'$\epsilon$-PrivateSMOTE']
+order_privsmote_bestperformance = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN','PATEGAN', r'$\epsilon$-PrivateSMOTE']
 
 # %%
 sns.set_style("darkgrid")
@@ -208,36 +206,3 @@ axes[0].autoscale_view(scaley=True)
 axes[1].autoscale_view(scaley=True)
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/risk_performance_rocauc.pdf', bbox_inches='tight')
 
-# %%
-##################### PARETO FRONT ####################
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.metrics import f1_score
-
-# Assuming 'accuracy_values' and 'linkability_risk_values' are your lists
-accuracy_values = [0.8, 0.85, 0.9, 0.92, 0.88]
-linkability_risk_values = [0.2, 0.15, 0.1, 0.08, 0.12]
-
-# Calculate F1 score for each point on the curve
-f1_scores = [f1_score([1 if acc >= threshold else 0 for acc in accuracy_values], [1 if risk <= threshold else 0 for risk in linkability_risk_values]) for threshold in linkability_risk_values]
-
-# Find the index of the maximum F1 score
-optimal_index = np.argmax(f1_scores)
-
-# Plotting the tradeoff curve with the optimal point
-plt.figure(figsize=(8, 8))
-plt.plot(linkability_risk_values, accuracy_values, marker='o', linestyle='-', color='b', label='Tradeoff Curve')
-plt.scatter([linkability_risk_values[optimal_index]], [accuracy_values[optimal_index]], color='red', label='Optimal Point')
-plt.title('Tradeoff between Accuracy and Linkability Risk')
-plt.xlabel('Linkability Risk')
-plt.ylabel('Accuracy')
-plt.grid(True)
-plt.legend()
-plt.show()
-
-# Display the optimal threshold and corresponding F1 score
-optimal_threshold = linkability_risk_values[optimal_index]
-optimal_f1_score = f1_scores[optimal_index]
-print(f"Optimal Tradeoff Point: Linkability Risk = {optimal_threshold}, Accuracy = {accuracy_values[optimal_index]}, F1 Score = {optimal_f1_score}")
-
-# %%

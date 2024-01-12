@@ -80,6 +80,24 @@ sns.set(font_scale=1)
 sns.set_palette("Paired")
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/statistic_similarity_privatesmote.pdf', bbox_inches='tight')
 
+# %%
+privsmote_ds16 = privsmote.loc[privsmote.dsn=='ds16']
+plt.figure(figsize=(6,4))
+sns.set_style("darkgrid")
+ax4 = sns.boxplot(x=privsmote_ds16["Range Coverage"], hue=privsmote_ds16['epsilon'], hue_order=hue_order)
+sns.move_legend(ax4, bbox_to_anchor=(1,0.5), loc='center left', title='Epsilon', borderaxespad=0., frameon=False)
+sns.set(font_scale=1)
+sns.set_palette("Paired")
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/range_coverage_privatesmote_ds16.pdf', bbox_inches='tight')
+# %% 
+plt.figure(figsize=(6,4))
+sns.set_style("darkgrid")
+ax4 = sns.boxplot(x=privsmote_ds16["Statistic similarity"], hue=privsmote_ds16['epsilon'], hue_order=hue_order)
+sns.move_legend(ax4, bbox_to_anchor=(1,0.5), loc='center left', title='Epsilon', borderaxespad=0., frameon=False)
+sns.set(font_scale=1)
+sns.set_palette("Paired")
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/statistic_similarity_privatesmote_ds16.pdf', bbox_inches='tight')
+
 # %% Particular analysis
 mean_cols.loc[(mean_cols["Range Coverage"]<0.5) & (mean_cols["technique"]=='SDV')]
 # %%

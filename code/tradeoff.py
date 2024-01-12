@@ -25,10 +25,14 @@ for idx, file in enumerate(privsmote.ds_complete):
 hue_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
 sns.set(style='darkgrid')
 sns.scatterplot(x="roc_auc_perdif",
-                    y="value",
-                    hue='epsilon',
-                    hue_order=hue_order,
-                    data=privsmote)
+            y="value",
+            hue='epsilon',
+            hue_order=hue_order,
+            data=privsmote)
+plt.ylabel("Re-identification Risk")
+plt.xlabel("Percentage difference of predictive performance (AUC)")
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_allds.pdf', bbox_inches='tight')
+
 # %%
 privsmote_ds16 = privsmote.loc[privsmote.ds=='ds14']
 

@@ -3,6 +3,7 @@ This script will analyse the predictive performance in the out-of-sample.
 """
 # %%
 from os import walk
+import os
 import re
 import pandas as pd
 import numpy as np
@@ -146,7 +147,7 @@ for idx, file in enumerate(privsmote.ds_complete):
         privsmote['epsilon'][idx] = str(list(map(float, re.findall(r'\d+\.\d+', file.split('_')[1])))[0])
         
 # %%
-privsmote_max = privsmote.loc[privsmote.groupby(['ds'])['roc_auc_perdif'].idxmax()]
+privsmote_max = privsmote.loc[privsmote.groupby(['ds', 'epsilon'])['roc_auc_perdif'].idxmax()]
 
 ep_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
 sns.set_style("darkgrid")
@@ -158,8 +159,8 @@ plt.xlabel("")
 plt.ylabel("Percentage difference of predictive performance (AUC)")
 # ax.set_xlim(0,1.02)
 plt.show()
-#figure = ax.get_figure()
-#figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performance_privateSMOTE.pdf', bbox_inches='tight')
+# figure = ax.get_figure()
+# figure.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_epsilons.pdf', bbox_inches='tight')
 
 
 # %%

@@ -53,7 +53,7 @@ def join_allresults(candidate_folder, technique):
             else:     
                 concat_results_test = pd.concat([concat_results_test, best_test])
         except: pass
-    return concat_results_test    
+    return concat_results_test
 
 # %% 
 # path to predictive results
@@ -73,13 +73,13 @@ city = join_allresults('../output/modeling/city/', 'city')
 privatesmote = join_allresults('../output/modeling/PrivateSMOTE/', 'PrivateSMOTE')
 
 # %% concat all data sets
-results = pd.concat([orig, ppt, privatesmote, deeplearn, #resampling, city,
+results = pd.concat([orig, ppt, privatesmote, deeplearn, resampling, city,
                      ]).reset_index(drop=True)
 # %%
 results.loc[results['technique']=='Under', 'technique'] = 'RUS'
 results.loc[results['technique']=='Bordersmote', 'technique'] = 'BorderlineSMOTE'
 results.loc[results['technique']=='Smote', 'technique'] = 'SMOTE'
-results.loc[results['technique']=='copulaGAN', 'technique'] = 'Copula GAN'
+results.loc[results['technique']=='CopulaGAN', 'technique'] = 'Copula GAN'
 results.loc[results['technique']=='PrivateSMOTE', 'technique'] = r'$\epsilon$-PrivateSMOTE'
 
 # %% prepare to calculate percentage difference

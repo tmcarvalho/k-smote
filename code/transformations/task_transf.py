@@ -52,7 +52,7 @@ if args.type == 'PrivateSMOTE':
         if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87, 100,43]:
         # if f in [37]:
             print(file)
-            for idx in range(3):
+            for idx in range(5):
                 for k in knn:
                     for p in per:
                         for ep in epislon:

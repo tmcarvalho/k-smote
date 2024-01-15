@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
-from sdmetrics.single_column import StatisticSimilarity, RangeCoverage, CategoryCoverage
+from sdmetrics.single_column import StatisticSimilarity, RangeCoverage, CategoryCoverage, BoundaryAdherence
 from sdmetrics.column_pairs import CorrelationSimilarity
 import argparse
 
@@ -39,7 +39,6 @@ def coverage_(technique):
                             )
                     except: # fails for columns with constant values
                         corr=np.nan
-                    
                     # print(num_columns)
                     for col in num_columns:
                         
@@ -62,6 +61,10 @@ def coverage_(technique):
                             real_data=orig_data[col],
                             synthetic_data=transf_data[col]
                         )
+                        boundary = BoundaryAdherence.compute(
+                            real_data=orig_data[col],
+                            synthetic_data=transf_data[col]
+                        )
                         # print(stats)
                         stats_ = {'ds':transf_file, 
                                   'col': col,
@@ -69,6 +72,7 @@ def coverage_(technique):
                                   'Statistic Similarity (Mean)': stats_mean,
                                   'Statistic Similarity (Median)': stats_med,
                                   'Statistic Similarity (Standard Deviation)': stats_std,
+                                  'Boundary Adherence': boundary,
                                   'Range Coverage': range, 
                                   'Category Coverage': np.nan}
                         all_stats.append(stats_)
@@ -84,6 +88,7 @@ def coverage_(technique):
                                   'Statistic Similarity (Mean)': stats_mean,
                                   'Statistic Similarity (Median)': stats_med,
                                   'Statistic Similarity (Standard Deviation)': stats_std,
+                                  'Boundary Adherence': boundary,
                                   'Range Coverage': range, 
                                   'Category Coverage': cat_range}
 

@@ -20,7 +20,7 @@ results.loc[results['technique']=='CopulaGAN', 'technique'] = 'Copula GAN'
 results.loc[results['technique']=='dpgan', 'technique'] = 'DPGAN'
 results.loc[results['technique']=='pategan', 'technique'] = 'PATEGAN'
 # %%
-mean_cols = results.groupby(['ds', 'technique'])['Correlation', 'Statistic Similarity (Mean)','Statistic Similarity (Median)','Statistic Similarity (Standard Deviation)', 'Range Coverage', 'Category Coverage'].mean()
+mean_cols = results.groupby(['ds', 'technique'])['Correlation', 'Statistic Similarity (Mean)','Statistic Similarity (Median)','Statistic Similarity (Standard Deviation)', 'Boundary Adherence', 'Range Coverage', 'Category Coverage'].mean()
 mean_cols = mean_cols.reset_index()
 # %%
 mean_cols['dsn'] = mean_cols['ds'].apply(lambda x: x.split('_')[0])
@@ -48,6 +48,8 @@ sns.move_legend(ax, bbox_to_anchor=(1,0.5), loc='center left', title='Transforma
 ax.set_xlim(0,1.02)
 sns.set(font_scale=1.7)
 sns.set_palette("Paired")
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/statistic_similarity_median.pdf', bbox_inches='tight')
+
 # %%
 sns.set_style("darkgrid")
 plt.figure(figsize=(12,10))
@@ -56,6 +58,8 @@ sns.move_legend(ax, bbox_to_anchor=(1,0.5), loc='center left', title='Transforma
 ax.set_xlim(0,1.02)
 sns.set(font_scale=1.7)
 sns.set_palette("Paired")
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/statistic_similarity_std.pdf', bbox_inches='tight')
+
 # %%
 sns.set_style("darkgrid")
 plt.figure(figsize=(12,10))
@@ -64,6 +68,18 @@ sns.move_legend(ax, bbox_to_anchor=(1,0.5), loc='center left', title='Transforma
 ax.set_xlim(0,1.02)
 sns.set(font_scale=1.7)
 sns.set_palette("Paired")
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/correlation.pdf', bbox_inches='tight')
+
+# %%
+sns.set_style("darkgrid")
+plt.figure(figsize=(12,10))
+ax = sns.boxplot(x=mean_cols["Boundary Adherence"], hue=mean_cols["technique"], hue_order=order)
+sns.move_legend(ax, bbox_to_anchor=(1,0.5), loc='center left', title='Transformation', borderaxespad=0., frameon=False)
+ax.set_xlim(0,1.02)
+sns.set(font_scale=1.7)
+sns.set_palette("Paired")
+plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/boundary_adherence.pdf', bbox_inches='tight')
+
 # %%
 plt.figure(figsize=(12,10))
 ax1 = sns.boxplot(x=mean_cols["Range Coverage"], hue=mean_cols["technique"], hue_order=order)
@@ -71,7 +87,7 @@ sns.move_legend(ax1, bbox_to_anchor=(1,0.5), loc='center left', title='Transform
 ax1.set_xlim(0,1.02)
 sns.set(font_scale=1.7)
 sns.set_palette("Paired")
-# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/range_coverage.pdf', bbox_inches='tight')
+plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/range_coverage.pdf', bbox_inches='tight')
 
 # %%
 plt.figure(figsize=(12,10))
@@ -80,7 +96,7 @@ sns.move_legend(ax2, bbox_to_anchor=(1,0.5), loc='center left', title='Transform
 ax2.set_xlim(0,1.02)
 sns.set(font_scale=1.7)
 sns.set_palette("Paired")
-# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/category_coverage.pdf', bbox_inches='tight')
+plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/category_coverage.pdf', bbox_inches='tight')
 
 # %%
 privsmote = mean_cols.loc[mean_cols.technique.str.contains('PrivateSMOTE')].reset_index(drop=True)
@@ -89,6 +105,17 @@ for idx, file in enumerate(privsmote.ds):
     if 'privateSMOTE' in file:
         privsmote['epsilon'][idx] = str(list(map(float, re.findall(r'\d+\.\d+', file.split('_')[1])))[0])
         
+# %%
+hue_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
+
+plt.figure(figsize=(6,4))
+sns.set_style("darkgrid")
+ax3 = sns.boxplot(x=privsmote["Boundary Adherence"], hue=privsmote['epsilon'], hue_order=hue_order)
+sns.move_legend(ax3, bbox_to_anchor=(1,0.5), loc='center left', title='Epsilon', borderaxespad=0., frameon=False)
+# ax3.set_xlim(0,1.02)
+sns.set(font_scale=1)
+sns.set_palette("Paired")
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/boundary_adherence_privatesmote.pdf', bbox_inches='tight')
 # %%
 hue_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
 plt.figure(figsize=(6,4))
@@ -137,6 +164,8 @@ ax3 = sns.boxplot(x=privsmote["Correlation"], hue=privsmote['epsilon'], hue_orde
 sns.move_legend(ax3, bbox_to_anchor=(1,0.5), loc='center left', title='Epsilon', borderaxespad=0., frameon=False)
 sns.set(font_scale=1)
 sns.set_palette("Paired")
+plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/correlation_privatesmote.pdf', bbox_inches='tight')
+
 # %%
 privsmote_ds16 = privsmote.loc[privsmote.dsn=='ds16']
 plt.figure(figsize=(6,4))

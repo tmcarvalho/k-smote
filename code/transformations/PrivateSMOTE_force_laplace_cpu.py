@@ -233,6 +233,12 @@ def PrivateSMOTE_force_laplace_(input_file, keys):
     index = indexes.loc[indexes['ds']==str(f[0]), 'indexes'].values[0]
     data_idx = list(set(list(data.index)) - set(index))
     data = data.iloc[data_idx, :]
+    
+    if f[0] == 37: # because SDV models returns real states instead of numbers as in the original data
+        data.rename(columns = {'code_number':'state','number':'phone_number', 'voice_plan':'voice_mail_plan'}, inplace = True)
+    
+    if f[0] == 55:
+        data.rename(columns = {'code_number', 'state'}, inplace = True) 
 
     # encode string with numbers to numeric and remove trailing zeros
     data = keep_numbers(data)

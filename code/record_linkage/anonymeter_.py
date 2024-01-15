@@ -38,6 +38,7 @@ def anonymeter_linkability(file, args):
         orig_data = data.iloc[idx, :].reset_index(drop=True)
         control_data = data.iloc[index]
         transf_data = pd.read_csv(f'{args.input_folder}/{file}')
+
     else:
         orig_data = pd.read_csv(f'{orig_folder}/PPT_ARX_train_orig/{orig_file[0]}')
         control_data = pd.read_csv(f'{orig_folder}/PPT_ARX_test_orig/{orig_file[0]}')
@@ -55,7 +56,7 @@ def anonymeter_linkability(file, args):
                 evaluator = LinkabilityEvaluator(ori=orig_data, 
                                             syn=transf_data, 
                                             control=control_data,
-                                            n_attacks=len(control_data),
+                                            n_attacks=orig_data.shape[0],
                                             aux_cols=set_key_vars[i],
                                             n_neighbors=10)
 
@@ -72,9 +73,9 @@ def anonymeter_linkability(file, args):
         keys = set_key_vars[keys_nr]
         try:
             evaluator = LinkabilityEvaluator(ori=orig_data, 
-                                        syn=transf_data, 
+                                        syn=transf_data,
                                         control=control_data,
-                                        n_attacks=len(control_data),
+                                        n_attacks=orig_data.shape[0],
                                         aux_cols=keys,
                                         n_neighbors=10)
 

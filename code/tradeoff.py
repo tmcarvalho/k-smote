@@ -11,9 +11,12 @@ priv_results = pd.read_csv('../output_analysis/anonymeter.csv')
 predictive_results = pd.read_csv('../output_analysis/modeling_results.csv')
 # TODO: RUN ALL QIs FOR PRIVATESMOTE (QI3 AND QI4 MISSING)
 # %%
-priv_results['ds_complete'] = priv_results['ds_complete'].apply(lambda x: re.sub(r'_qi[0-9]','', x) if (('TVAE' in x) or ('CTGAN' in x) or ('copulaGAN' in x) or ('dpgan' in x) or ('pategan' in x) or ('smote' in x) or ('under' in x)) else x)
+priv_results['ds_complete'] = priv_results['ds_complete'].apply(lambda x: re.sub(r'_qi[0-9]','', x) if (('TVAE' in x) or ('CTGAN' in x) or ('CopulaGAN' in x) or ('dpgan' in x) or ('pategan' in x) or ('smote' in x) or ('under' in x)) else x)
 
 priv_util = priv_results.merge(predictive_results, on=['technique', 'ds_complete', 'ds'], how='left')
+
+# %% Remove ds32, 33 and 38 because it do not have borderline and smote
+priv_util = priv_util[~priv_util.ds.isin(['ds32', 'ds33', 'ds38'])]
 # %%
 privsmote = priv_util.loc[priv_util.technique.str.contains('PrivateSMOTE')].reset_index(drop=True)
 privsmote['epsilon'] = np.nan
@@ -22,6 +25,7 @@ for idx, file in enumerate(privsmote.ds_complete):
         privsmote['epsilon'][idx] = str(list(map(float, re.findall(r'\d+\.\d+', file.split('_')[1])))[0])
         
 # %%
+# privsmote = privsmote.loc[privsmote.groupby(['ds', 'epsilon'])['roc_auc_perdif'].idxmax()]
 hue_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
 sns.set(style='darkgrid')
 sns.scatterplot(x="roc_auc_perdif",
@@ -29,6 +33,18 @@ sns.scatterplot(x="roc_auc_perdif",
             hue='epsilon',
             hue_order=hue_order,
             data=privsmote)
+plt.ylabel("Re-identification Risk")
+plt.xlabel("Percentage difference of predictive performance (AUC)")
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_allds.pdf', bbox_inches='tight')
+# %%
+privsmote_max = privsmote.loc[privsmote.groupby(['ds', 'epsilon'])['roc_auc_perdif'].idxmax()]
+hue_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
+sns.set(style='darkgrid')
+sns.scatterplot(x="roc_auc_perdif",
+            y="value",
+            hue='epsilon',
+            hue_order=hue_order,
+            data=privsmote_max)
 plt.ylabel("Re-identification Risk")
 plt.xlabel("Percentage difference of predictive performance (AUC)")
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_allds.pdf', bbox_inches='tight')
@@ -50,83 +66,51 @@ ppt = priv_util.loc[priv_util.technique.str.contains('PPT')].reset_index(drop=Tr
 sns.scatterplot(x="roc_auc_perdif",
                     y="value",
                     data=ppt)
-
 # %%
-###########################
-#       MAX UTILITY       #
-###########################
+resampling = priv_util.loc[(priv_util.ds_complete.str.contains('_smote')) |
+                           (priv_util.ds_complete.str.contains('_border')) |
+                           (priv_util.ds_complete.str.contains('_under'))
+                           ].reset_index(drop=True)
+sns.scatterplot(x="roc_auc_perdif",
+                    y="value",
+                    hue='technique',
+                    data=resampling)
+# there are more vertical lines because we have different re-identification risk for the same roc auc (QIs only in re-identification)
+# %%
+deep_learning = priv_util.loc[(priv_util.ds_complete.str.contains('_TVAE')) |
+                           (priv_util.ds_complete.str.contains('_CTGAN')) |
+                           (priv_util.ds_complete.str.contains('_Copula'))
+                           ].reset_index(drop=True)
+sns.scatterplot(x="roc_auc_perdif",
+                    y="value",
+                    hue='technique',
+                    data=deep_learning)
+# %%
+city = priv_util.loc[(priv_util.ds_complete.str.contains('_dpgan')) |
+                           (priv_util.ds_complete.str.contains('_pategan'))
+                           ].reset_index(drop=True)
+sns.scatterplot(x="roc_auc_perdif",
+                    y="value",
+                    hue='technique',
+                    data=city)
+# %%
+###############################
+#       MAX PERFORMANCE       #
+###############################
 # df.groupby('group').agg({'column1': 'idxmax', 'column2': 'idxmin'})
 
-predictive_results_max = priv_util.loc[priv_util.groupby(['ds', 'technique'])['roc_auc_perdif'].idxmax()].reset_index(drop=True)
+# Find the maximum value within each group
+max_values = priv_util[(priv_util['roc_auc_perdif'] == priv_util.groupby(['ds', 'technique'])['roc_auc_perdif'].transform('max'))]
 
-# %% remove "qi" from privacy results file to merge the tables correctly
-priv_results['ds_complete'] = priv_results['ds_complete'].apply(lambda x: re.sub(r'_qi[0-9]','', x) if (('TVAE' in x) or ('CTGAN' in x) or ('copulaGAN' in x) or ('dpart' in x) or ('synthpop' in x) or ('smote' in x) or ('under' in x)) else x)
-
-# %%
-priv_performance = pd.merge(priv_results, predictive_results_max, how='left')
-# %%
-priv_performance = priv_performance.dropna()
+# Merge to get the corresponding rows
+predictive_results_max = pd.merge(priv_util, max_values, how='inner')
 
 # %%
-priv_performance_best = priv_performance.loc[priv_performance.groupby(['dsn', 'technique'])['value'].idxmin()].reset_index(drop=True)
-
-# %%
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
-
-plt.figure(figsize=(11,6))
-ax = sns.boxplot(data=predictive_results_max, x='technique', y='value',
-    palette='Spectral_r', order=order)
-sns.set(font_scale=1.6)
-ax.margins(y=0.02)
-ax.margins(x=0.03)
-ax.use_sticky_edges = False
-ax.autoscale_view(scaley=True)
-plt.xticks(rotation=45)
-plt.xlabel("")
-plt.ylabel("Re-identification Risk")
-plt.show()
-# figure = ax.get_figure()
-# figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/anonymeter_k5_predictiveperformance.pdf', bbox_inches='tight')
-
-# %%
-#####################################
-#         PERFORMANCE FIRST         #
-#####################################
-priv_results = pd.read_csv('../output_analysis/anonymeter.csv')
-predictive_results = pd.read_csv('../output_analysis/modeling_results.csv')
-
-# %%
-predictive_results_max = predictive_results.loc[predictive_results.groupby(['ds', 'technique'])['roc_auc_perdif'].idxmax()].reset_index(drop=True)
-# %% remove "qi" from privacy results file to merge the tables correctly
-priv_results['ds_complete'] = priv_results['ds_complete'].apply(lambda x: re.sub(r'_qi[0-9]','', x) if (('TVAE' in x) or ('CTGAN' in x) or ('copulaGAN' in x) or ('dpgan' in x) or ('pategan' in x) or ('smote' in x) or ('under' in x)) else x)
-
-# %%
-priv_performance = pd.merge(priv_results, predictive_results_max, how='left')
-# %%
-priv_performance = priv_performance.dropna()
-
-# %%
-priv_performance_best = priv_performance.loc[priv_performance.groupby(['ds', 'technique'])['value'].idxmin()].reset_index(drop=True)
-
-# %%
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'Independent', 'Synthpop', 'PrivateSMOTE','PrivateSMOTE *', 'PrivateSMOTE Force', r'$\epsilon$-PrivateSMOTE', r'$\epsilon$-PrivateSMOTE Force', r'$\epsilon$-PrivateSMOTE Force *']
-# %%  PRIVACY RISK FOR ALL (BEST PERFORMANCE)
-plt.figure(figsize=(11,6))
-ax = sns.boxplot(data=priv_performance_best, x='technique', y='value',
-    palette='Spectral_r', order=order)
-sns.set(font_scale=1.6)
-ax.margins(y=0.02)
-ax.margins(x=0.03)
-ax.use_sticky_edges = False
-ax.autoscale_view(scaley=True)
-plt.xticks(rotation=45)
-plt.xlabel("")
-plt.ylabel("Re-identification Risk")
-plt.show()
-# figure = ax.get_figure()
-# figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/anonymeter_k5_predictiveperformance.pdf', bbox_inches='tight')
+performance_priv = predictive_results_max.loc[predictive_results_max.groupby(['ds', 'technique'])['value'].idxmin()].reset_index(drop=True)
 
 # %% 
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
+
 PROPS = {
     'boxprops':{'facecolor':'#00BFC4', 'edgecolor':'black'},
     'medianprops':{'color':'black'},
@@ -135,15 +119,13 @@ PROPS = {
 }
 
 # %% 
-# BEST PERFORMANCE WITH BEST PRIVATESMOTE VERSION 
-order_performance_bestprivsmote = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
-
+# BEST PERFORMANCE WITH BEST PRIVACY
 sns.set_style("darkgrid")
 fig, axes = plt.subplots(1, 2, figsize=(25,8.8))
-sns.boxplot(ax=axes[0], data=priv_performance_best,
-    x='technique', y='roc_auc_perdif', order=order_performance_bestprivsmote, **PROPS)
-sns.boxplot(ax=axes[1], data=priv_performance_best,
-    x='technique', y='value', order=order_performance_bestprivsmote, **PROPS)
+sns.boxplot(ax=axes[0], data=performance_priv,
+    x='technique', y='roc_auc_perdif', order=order, **PROPS)
+sns.boxplot(ax=axes[1], data=performance_priv,
+    x='technique', y='value', order=order, **PROPS)
 sns.set(font_scale=2.2)
 sns.light_palette("seagreen", as_cmap=True)
 axes[0].set_ylabel("Percentage difference of \n predictive performance (AUC)")
@@ -160,7 +142,7 @@ axes[0].use_sticky_edges = False
 axes[1].use_sticky_edges = False
 axes[0].autoscale_view(scaley=True)
 axes[1].autoscale_view(scaley=True)
-# plt.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performance_risk_rocauc.pdf', bbox_inches='tight')
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_risk.pdf', bbox_inches='tight')
 
 # %% 
 #####################################
@@ -169,25 +151,18 @@ axes[1].autoscale_view(scaley=True)
 # BEST IN PRIVACY WITH BEST IN PERFORMANCE
 #bestpriv_results = results.loc[results.groupby(['dsn','value'])['value'].min()]
 # %%
-bestpriv_results = priv_results[(priv_results['value'] == priv_results.groupby(['ds', 'technique'])['value'].transform('min'))]
+bestpriv_results = priv_util[(priv_util['value'] == priv_util.groupby(['ds', 'technique'])['value'].transform('min'))]
 
 # %%
-performance_priv = pd.merge(bestpriv_results, predictive_results, how='left')
-
-performance_priv=performance_priv.dropna()
-# %%
-pred_ = performance_priv.loc[performance_priv.groupby(['ds', 'technique'])['roc_auc_perdif'].idxmax()].reset_index(drop=True)
-
-# %%
-order_privsmote_bestperformance = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN','PATEGAN', r'$\epsilon$-PrivateSMOTE']
+priv_performance = bestpriv_results.loc[bestpriv_results.groupby(['ds', 'technique'])['roc_auc_perdif'].idxmax()].reset_index(drop=True)
 
 # %%
 sns.set_style("darkgrid")
 fig, axes = plt.subplots(1, 2, figsize=(25,8.8))
-sns.boxplot(ax=axes[0], data=pred_,
-    x='technique', y='value', order=order_privsmote_bestperformance, **PROPS)
-sns.boxplot(ax=axes[1], data=pred_,
-    x='technique', y='roc_auc_perdif', order=order_privsmote_bestperformance, **PROPS)
+sns.boxplot(ax=axes[0], data=priv_performance,
+    x='technique', y='value', order=order, **PROPS)
+sns.boxplot(ax=axes[1], data=priv_performance,
+    x='technique', y='roc_auc_perdif', order=order, **PROPS)
 sns.set(font_scale=2.2)
 sns.light_palette("seagreen", as_cmap=True)
 axes[0].set_ylabel("Privacy Risk (linkability)")
@@ -204,5 +179,6 @@ axes[0].use_sticky_edges = False
 axes[1].use_sticky_edges = False
 axes[0].autoscale_view(scaley=True)
 axes[1].autoscale_view(scaley=True)
-# plt.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/risk_performance_rocauc.pdf', bbox_inches='tight')
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/risk_performance.pdf', bbox_inches='tight')
 
+# %%

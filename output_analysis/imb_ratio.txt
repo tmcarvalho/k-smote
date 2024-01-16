@@ -1,0 +1,89 @@
+['68.csv']
+N    7870
+P     924
+0.1174
+Name: binaryClass, dtype: int64
+['50.csv']
+N    6698
+P    1271
+0.1897
+Name: binaryClass, dtype: int64
+['56.csv']
+1    1208
+0    1180
+1.0237
+Name: class, dtype: int64
+['2.csv']
+N    733
+Y    102
+0.1391
+Name: def, dtype: int64
+['4.csv']
+N    1445
+P     155
+0.1072
+Name: binaryClass, dtype: int64
+['8.csv']
+0    2501
+1     817
+0.3266
+Name: class, dtype: int64
+['59.csv']
+N    759
+Y    103
+Name: def, dtype: int64
+['55.csv']
+1    8354
+0    4082
+0.4886
+Name: code_number, dtype: int64
+['38.csv']
+P    5002
+N     624
+0.1247
+Name: binaryClass, dtype: int64
+['16.csv']
+N    1448
+P     152
+0.1049
+Name: binaryClass, dtype: int64
+['24.csv']
+1    1901
+2     127
+0.0668
+Name: Class, dtype: int64
+['33.csv']
+1    3199
+2     418
+0.1306
+Name: Class, dtype: int64
+['37.csv']
+0    3424
+1     576
+0.1682
+Name: class, dtype: int64
+['51.csv']
+False    7029
+True     1675
+0.2382
+Name: defects, dtype: int64
+['14.csv']
+N    1430
+P     170
+0.1188
+Name: binaryClass, dtype: int64
+['32.csv']
+-1    2702
+ 1     878
+ 0.3249
+Name: label, dtype: int64
+['10.csv']
+0    1023
+1     144
+0.1407
+Name: c, dtype: int64
+['5.csv']
+0    1123
+1     128
+0.1139
+Name: c, dtype: int64

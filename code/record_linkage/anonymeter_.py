@@ -52,37 +52,33 @@ def anonymeter_linkability(file, args):
 
     if args.type=='resampling_and_gans':
         for i in range(len(set_key_vars)):
-            try:
-                evaluator = LinkabilityEvaluator(ori=orig_data, 
-                                            syn=transf_data, 
-                                            control=control_data,
-                                            n_attacks=orig_data.shape[0],
-                                            aux_cols=set_key_vars[i],
-                                            n_neighbors=10)
+            evaluator = LinkabilityEvaluator(ori=orig_data, 
+                                        syn=transf_data, 
+                                        control=control_data,
+                                        n_attacks=len(control_data),
+                                        aux_cols=set_key_vars[i],
+                                        n_neighbors=10)
 
-                evaluator.evaluate(n_jobs=-2)  # n_jobs follow joblib convention. -1 = all cores, -2 = all execept one
-                # evaluator.risk()
-                risk = pd.DataFrame({'value': evaluator.risk()[0], 'ci':[evaluator.risk()[1]]})
-                risk.to_csv(
-                        f'{args.output_folder}/{file.split(".csv")[0]}_qi{i}.csv',
-                        index=False)
-            except: pass
+            evaluator.evaluate(n_jobs=-1)
+            # evaluator.risk()
+            risk = pd.DataFrame({'value': evaluator.risk()[0], 'ci':[evaluator.risk()[1]]})
+            risk.to_csv(
+                    f'{args.output_folder}/{file.split(".csv")[0]}_qi{i}.csv',
+                    index=False)
+
     else:
         keys_nr = list(map(int, re.findall(r'\d+', file.split('_')[2])))[0]
         print(keys_nr)
         keys = set_key_vars[keys_nr]
-        try:
-            evaluator = LinkabilityEvaluator(ori=orig_data, 
-                                        syn=transf_data,
-                                        control=control_data,
-                                        n_attacks=orig_data.shape[0],
-                                        aux_cols=keys,
-                                        n_neighbors=10)
+        evaluator = LinkabilityEvaluator(ori=orig_data, 
+                                    syn=transf_data,
+                                    control=control_data,
+                                    n_attacks=len(control_data),
+                                    aux_cols=keys,
+                                    n_neighbors=10)
 
-            evaluator.evaluate(n_jobs=-2)  # n_jobs follow joblib convention. -1 = all cores, -2 = all execept one
-            # evaluator.risk()
-            risk = pd.DataFrame({'value': evaluator.risk()[0], 'ci':[evaluator.risk()[1]]})
-            risk.to_csv(
-                    f'{args.output_folder}/{file}',
-                    index=False)
-        except: pass
+        evaluator.evaluate(n_jobs=-1)
+        risk = pd.DataFrame({'value': evaluator.risk()[0], 'ci':[evaluator.risk()[1]]})
+        risk.to_csv(
+                f'{args.output_folder}/{file}',
+                index=False)

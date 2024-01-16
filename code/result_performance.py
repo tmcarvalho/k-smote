@@ -22,36 +22,46 @@ def join_allresults(candidate_folder, technique):
             candidate_result_cv_train = pd.read_csv(f'{candidate_folder}/validation/{transf_file}')
             candidate_result_test = pd.read_csv(f'{candidate_folder}/test/{transf_file}')
             # select the best model in CV
-            best_cv = candidate_result_cv_train.iloc[[candidate_result_cv_train['mean_test_roc_auc_curve'].idxmax()]]
+            best_cv_roc = candidate_result_cv_train.iloc[[candidate_result_cv_train['mean_test_roc_auc_curve'].idxmax()]]
+            best_cv_f1 = candidate_result_cv_train.iloc[[candidate_result_cv_train['mean_test_f1_weighted'].idxmax()]]
+            best_cv_gmean = candidate_result_cv_train.iloc[[candidate_result_cv_train['mean_test_gmean'].idxmax()]]
+            best_cv_acc = candidate_result_cv_train.iloc[[candidate_result_cv_train['mean_test_acc'].idxmax()]]
             # use the best model in CV to get the results of it in out of sample
-            best_test = candidate_result_test.iloc[best_cv.index,:]
-
+            best_test_roc = candidate_result_test.iloc[best_cv_roc.index,:]
+            best_cv_f1 = candidate_result_test.iloc[best_cv_f1.index,:]
+            best_cv_gmean = candidate_result_test.iloc[best_cv_gmean.index,:]
+            best_cv_acc = candidate_result_test.iloc[best_cv_acc.index,:]
+                
             # save oracle results in out of sample
             oracle_candidate = candidate_result_test.loc[candidate_result_test['test_roc_auc'].idxmax(),'test_roc_auc']
             oracle_candidate_fscore = candidate_result_test.loc[candidate_result_test['test_f1_weighted'].idxmax(),'test_f1_weighted']
-            best_test['test_roc_auc_oracle'] = oracle_candidate
-            best_test['test_fscore_oracle'] = oracle_candidate_fscore
+            oracle_candidate_gmean = candidate_result_test.loc[candidate_result_test['test_gmean'].idxmax(),'test_gmean']
+            oracle_candidate_acc = candidate_result_test.loc[candidate_result_test['test_accuracy'].idxmax(),'test_accuracy']
+            best_test_roc['test_roc_auc_oracle'] = oracle_candidate
+            best_test_roc['test_fscore_oracle'] = oracle_candidate_fscore
+            best_test_roc['test_gmean_oracle'] = oracle_candidate_gmean
+            best_test_roc['test_accuracy_oracle'] = oracle_candidate_acc
 
             # get technique
             if technique=='resampling':
-                best_test.loc[:, 'technique'] = transf_file.split('_')[1].title()
+                best_test_roc.loc[:, 'technique'] = transf_file.split('_')[1].title()
             elif technique=='deep_learning':
-                best_test.loc[:, 'technique'] = transf_file.split('_')[1]
+                best_test_roc.loc[:, 'technique'] = transf_file.split('_')[1]
             elif technique=='city':
-                best_test.loc[:, 'technique'] = transf_file.split('_')[1].upper()
+                best_test_roc.loc[:, 'technique'] = transf_file.split('_')[1].upper()
             else:
-                best_test.loc[:, 'technique'] = technique
-    
+                best_test_roc.loc[:, 'technique'] = technique
+
             # get dataset number
-            best_test['ds'] = transf_file.split('_')[0]
-            best_test['ds_complete'] = transf_file
+            best_test_roc['ds'] = transf_file.split('_')[0]
+            best_test_roc['ds_complete'] = transf_file
 
             # concat each test result
             if c == 0:
-                concat_results_test = best_test
+                concat_results_test = best_test_roc
                 c += 1
             else:     
-                concat_results_test = pd.concat([concat_results_test, best_test])
+                concat_results_test = pd.concat([concat_results_test, best_test_roc])
         except: pass
     return concat_results_test
 
@@ -91,6 +101,8 @@ original_results['ds'] = original_results['ds'].apply(lambda x: f'ds{x.split("."
 # %% percentage difference
 results['roc_auc_perdif'] = np.NaN
 results['fscore_perdif'] = np.NaN
+results['gmean_perdif'] = np.NaN
+results['acc_perdif'] = np.NaN
 for idx in results.index:
     orig_file = original_results.loc[(original_results.ds == results.ds[idx])].reset_index(drop=True)
 
@@ -98,6 +110,8 @@ for idx in results.index:
     # 100 * (Sc - Sb) / Sb
     results['roc_auc_perdif'][idx] = (results['test_roc_auc'][idx] - orig_file['test_roc_auc'].iloc[0]) / orig_file['test_roc_auc'].iloc[0] * 100
     results['fscore_perdif'][idx] = (results['test_f1_weighted'][idx] - orig_file['test_f1_weighted'].iloc[0]) / orig_file['test_f1_weighted'].iloc[0] * 100
+    results['gmean_perdif'][idx] = (results['test_gmean'][idx] - orig_file['test_gmean'].iloc[0]) / orig_file['test_gmean'].iloc[0] * 100
+    results['acc_perdif'][idx] = (results['test_accuracy'][idx] - orig_file['test_accuracy'].iloc[0]) / orig_file['test_accuracy'].iloc[0] * 100
 
 # %%
 # results.to_csv('../output_analysis/modeling_results.csv', index=False)
@@ -126,10 +140,37 @@ plt.show()
 # figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performance_all.pdf', bbox_inches='tight')
 
 # %%
+sns.set_style("darkgrid")
+plt.figure(figsize=(12,8))
+ax = sns.boxplot(data=results, x='technique', y='fscore_perdif', **PROPS, order=order)
+sns.set(font_scale=1.5)
+plt.xticks(rotation=45)
+plt.xlabel("")
+plt.ylabel("Percentage difference of predictive performance (AUC)")
+plt.autoscale(True)
+plt.show()
+# figure = ax.get_figure()
+# figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performance_all.pdf', bbox_inches='tight')
+
+# %%
 results_max = results.loc[results.groupby(['ds', 'technique'])['roc_auc_perdif'].idxmax()]
 sns.set_style("darkgrid")
 plt.figure(figsize=(12,8))
 ax = sns.boxplot(data=results_max, x='technique', y='roc_auc_perdif', **PROPS, order=order)
+sns.set(font_scale=1.5)
+plt.xticks(rotation=45)
+plt.xlabel("")
+plt.ylabel("Percentage difference of predictive performance (AUC)")
+plt.autoscale(True)
+plt.show()
+# figure = ax.get_figure()
+# figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performance_all.pdf', bbox_inches='tight')
+
+# %%
+results_max_fscore = results.loc[results.groupby(['ds', 'technique'])['fscore_perdif'].idxmax()]
+sns.set_style("darkgrid")
+plt.figure(figsize=(12,8))
+ax = sns.boxplot(data=results_max_fscore, x='technique', y='fscore_perdif', **PROPS, order=order)
 sns.set(font_scale=1.5)
 plt.xticks(rotation=45)
 plt.xlabel("")

@@ -53,7 +53,6 @@ plt.xlabel("Percentage difference of predictive performance (AUC)")
 
 # %%
 privsmote_ds16 = privsmote.loc[privsmote.ds=='ds16']
-# privsmote_ds16 = privsmote_ds16.loc[privsmote_ds16.fscore_perdif>-10]
 
 ax = sns.lmplot(x="roc_auc_perdif",
                     y="value",
@@ -62,7 +61,7 @@ ax = sns.lmplot(x="roc_auc_perdif",
                     data=privsmote_ds16)
 plt.ylabel("Re-identification Risk")
 plt.xlabel("Percentage difference of predictive performance (AUC)")
-# ax.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_ds14.pdf', bbox_inches='tight')
+# ax.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_ds16.pdf', bbox_inches='tight')
 
 # %%
 ppt = priv_util.loc[priv_util.technique.str.contains('PPT')].reset_index(drop=True)
@@ -100,7 +99,6 @@ sns.scatterplot(x="roc_auc_perdif",
 ###############################
 #       MAX PERFORMANCE       #
 ###############################
-# df.groupby('group').agg({'column1': 'idxmax', 'column2': 'idxmin'})
 
 # Find the maximum value within each group
 max_values = priv_util[(priv_util['roc_auc_perdif'] == priv_util.groupby(['ds', 'technique'])['roc_auc_perdif'].transform('max'))]
@@ -212,9 +210,6 @@ axes[1].autoscale_view(scaley=True)
 priv_util['roc_auc_rank'] = priv_util.groupby(['ds', 'technique', 'qi'])['roc_auc_perdif'].transform(lambda x: x.rank())
 priv_util['linkability_rank'] = priv_util.groupby(['ds', 'technique', 'qi'])['value'].transform(lambda x: x.rank(ascending=False))
 
-# priv_util['roc_auc_rank'] = priv_util['roc_auc_perdif'].rank()
-# priv_util['linkability_rank'] = priv_util['value'].rank(ascending=False)
-
 # Calculate mean rank
 priv_util['mean_rank'] = (priv_util['roc_auc_rank'] + priv_util['linkability_rank']) / 2
 
@@ -228,8 +223,6 @@ sns.set(font_scale=1.5)
 plt.xticks(rotation=45)
 plt.xlabel("")
 plt.ylabel("Mean rank between ROC AUC and Linkability")
-# ax.set_xlim(0,1.02)
-plt.show()
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/rank.pdf', bbox_inches='tight')
  
 # %%
@@ -248,7 +241,6 @@ axes[1].set_ylabel("Privacy Risk (linkability)")
 axes[1].set_xlabel("")
 axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=60)
 axes[0].margins(y=0.2)
-#axes[0].yaxis.set_ticks(np.arange(-80,20, 10))
 axes[0].set_ylim(-55,90)
 axes[1].set_ylim(-0.02,1.02)
 axes[0].use_sticky_edges = False

@@ -62,11 +62,9 @@ ax = sns.boxplot(data=results,
     x='technique', y='value', order=order, color='c')
 sns.set(font_scale=2.5)
 ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1), ncol=3, title='', borderaxespad=0., frameon=False)
-#ax.set_yscale("symlog")
-#ax.set_ylim(-0.2,150)
 plt.xticks(rotation=45)
 plt.xlabel("")
-plt.ylabel("Re-identification Risk")
+plt.ylabel("Privacy Risk (Linkability)")
 plt.show()
 
 # %%  BETTER IN PRIVACY
@@ -81,7 +79,7 @@ ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1), ncol=3, title='', bordera
 #ax.set_ylim(-0.2,150)
 plt.xticks(rotation=45)
 plt.xlabel("")
-plt.ylabel("Re-identification Risk")
+plt.ylabel("Privacy Risk (Linkability)")
 plt.show()
 
 
@@ -107,9 +105,7 @@ ax = sns.boxplot(data=privsmote, x='epsilon', y='value', order=ep_order, **PROPS
 sns.set(font_scale=1.5)
 plt.xticks(rotation=45)
 plt.xlabel("")
-plt.ylabel("Re-identification Risk")
-# ax.set_xlim(0,1.02)
-plt.show()
+plt.ylabel("Privacy Risk (Linkability)")
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_epsilons_risk.pdf', bbox_inches='tight')
 
 # %%
@@ -122,7 +118,6 @@ ax = sns.boxplot(data=privsmote_max, x='epsilon', y='value', order=ep_order, **P
 sns.set(font_scale=1.5)
 plt.xticks(rotation=45)
 plt.xlabel("")
-plt.ylabel("Re-identification Risk")
-# ax.set_xlim(0,1.02)
+plt.ylabel("Privacy Risk (Linkability)")
 plt.show()
 # %%

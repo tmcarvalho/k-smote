@@ -108,10 +108,10 @@ for idx in results.index:
 
     # calculate the percentage difference
     # 100 * (Sc - Sb) / Sb
-    results['roc_auc_perdif'][idx] = (results['test_roc_auc'][idx] - orig_file['test_roc_auc'].iloc[0]) / orig_file['test_roc_auc'].iloc[0] * 100
-    results['fscore_perdif'][idx] = (results['test_f1_weighted'][idx] - orig_file['test_f1_weighted'].iloc[0]) / orig_file['test_f1_weighted'].iloc[0] * 100
-    results['gmean_perdif'][idx] = (results['test_gmean'][idx] - orig_file['test_gmean'].iloc[0]) / orig_file['test_gmean'].iloc[0] * 100
-    results['acc_perdif'][idx] = (results['test_accuracy'][idx] - orig_file['test_accuracy'].iloc[0]) / orig_file['test_accuracy'].iloc[0] * 100
+    results['roc_auc_perdif'][idx] = ((results['test_roc_auc'][idx] - orig_file['test_roc_auc'].iloc[0]) / orig_file['test_roc_auc'].iloc[0]) * 100
+    results['fscore_perdif'][idx] = ((results['test_f1_weighted'][idx] - orig_file['test_f1_weighted'].iloc[0]) / orig_file['test_f1_weighted'].iloc[0]) * 100
+    results['gmean_perdif'][idx] = ((results['test_gmean'][idx] - orig_file['test_gmean'].iloc[0]) / orig_file['test_gmean'].iloc[0]) * 100
+    results['acc_perdif'][idx] = ((results['test_accuracy'][idx] - orig_file['test_accuracy'].iloc[0]) / orig_file['test_accuracy'].iloc[0]) * 100
 
 # %%
 # results.to_csv('../output_analysis/modeling_results.csv', index=False)
@@ -178,7 +178,7 @@ plt.ylabel("Percentage difference of predictive performance (AUC)")
 plt.autoscale(True)
 plt.show()
 # figure = ax.get_figure()
-# figure.savefig(f'{os.path.dirname(os.getcwd())}/output/plots/performance_all.pdf', bbox_inches='tight')
+# figure.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_all.pdf', bbox_inches='tight')
 
 # %%
 privsmote = results.loc[results.technique.str.contains('PrivateSMOTE')].reset_index(drop=True)
@@ -192,16 +192,31 @@ privsmote_max = privsmote.loc[privsmote.groupby(['ds', 'epsilon'])['roc_auc_perd
 
 ep_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
 sns.set_style("darkgrid")
-plt.figure(figsize=(8,7))
+plt.figure(figsize=(9,8))
 ax = sns.boxplot(data=privsmote_max, x='epsilon', y='roc_auc_perdif', order=ep_order, **PROPS)
-sns.set(font_scale=1.1)
+sns.set(font_scale=1.5)
 plt.xticks(rotation=45)
 plt.xlabel("")
-plt.ylabel("Percentage difference of predictive performance (AUC)")
+plt.ylabel("Percentage difference of \npredictive performance (AUC)")
 # ax.set_xlim(0,1.02)
 plt.show()
-# figure = ax.get_figure()
-# figure.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_epsilons.pdf', bbox_inches='tight')
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_epsilons.pdf', bbox_inches='tight')
+
+
+# %%
+privsmote_max_fscore = privsmote.loc[privsmote.groupby(['ds', 'epsilon'])['fscore_perdif'].idxmax()]
+
+ep_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
+sns.set_style("darkgrid")
+plt.figure(figsize=(9,8))
+ax = sns.boxplot(data=privsmote_max, x='epsilon', y='fscore_perdif', order=ep_order, **PROPS)
+sns.set(font_scale=1.5)
+plt.xticks(rotation=45)
+plt.xlabel("")
+plt.ylabel("Percentage difference of \npredictive performance (Fscore)")
+# ax.set_xlim(0,1.02)
+plt.show()
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_epsilons_fscore.pdf', bbox_inches='tight')
 
 
 # %%

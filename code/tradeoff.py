@@ -17,35 +17,65 @@ priv_results['ds_complete'] = priv_results['ds_complete'].apply(lambda x: re.sub
 
 priv_util = priv_results.merge(predictive_results, on=['technique', 'ds_complete', 'ds'], how='left')
 
-# %% Remove ds32, 33 and 38 because it do not have borderline and smote
+# %% Remove ds32, 33 and 38 because they do not have borderline and smote
 priv_util = priv_util[~priv_util.ds.isin(['ds32', 'ds33', 'ds38'])]
 # %%
 privsmote = priv_util.loc[priv_util.technique.str.contains('PrivateSMOTE')].reset_index(drop=True)
 privsmote['epsilon'] = np.nan
 for idx, file in enumerate(privsmote.ds_complete):
-    if 'privateSMOTE' in file:
-        privsmote['epsilon'][idx] = str(list(map(float, re.findall(r'\d+\.\d+', file.split('_')[1])))[0])
+    privsmote['epsilon'][idx] = str(list(map(float, re.findall(r'\d+\.\d+', file.split('_')[1])))[0])
         
 # %%
+PROPS = {
+    'boxprops':{'facecolor':'#00BFC4', 'edgecolor':'black'},
+    'medianprops':{'color':'black'},
+    'whiskerprops':{'color':'black'},
+    'capprops':{'color':'black'}
+}
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
+order_eps = ['0.1', '0.5', '1.0', '5.0', '10.0']
+# %%
 # privsmote = privsmote.loc[privsmote.groupby(['ds', 'epsilon'])['roc_auc_perdif'].idxmax()]
-hue_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
 sns.set(style='darkgrid')
 sns.scatterplot(x="roc_auc_perdif",
             y="value",
             hue='epsilon',
-            hue_order=hue_order,
+            hue_order=order_eps,
             data=privsmote)
 plt.ylabel("Re-identification Risk")
 plt.xlabel("Percentage difference of predictive performance (AUC)")
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_allds.pdf', bbox_inches='tight')
 # %%
+sns.set_style("darkgrid")
+fig, axes = plt.subplots(1, 2, figsize=(25,8.8))
+sns.boxplot(ax=axes[0], data=privsmote,
+    x='epsilon', y='roc_auc_perdif', order=order_eps, **PROPS)
+sns.boxplot(ax=axes[1], data=privsmote,
+    x='epsilon', y='value', order=order_eps, **PROPS)
+sns.set(font_scale=2.2)
+sns.light_palette("seagreen", as_cmap=True)
+axes[0].set_ylabel("Percentage difference of \n predictive performance (ROC AUC)")
+axes[0].set_xlabel("")
+axes[0].set_xticklabels(axes[0].get_xticklabels(), rotation=60)
+axes[1].set_ylabel("Privacy Risk (linkability)")
+axes[1].set_xlabel("")
+axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=60)
+axes[0].margins(y=0.2)
+#axes[0].yaxis.set_ticks(np.arange(-80,20, 10))
+# axes[0].set_ylim(-70,120)
+axes[1].set_ylim(-0.02,1.02)
+axes[0].use_sticky_edges = False
+axes[1].use_sticky_edges = False
+axes[0].autoscale_view(scaley=True)
+axes[1].autoscale_view(scaley=True)
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privatesmote_epsilons_allvariants.pdf', bbox_inches='tight')
+# %%
 privsmote_max = privsmote.loc[privsmote.groupby(['ds', 'epsilon'])['roc_auc_perdif'].idxmax()]
-hue_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
 sns.set(style='darkgrid')
 sns.scatterplot(x="fscore_perdif",
             y="value",
             hue='epsilon',
-            hue_order=hue_order,
+            hue_order=order_eps,
             data=privsmote_max)
 plt.ylabel("Re-identification Risk")
 plt.xlabel("Percentage difference of predictive performance (AUC)")
@@ -57,7 +87,7 @@ privsmote_ds16 = privsmote.loc[privsmote.ds=='ds16']
 ax = sns.lmplot(x="roc_auc_perdif",
                     y="value",
                     hue='epsilon',
-                    hue_order=hue_order,
+                    hue_order=order_eps,
                     data=privsmote_ds16)
 plt.ylabel("Re-identification Risk")
 plt.xlabel("Percentage difference of predictive performance (AUC)")
@@ -91,10 +121,40 @@ sns.scatterplot(x="roc_auc_perdif",
 city = priv_util.loc[(priv_util.ds_complete.str.contains('_dpgan')) |
                            (priv_util.ds_complete.str.contains('_pategan'))
                            ].reset_index(drop=True)
+     
 sns.scatterplot(x="roc_auc_perdif",
                     y="value",
                     hue='technique',
                     data=city)
+# %%
+city['epsilon'] = np.nan
+for idx, file in enumerate(city.ds_complete):
+    city['epsilon'][idx] = str(list(map(float, re.findall(r'\d+\.\d+', file.split('_')[4])))[0])
+
+sns.set_style("darkgrid")
+fig, axes = plt.subplots(1, 2, figsize=(25,8.8))
+sns.boxplot(ax=axes[0], data=city,
+    x='epsilon', y='roc_auc_perdif', order=order_eps, **PROPS)
+sns.boxplot(ax=axes[1], data=city,
+    x='epsilon', y='value', order=order_eps, **PROPS)
+sns.set(font_scale=2.2)
+sns.light_palette("seagreen", as_cmap=True)
+axes[0].set_ylabel("Percentage difference of \n predictive performance (ROC AUC)")
+axes[0].set_xlabel("")
+axes[0].set_xticklabels(axes[0].get_xticklabels(), rotation=60)
+axes[1].set_ylabel("Privacy Risk (linkability)")
+axes[1].set_xlabel("")
+axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=60)
+axes[0].margins(y=0.2)
+#axes[0].yaxis.set_ticks(np.arange(-80,20, 10))
+# axes[0].set_ylim(-70,120)
+axes[1].set_ylim(-0.02,1.02)
+axes[0].use_sticky_edges = False
+axes[1].use_sticky_edges = False
+axes[0].autoscale_view(scaley=True)
+axes[1].autoscale_view(scaley=True)
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/city_epsilons_allvariants.pdf', bbox_inches='tight')
+
 # %%
 ###############################
 #       MAX PERFORMANCE       #
@@ -108,16 +168,6 @@ predictive_results_max = pd.merge(priv_util, max_values, how='inner')
 
 # %%
 performance_priv = predictive_results_max.loc[predictive_results_max.groupby(['ds', 'technique'])['value'].idxmin()].reset_index(drop=True)
-
-# %% 
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
-
-PROPS = {
-    'boxprops':{'facecolor':'#00BFC4', 'edgecolor':'black'},
-    'medianprops':{'color':'black'},
-    'whiskerprops':{'color':'black'},
-    'capprops':{'color':'black'}
-}
 
 # %% 
 # BEST PERFORMANCE WITH BEST PRIVACY
@@ -248,5 +298,23 @@ axes[1].use_sticky_edges = False
 axes[0].autoscale_view(scaley=True)
 axes[1].autoscale_view(scaley=True)
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/rank_individually.pdf', bbox_inches='tight')
+ 
+# %%
+# Calculate ranks for each metric
+best_rank['roc_auc_rank_grp'] = best_rank.groupby(['ds', 'technique'])['roc_auc_perdif'].transform(lambda x: x.rank())
+best_rank['linkability_rank_grp'] = best_rank.groupby(['ds', 'technique'])['value'].transform(lambda x: x.rank(ascending=False))
+
+# Calculate mean rank
+best_rank['mean_rank_grp'] = (best_rank['roc_auc_rank_grp'] + best_rank['linkability_rank_grp']) / 2
+
+# %%
+sns.set_style("darkgrid")
+plt.figure(figsize=(9,8))
+ax = sns.boxplot(data=best_rank, x='technique', y='mean_rank_grp', order=order, **PROPS)
+sns.set(font_scale=1.5)
+plt.xticks(rotation=45)
+plt.xlabel("")
+plt.ylabel("Mean rank between ROC AUC and Linkability")
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/rank.pdf', bbox_inches='tight')
  
 # %%

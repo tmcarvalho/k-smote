@@ -47,6 +47,8 @@ results.loc[results['technique']=='Under', 'technique'] = 'RUS'
 results.loc[results['technique']=='Bordersmote', 'technique'] = 'BorderlineSMOTE'
 results.loc[results['technique']=='Smote', 'technique'] = 'SMOTE'
 results.loc[results['technique']=='CopulaGAN', 'technique'] = 'Copula GAN'
+# %% remove wrong results (dpgan in deep learning folders) 
+results = results.loc[results.technique != 'dpgan'].reset_index(drop=True)
 
 # %%
 # results.to_csv('../output_analysis/anonymeter.csv', index=False)

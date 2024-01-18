@@ -91,7 +91,8 @@ results.loc[results['technique']=='Bordersmote', 'technique'] = 'BorderlineSMOTE
 results.loc[results['technique']=='Smote', 'technique'] = 'SMOTE'
 results.loc[results['technique']=='CopulaGAN', 'technique'] = 'Copula GAN'
 results.loc[results['technique']=='PrivateSMOTE', 'technique'] = r'$\epsilon$-PrivateSMOTE'
-
+# %% remove wrong results (dpgan in deep learning folders) 
+results = results.loc[results.technique != 'dpgan'].reset_index(drop=True)
 # %% prepare to calculate percentage difference
 original_results = results.loc[results['technique']=='original'].reset_index(drop=True)
 results = results.loc[results['technique'] != 'original'].reset_index(drop=True)

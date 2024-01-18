@@ -200,7 +200,6 @@ axes[1].autoscale_view(scaley=True)
 #           PRIVACY FIRST           #
 #####################################
 # BEST IN PRIVACY WITH BEST IN PERFORMANCE
-# %%
 bestpriv_results = priv_util[(priv_util['value'] == priv_util.groupby(['ds', 'technique'])['value'].transform('min'))]
 
 # %%
@@ -222,7 +221,6 @@ axes[1].set_ylabel("Percentage difference of \n predictive performance (AUC)")
 axes[1].set_xlabel("")
 axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=60)
 axes[0].margins(y=0.2)
-#axes[1].yaxis.set_ticks(np.arange(-80,20, 10))
 axes[1].set_ylim(-70,120)
 axes[0].set_ylim(-0.02,1.02)
 axes[0].use_sticky_edges = False
@@ -299,22 +297,3 @@ axes[0].autoscale_view(scaley=True)
 axes[1].autoscale_view(scaley=True)
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/rank_individually.pdf', bbox_inches='tight')
  
-# %%
-# Calculate ranks for each metric
-best_rank['roc_auc_rank_grp'] = best_rank.groupby(['ds', 'technique'])['roc_auc_perdif'].transform(lambda x: x.rank())
-best_rank['linkability_rank_grp'] = best_rank.groupby(['ds', 'technique'])['value'].transform(lambda x: x.rank(ascending=False))
-
-# Calculate mean rank
-best_rank['mean_rank_grp'] = (best_rank['roc_auc_rank_grp'] + best_rank['linkability_rank_grp']) / 2
-
-# %%
-sns.set_style("darkgrid")
-plt.figure(figsize=(9,8))
-ax = sns.boxplot(data=best_rank, x='technique', y='mean_rank_grp', order=order, **PROPS)
-sns.set(font_scale=1.5)
-plt.xticks(rotation=45)
-plt.xlabel("")
-plt.ylabel("Mean rank between ROC AUC and Linkability")
-# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/rank.pdf', bbox_inches='tight')
- 
-# %%

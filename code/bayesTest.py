@@ -8,12 +8,16 @@ import matplotlib.pyplot as plt
 
 # %% ORACLE SETTING
 # percentage difference in out of sample setting
-anonymeter_results = pd.read_csv('../output/anonymeter_k3.csv')
-performance_priv = pd.read_csv("../output/test_cv_roc_auc_newprivatesmote_k3.csv")
+anonymeter_results = pd.read_csv('../output_analysis/anonymeter.csv')
+performance_priv = pd.read_csv("../output_analysis/modeling_results.csv")
+# %%Extract 'qi' values 
+anonymeter_results['qi'] = anonymeter_results['ds_complete'].str.extract(r'qi(\d+)', flags=re.IGNORECASE).astype(float)
+# %%
+anonymeter_results['ds_complete'] = anonymeter_results['ds_complete'].apply(lambda x: re.sub(r'_qi[0-9]','', x) if (('TVAE' in x) or ('CTGAN' in x) or ('CopulaGAN' in x) or ('dpgan' in x) or ('pategan' in x) or ('smote' in x) or ('under' in x)) else x)
+priv_util = anonymeter_results.merge(performance_priv, on=['technique', 'ds_complete', 'ds'], how='left')
 
-# %% remove ds38, ds43, ds100
-anonymeter_results = anonymeter_results.loc[~anonymeter_results.dsn.isin(['ds38', 'ds43', 'ds100'])].reset_index(drop=True)
-performance_priv = performance_priv.loc[~performance_priv.ds.isin(['ds38', 'ds43', 'ds100'])].reset_index(drop=True)
+# %% Remove ds32, 33 and 38 because they do not have borderline and smote
+priv_util = priv_util[~priv_util.ds.isin(['ds32', 'ds33', 'ds38'])]
 # %%
 def BayesianSignTest(diffVector, rope_min, rope_max):
     # for the moment we implement the sign test. Signedrank will follows
@@ -83,66 +87,46 @@ def solutions_concat(candidates, metric):
 def sorter(column):
     reorder = [
         'PPT',
-        'Over',
         'RUS',
         'SMOTE',
         'BorderlineSMOTE',
         'Copula GAN',
         'TVAE',
         'CTGAN',
-        'Independent',
-        'Synthpop',
+        'DPGAN',
+        'PATEGAN',
         r'$\epsilon$-PrivateSMOTE'
         ]
     cat = pd.Categorical(column, categories=reorder, ordered=True)
     return pd.Series(cat)
 
 
-# %% remove PrivaSMOTE versions
-anonymeter_results = anonymeter_results.loc[(anonymeter_results.technique!='PrivateSMOTE') &\
-                                                   (anonymeter_results.technique!='PrivateSMOTE Force')\
-                                                   & (anonymeter_results.technique!='PrivateSMOTE *') \
-                                                   & (anonymeter_results.technique!=r'$\epsilon$-PrivateSMOTE Force *') \
-                                                  & (anonymeter_results.technique!=r'$\epsilon$-PrivateSMOTE')].reset_index(drop=True)
-anonymeter_results.loc[anonymeter_results.technique==r'$\epsilon$-PrivateSMOTE Force', 'technique'] = r'$\epsilon$-PrivateSMOTE'
-
-performance_priv = performance_priv.loc[(performance_priv.technique!='PrivateSMOTE') &\
-                                                   (performance_priv.technique!='PrivateSMOTE Force')\
-                                                   & (performance_priv.technique!='PrivateSMOTE *')\
-                                                    & (performance_priv.technique!=r'$\epsilon$-PrivateSMOTE Force *')\
-                                                  & (performance_priv.technique!=r'$\epsilon$-PrivateSMOTE')].reset_index(drop=True)
-performance_priv.loc[performance_priv.technique==r'$\epsilon$-PrivateSMOTE Force', 'technique'] = r'$\epsilon$-PrivateSMOTE'
 # %% PRIVACY FIRST
-# anonymeter_results_grp = anonymeter_results.loc[anonymeter_results.groupby(['dsn', 'technique'])['value'].idxmin()].reset_index(drop=True)
-anonymeter_results_grp = anonymeter_results[(anonymeter_results['value'] == anonymeter_results.groupby(['dsn', 'technique'])['value'].transform('min'))]
-anonymeter_results_grp['ds_complete'] = anonymeter_results_grp['ds_complete'].apply(lambda x: re.sub(r'_qi[0-9]','', x) if (('TVAE' in x) or ('CTGAN' in x) or ('copulaGAN' in x) or ('dpart' in x) or ('synthpop' in x) or ('smote' in x) or ('under' in x)) else x)
-
+best_priv = priv_util[(priv_util['value'] == priv_util.groupby(['ds', 'technique'])['value'].transform('min'))].reset_index(drop=True)
+best_priv = best_priv.dropna().reset_index(drop=True)
 # %%
-priv_performance = pd.merge(anonymeter_results_grp, performance_priv, how='left')
-priv_performance = priv_performance.dropna().reset_index()
+best_priv_performance = best_priv.loc[best_priv.groupby(['ds', 'technique'])['test_roc_auc_oracle'].idxmax()].reset_index(drop=True)
 
 # %% oracle percentage difference
-oracle = priv_performance.loc[priv_performance.groupby(['ds'])["test_roc_auc_oracle"].idxmax()].reset_index(drop=True)
-# %%
-priv_performance[(priv_performance['test_roc_auc_oracle'] == priv_performance.groupby(['ds'])['test_roc_auc_oracle'].transform('max'))]
+oracle_priv_performance = best_priv_performance.loc[best_priv_performance.groupby(['ds'])["test_roc_auc_oracle"].idxmax()].reset_index(drop=True)
 
 # %% 
-priv_performance['test_roc_auc_perdif_oracle'] = None
-for i in range(len(priv_performance)):
-    ds_oracle = oracle.loc[priv_performance.at[i,'ds'] == oracle.ds,:].reset_index(drop=True)
-    priv_performance['test_roc_auc_perdif_oracle'][i] = 100 * (priv_performance['test_roc_auc_candidate'][i] - ds_oracle['test_roc_auc_oracle'][0]) / ds_oracle['test_roc_auc_oracle'][0]
+best_priv_performance['test_roc_auc_perdif_oracle'] = None
+for i in range(len(best_priv_performance)):
+    ds_oracle = oracle_priv_performance.loc[best_priv_performance.at[i,'ds'] == oracle_priv_performance.ds,:].reset_index(drop=True)
+    best_priv_performance['test_roc_auc_perdif_oracle'][i] = 100 * (best_priv_performance['test_roc_auc_oracle'][i] - ds_oracle['test_roc_auc_oracle'][0]) / ds_oracle['test_roc_auc_oracle'][0]
 
-priv_performance['test_roc_auc_perdif_oracle'] =priv_performance['test_roc_auc_perdif_oracle'].astype(np.float)
-
-performance_priv_grp = priv_performance.loc[priv_performance.groupby(['ds', 'technique'])['test_roc_auc_perdif_oracle'].idxmax()].reset_index(drop=True)
+best_priv_performance['test_roc_auc_perdif_oracle'] =best_priv_performance['test_roc_auc_perdif_oracle'].astype(np.float)
+# %%
+priv_performance_grp = best_priv_performance.loc[best_priv_performance.groupby(['ds', 'technique'])['test_roc_auc_perdif_oracle'].idxmax()].reset_index(drop=True)
 
 # %% PRIVACY
-solutions_org_candidates_priv, palette_candidates_priv = solutions_concat(performance_priv_grp, 'value')   
+solutions_org_candidates_priv, palette_candidates_priv = solutions_concat(priv_performance_grp, 'value')   
 solutions_org_candidates_priv = solutions_org_candidates_priv.reset_index(drop=True)
 solutions_org_candidates_priv = solutions_org_candidates_priv.sort_values(by="Solution", key=sorter)
 
 # %% PREDICTIVE PERFORMANCE
-solutions_org_candidates, palette_candidates = solutions_concat(performance_priv_grp, 'test_roc_auc_perdif_oracle')   
+solutions_org_candidates, palette_candidates = solutions_concat(priv_performance_grp, 'test_roc_auc_perdif_oracle')   
 solutions_org_candidates = solutions_org_candidates.reset_index(drop=True)
 solutions_org_candidates = solutions_org_candidates.sort_values(by="Solution", key=sorter)
 
@@ -187,17 +171,36 @@ plt.xticks(rotation=45)
 
 # %%
 ###### BEST IN PERFORMANCE
-predictive_results_max = performance_priv.loc[performance_priv.groupby(['ds', 'technique'])['test_roc_auc_perdif_oracle'].idxmax()].reset_index(drop=True)
+# predictive_results_max = performance_priv.loc[performance_priv.groupby(['ds', 'technique', 'qi'])['test_roc_auc_perdif_oracle'].idxmax()].reset_index(drop=True)
 # %%
-priv_performance_candidates, priv_performance_palette = solutions_concat(predictive_results_max, 'test_roc_auc_perdif_oracle')   
-priv_performance_candidates = priv_performance_candidates.reset_index(drop=True)
-priv_performance_candidates = priv_performance_candidates.sort_values(by="Solution", key=sorter)
+best_performance = priv_util[(priv_util['test_roc_auc_oracle'] == priv_util.groupby(['ds', 'technique'])['test_roc_auc_oracle'].transform('max'))].reset_index(drop=True)
+best_performance = best_performance.dropna().reset_index(drop=True)
+# %%
+best_performance_priv = best_performance.loc[best_performance.groupby(['ds', 'technique'])['value'].idxmin()].reset_index(drop=True)
+
+# %% oracle percentage difference
+oracle_performance_priv = best_performance_priv.loc[best_performance_priv.groupby(['ds'])["value"].idxmin()].reset_index(drop=True)
+
+# %% 
+best_performance_priv['test_roc_auc_perdif_oracle'] = None
+for i in range(len(best_performance_priv)):
+    ds_oracle = oracle_performance_priv.loc[best_performance_priv.at[i,'ds'] == oracle_performance_priv.ds,:].reset_index(drop=True)
+    best_performance_priv['test_roc_auc_perdif_oracle'][i] = 100 * (best_performance_priv['test_roc_auc_oracle'][i] - ds_oracle['test_roc_auc_oracle'][0]) / ds_oracle['test_roc_auc_oracle'][0]
+
+best_performance_priv['test_roc_auc_perdif_oracle'] =best_performance_priv['test_roc_auc_perdif_oracle'].astype(np.float)
+# %%
+performance_priv_grp = best_performance_priv.loc[best_performance_priv.groupby(['ds', 'technique'])['test_roc_auc_perdif_oracle'].idxmax()].reset_index(drop=True)
+
+# %%
+performance_priv_candidates, performance_priv_palette = solutions_concat(performance_priv_grp, 'test_roc_auc_perdif_oracle')   
+performance_priv_candidates = performance_priv_candidates.reset_index(drop=True)
+performance_priv_candidates = performance_priv_candidates.sort_values(by="Solution", key=sorter)
 
 # %%
 sns.set_style("darkgrid")
 fig, ax= plt.subplots(figsize=(10, 2.5))
-sns.histplot(data=priv_performance_candidates, stat='probability', multiple='fill', x='Solution', hue='Result', edgecolor='none',
-            palette = priv_performance_palette, shrink=0.8, hue_order=['Lose', 'Draw'])
+sns.histplot(data=performance_priv_candidates, stat='probability', multiple='fill', x='Solution', hue='Result', edgecolor='none',
+            palette = performance_priv_palette, shrink=0.8, hue_order=['Lose', 'Draw'])
 ax.axhline(0.5, linewidth=0.5, color='lightgrey')
 ax.margins(x=0.2)
 ax.set_xlabel("")

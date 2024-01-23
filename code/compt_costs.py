@@ -2,6 +2,7 @@
 # %%
 import pandas as pd
 import seaborn as sns
+import re
 import matplotlib.pyplot as plt
 import os
 # %%
@@ -27,10 +28,10 @@ summary_costs['technique'] = ['PrivateSMOTE' if 'privateSMOTE' in tech else tech
 summary_costs.loc[summary_costs['technique']=='PrivateSMOTE', 'technique'] = r'$\epsilon$-PrivateSMOTE'
 summary_costs.loc[summary_costs['technique']=='CopulaGAN', 'technique'] = 'Copula GAN'
 summary_costs.loc[summary_costs['technique']=='dpgan', 'technique'] = 'DPGAN'
-summary_costs.loc[summary_costs['technique']=='pategan', 'technique'] = 'PATEGAN'
+summary_costs.loc[summary_costs['technique']=='pategan', 'technique'] = 'PATE-GAN'
 
 # %%
-# summary_costs.to_csv('../output_analysis/comp_costs.csv', index=False)
+summary_costs.to_csv('../output_analysis/comp_costs.csv', index=False)
 # %%
 PROPS = {
     'boxprops':{'facecolor':'#00BFC4', 'edgecolor':'black'},
@@ -38,6 +39,14 @@ PROPS = {
     'whiskerprops':{'color':'black'},
     'capprops':{'color':'black'}
 }
+# %%
+# %% Remove ds32, 33 and 38 because they do not have borderline and smote
+pattern_to_exclude = re.compile(r'ds3[238]')
+summary_costs = summary_costs[~summary_costs.file.str.contains(pattern_to_exclude)]
+
+# %% remove epsilon=10
+epi_to_exclude = re.compile(r'epi10.0')
+summary_costs = summary_costs[~summary_costs.file.str.contains(epi_to_exclude)]
 # %%
 order = ['Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
 sns.set_style("darkgrid")
@@ -70,5 +79,28 @@ ax.set_ylabel("Percentage of GPU")
 ax.set_xlabel("")
 ax.set_xticklabels(ax.get_xticklabels(), rotation=60)
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/gpu.pdf', bbox_inches='tight')
+# %%
+summary_costs['ds'] = summary_costs['file'].apply(lambda x: x.split('_')[0])
+# %%
+summary_costs_max = summary_costs.groupby(['ds', 'technique']).agg({'elapsed_time': 'sum', 'cpu_percent': 'mean', 'gpu_percent': 'mean', 'ram_percent': 'mean', 'gpu_temperature': 'mean'}).reset_index()
+
+# %%
+plt.figure(figsize=(12,10))
+ax = sns.boxplot(x=summary_costs_max["technique"], y=summary_costs_max["elapsed_time"], order=order,**PROPS)
+# sns.move_legend(ax, bbox_to_anchor=(1,0.5), loc='center left', title='Transformation', borderaxespad=0., frameon=False)
+# ax.set_ylim(-1.5,100)
+ax.set_ylabel("Time")
+ax.set_xlabel("")
+ax.set_xticklabels(ax.get_xticklabels(), rotation=60)
+# %%
+summary_costs_final = summary_costs.groupby(['technique']).agg({'elapsed_time': 'sum', 'cpu_percent': 'mean', 'gpu_percent': 'mean', 'ram_percent': 'mean', 'gpu_temperature': 'mean'}).reset_index()
+
+# %%
+summary_costs_final['elapsed_time_min'] = summary_costs_final['elapsed_time'] / 60
+# %%
+summary_costs_final['n_variants'] = summary_costs.groupby(['technique']).size().reset_index(name='count')['count']
+
+# %%
+summary_costs_final['time_variant'] = summary_costs_final['elapsed_time'] / summary_costs_final['n_variants']
 
 # %%

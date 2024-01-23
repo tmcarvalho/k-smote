@@ -17,7 +17,15 @@ priv_util = priv_results.merge(predictive_results, on=['technique', 'ds_complete
 
 # %% Remove ds32, 33 and 38 because they do not have borderline and smote
 priv_util = priv_util[~priv_util.ds.isin(['ds32', 'ds33', 'ds38'])]
-
+# %%
+PROPS = {
+    'boxprops':{'facecolor':'#00BFC4', 'edgecolor':'black'},
+    'medianprops':{'color':'black'},
+    'whiskerprops':{'color':'black'},
+    'capprops':{'color':'black'}
+}
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
+order_eps = ['0.1', '0.5', '1.0', '5.0', '10.0']
 # %%
 ###############################
 #       MAX PERFORMANCE       #
@@ -31,15 +39,7 @@ predictive_results_max = pd.merge(priv_util, max_values, how='inner')
 
 # %%
 performance_priv = predictive_results_max.loc[predictive_results_max.groupby(['ds', 'technique'])['value'].idxmin()].reset_index(drop=True)
-# %%
-PROPS = {
-    'boxprops':{'facecolor':'#00BFC4', 'edgecolor':'black'},
-    'medianprops':{'color':'black'},
-    'whiskerprops':{'color':'black'},
-    'capprops':{'color':'black'}
-}
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
-order_eps = ['0.1', '0.5', '1.0', '5.0', '10.0']
+
 # %% 
 # BEST PERFORMANCE WITH BEST PRIVACY
 sns.set_style("darkgrid")
@@ -185,6 +185,7 @@ ax = sns.lmplot(x="roc_auc_perdif",
                     hue='Epsilon',
                     hue_order=order_eps,
                     data=privsmote_ds16)
+sns.set_palette("Set2")
 plt.ylabel("Privacy Risk (Linkability)")
 plt.xlabel("Percentage difference of \n predictive performance (ROC AUC)")
 # ax.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_ds16.pdf', bbox_inches='tight')

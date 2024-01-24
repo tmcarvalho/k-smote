@@ -179,12 +179,14 @@ plt.xlabel("Percentage difference of predictive performance (AUC)")
 
 # %%
 privsmote_ds16 = privsmote.loc[privsmote.ds=='ds16']
-
+#plt.figure(figsize=(12,10))
 ax = sns.lmplot(x="roc_auc_perdif",
                     y="value",
                     hue='Epsilon',
                     hue_order=order_eps,
-                    data=privsmote_ds16)
+                    data=privsmote_ds16, height=4, aspect=1.3)
+sns.set(font_scale=1.3)
+ax.set(ylim=(-0.03, 1.02))
 sns.set_palette("Set2")
 plt.ylabel("Privacy Risk (Linkability)")
 plt.xlabel("Percentage difference of \n predictive performance (ROC AUC)")

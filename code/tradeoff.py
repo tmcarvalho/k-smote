@@ -142,6 +142,18 @@ plt.ylabel("Privacy Risk (Linkability)")
 plt.xlabel("Percentage difference of \npredictive performance (ROC AUC)")
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_allds.pdf', bbox_inches='tight')
 # %%
+# privsmote = privsmote.loc[privsmote.groupby(['ds', 'epsilon'])['roc_auc_perdif'].idxmax()]
+sns.set(style='darkgrid')
+sns.lineplot(x="roc_auc_perdif",
+            y="value",
+            hue='Epsilon',
+            hue_order=order_eps,
+            data=privsmote)
+plt.ylabel("Privacy Risk (Linkability)")
+plt.xlabel("Percentage difference of \npredictive performance (ROC AUC)")
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_allds.pdf', bbox_inches='tight')
+
+# %%
 sns.set_style("darkgrid")
 fig, axes = plt.subplots(1, 2, figsize=(25,8.8))
 sns.boxplot(ax=axes[0], data=privsmote,
@@ -168,7 +180,7 @@ axes[1].autoscale_view(scaley=True)
 # %%
 privsmote_max = privsmote.loc[privsmote.groupby(['ds', 'Epsilon'])['roc_auc_perdif'].idxmax()]
 sns.set(style='darkgrid')
-sns.scatterplot(x="fscore_perdif",
+sns.lineplot(x="fscore_perdif",
             y="value",
             hue='Epsilon',
             hue_order=order_eps,
@@ -190,7 +202,22 @@ ax.set(ylim=(-0.03, 1.02))
 sns.set_palette("Set2")
 plt.ylabel("Privacy Risk (Linkability)")
 plt.xlabel("Percentage difference of \n predictive performance (ROC AUC)")
-# ax.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_ds16.pdf', bbox_inches='tight')
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_ds16.pdf', bbox_inches='tight')
+
+# %%
+privsmote_ds16 = privsmote.loc[privsmote.ds=='ds16']
+ax = sns.lineplot(x="roc_auc_perdif",
+                    y="value",
+                    hue='Epsilon',
+                    hue_order=order_eps,
+                    data=privsmote_ds16)
+sns.set(font_scale=1.3)
+ax.set(ylim=(-0.03, 1.02))
+sns.set_palette("Set2")
+plt.ylabel("Privacy Risk (Linkability)")
+plt.xlabel("Percentage difference of \n predictive performance (ROC AUC)")
+sns.move_legend(ax, bbox_to_anchor=(1.25,0.5), loc='center right', title='Epsilon', borderaxespad=0., frameon=False)
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_ds16_line.pdf', bbox_inches='tight')
 
 # %%
 ppt = priv_util.loc[priv_util.technique.str.contains('PPT')].reset_index(drop=True)

@@ -37,6 +37,9 @@ def join_allresults(candidate_folder, technique):
             oracle_candidate_fscore = candidate_result_test.loc[candidate_result_test['test_f1_weighted'].idxmax(),'test_f1_weighted']
             oracle_candidate_gmean = candidate_result_test.loc[candidate_result_test['test_gmean'].idxmax(),'test_gmean']
             oracle_candidate_acc = candidate_result_test.loc[candidate_result_test['test_accuracy'].idxmax(),'test_accuracy']
+            best_test_roc['best_mean_f1_weighted'] = best_cv_f1.mean_test_f1_weighted
+            best_test_roc['best_mean_gmean'] = best_cv_f1.mean_test_gmean
+            best_test_roc['best_mean_acc'] = best_cv_f1.mean_test_acc
             best_test_roc['test_roc_auc_oracle'] = oracle_candidate
             best_test_roc['test_fscore_oracle'] = oracle_candidate_fscore
             best_test_roc['test_gmean_oracle'] = oracle_candidate_gmean

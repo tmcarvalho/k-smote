@@ -100,6 +100,37 @@ axes[0].autoscale_view(scaley=True)
 axes[1].autoscale_view(scaley=True)
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/risk_performance.pdf', bbox_inches='tight')
 
+# %% together 
+sns.set_style("darkgrid")
+fig, axes = plt.subplots(2, 2, figsize=(28,20))
+sns.boxplot(ax=axes[0,0], data=performance_priv,
+    x='technique', y='roc_auc_perdif', order=order, **PROPS)
+sns.boxplot(ax=axes[0,1], data=performance_priv,
+    x='technique', y='value', order=order, **PROPS)
+sns.boxplot(ax=axes[1,0], data=priv_performance,
+    x='technique', y='roc_auc_perdif', order=order, **PROPS)
+sns.boxplot(ax=axes[1,1], data=priv_performance,
+    x='technique', y='value', order=order, **PROPS)
+sns.set(font_scale=3)
+axes[0,1].set_ylabel("Privacy Risk (linkability)")
+axes[1,1].set_ylabel("Privacy Risk (linkability)")
+axes[0,0].set_xlabel("")
+axes[0,1].set_xlabel("")
+axes[1,0].set_xlabel("")
+axes[1,1].set_xlabel("")
+axes[1,0].set_xticklabels(axes[1,0].get_xticklabels(), rotation=60)
+axes[0,0].set_xticklabels("")
+axes[0,0].set_ylabel("Percentage difference of \n predictive performance (AUC)")
+axes[1,0].set_ylabel("Percentage difference of \n predictive performance (AUC)")
+axes[1,1].set_xticklabels(axes[1,1].get_xticklabels(), rotation=60)
+axes[0,1].set_xticklabels("")
+axes[0,0].set_ylim(-70,100)
+axes[1,0].set_ylim(-70,100)
+axes[0,1].set_ylim(-0.02,1.02)
+axes[1,1].set_ylim(-0.02,1.02)
+plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_risk_together.pdf', bbox_inches='tight')
+
+
 # %% Imabalance ratios
 # orig_folder = '../original'
 # _, _, orig_files = next(os.walk(f'{orig_folder}'))

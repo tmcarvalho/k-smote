@@ -102,7 +102,7 @@ axes[1].autoscale_view(scaley=True)
 
 # %% together 
 sns.set_style("darkgrid")
-fig, axes = plt.subplots(2, 2, figsize=(28,20))
+fig, axes = plt.subplots(2, 2, figsize=(32,20))
 sns.boxplot(ax=axes[0,0], data=performance_priv,
     x='technique', y='roc_auc_perdif', order=order, **PROPS)
 sns.boxplot(ax=axes[0,1], data=performance_priv,

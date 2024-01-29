@@ -84,11 +84,14 @@ if args.type == 'Synthcity':
         if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87, 100,43]:
         # if f in [2]:
             print(file)
-            for technique in ['dpgan', 'pategan']:
-                    for epo in n_iter:
-                        for bs in batch_size_:
-                            for epi in epsilon:
-                                print(f'ds{file.split(".")[0]}_{technique}_epo{epo}_bs{bs}_epi{epi}')
-                                put_file_queue(channel, f'ds{file.split(".")[0]}_{technique}_epo{epo}_bs{bs}_epi{epi}')
+            # for technique in ['dpgan', 'pategan']:
+            #     for epo in n_iter:
+            #         for bs in batch_size_:
+            #             for epi in epsilon:
+            #                 print(f'ds{file.split(".")[0]}_{technique}_epo{epo}_bs{bs}_epi{epi}')
+            #                 put_file_queue(channel, f'ds{file.split(".")[0]}_{technique}_epo{epo}_bs{bs}_epi{epi}')
 
+            for epi in epsilon:
+                print(f'ds{file.split(".")[0]}_privbayes_epi{epi}')
+                put_file_queue(channel, f'ds{file.split(".")[0]}_privbayes_epi{epi}')
 connection.close()

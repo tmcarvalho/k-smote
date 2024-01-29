@@ -24,6 +24,12 @@ PROPS = {
     'whiskerprops':{'color':'black'},
     'capprops':{'color':'black'}
 }
+PROPS_RISK = {
+    'boxprops':{'facecolor':'#F1948A', 'edgecolor':'black'},
+    'medianprops':{'color':'black'},
+    'whiskerprops':{'color':'black'},
+    'capprops':{'color':'black'}
+}
 order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
 order_eps = ['0.1', '0.5', '1.0', '5.0', '10.0']
 # %%
@@ -108,9 +114,9 @@ sns.boxplot(ax=axes[0,0], data=performance_priv,
 sns.boxplot(ax=axes[0,1], data=performance_priv,
     x='technique', y='value', order=order, **PROPS)
 sns.boxplot(ax=axes[1,0], data=priv_performance,
-    x='technique', y='roc_auc_perdif', order=order, **PROPS)
+    x='technique', y='roc_auc_perdif', order=order, **PROPS_RISK)
 sns.boxplot(ax=axes[1,1], data=priv_performance,
-    x='technique', y='value', order=order, **PROPS)
+    x='technique', y='value', order=order, **PROPS_RISK)
 sns.set(font_scale=3)
 axes[0,1].set_ylabel("Privacy Risk (linkability)")
 axes[1,1].set_ylabel("Privacy Risk (linkability)")

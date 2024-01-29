@@ -18,6 +18,8 @@ priv_util = priv_results.merge(predictive_results, on=['technique', 'ds_complete
 # %% Remove ds32, 33 and 38 because they do not have borderline and smote
 priv_util = priv_util[~priv_util.ds.isin(['ds32', 'ds33', 'ds38'])]
 # %%
+priv_util.loc[priv_util['technique']=='PATEGAN', 'technique'] = 'PATE-GAN'
+#%%
 PROPS = {
     'boxprops':{'facecolor':'#00BFC4', 'edgecolor':'black'},
     'medianprops':{'color':'black'},
@@ -30,7 +32,7 @@ PROPS_RISK = {
     'whiskerprops':{'color':'black'},
     'capprops':{'color':'black'}
 }
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATE-GAN', r'$\epsilon$-PrivateSMOTE']
 order_eps = ['0.1', '0.5', '1.0', '5.0', '10.0']
 # %%
 ###############################
@@ -134,8 +136,7 @@ axes[0,0].set_ylim(-70,100)
 axes[1,0].set_ylim(-70,100)
 axes[0,1].set_ylim(-0.02,1.02)
 axes[1,1].set_ylim(-0.02,1.02)
-plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_risk_together.pdf', bbox_inches='tight')
-
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_risk_together.pdf', bbox_inches='tight')
 
 # %% Imabalance ratios
 # orig_folder = '../original'

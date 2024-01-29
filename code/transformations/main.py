@@ -46,8 +46,8 @@ def measure_resource_consumption(file, start_time, resource_usage_data):
     # Measure CPU usage
     cpu_percent = psutil.cpu_percent(interval=1)
     # Measure GPU usage
-    # gpu_percent = GPUtil.getGPUs()[0].load * 100
-    gpu_percent = 0.0 # can't detect GPUs (for now)
+    gpu_percent = GPUtil.getGPUs()[0].load * 100
+    # gpu_percent = 0.0 # can't detect GPUs (for now)
 
     # Measure RAM usage
     ram_percent = psutil.virtual_memory().percent
@@ -56,8 +56,8 @@ def measure_resource_consumption(file, start_time, resource_usage_data):
     # cpu_temperature = psutil.sensors_temperatures()["cpu_thermal"][0]
 
     # Measure GPU temperature
-    # gpu_temperature = GPUtil.getGPUs()[0].temperature
-    gpu_temperature = np.nan
+    gpu_temperature = GPUtil.getGPUs()[0].temperature
+    # gpu_temperature = np.nan
 
     # Measure elapsed time
     elapsed_time = time.time() - start_time
@@ -169,5 +169,5 @@ for thread in threads:
 connection.close()
 
 # find . -name ".DS_Store" -delete
-# python3 code/transformations/task_transf.py  --input_folder "original" --type "PrivateSMOTE"
-# python3 code/transformations/main.py --type "PrivateSMOTE"
+# python3 code/transformations/task_transf.py  --input_folder "original" --type "Synthcity"
+# python3 code/transformations/main.py --type "Synthcity"

@@ -58,16 +58,23 @@ def synth_city(msg):
     data[data.columns[-1]] = data[data.columns[-1]].astype(str)
     
     technique = msg.split('_')[1]
-    epo = list(map(int, re.findall(r'\d+', msg.split('_')[2])))[0]
-    bs = list(map(int, re.findall(r'\d+', msg.split('_')[3])))[0]
-    epi = list(map(float, re.findall(r'\d+\.\d+', msg.split('_')[4])))[0]
 
     if technique == 'dpgan':
+        epo = list(map(int, re.findall(r'\d+', msg.split('_')[2])))[0]
+        bs = list(map(int, re.findall(r'\d+', msg.split('_')[3])))[0]
+        epi = list(map(float, re.findall(r'\d+\.\d+', msg.split('_')[4])))[0]
         model = Plugins().get("dpgan", n_iter=epo, batch_size=bs, epsilon=epi)
 
     if technique == 'pategan':
+        epo = list(map(int, re.findall(r'\d+', msg.split('_')[2])))[0]
+        bs = list(map(int, re.findall(r'\d+', msg.split('_')[3])))[0]
+        epi = list(map(float, re.findall(r'\d+\.\d+', msg.split('_')[4])))[0]
         model = Plugins().get("pategan", n_iter=epo, batch_size=bs, epsilon=epi)
     
+    if technique == 'privbayes':
+        epi = list(map(float, re.findall(r'\d+\.\d+', msg.split('_')[2])))[0]
+        model = Plugins().get("privbayes", epsilon=epi)
+
     # Fit the model to the data
     model.fit(data)
     # Generate synthetic data

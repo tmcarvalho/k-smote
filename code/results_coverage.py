@@ -116,7 +116,7 @@ cov_performance_best = bestpriv_results.loc[bestpriv_results.groupby(['dsn', 'te
 
 # %%
 sns.set_style("darkgrid")
-fig, axes = plt.subplots(1, 4, figsize=(25,7))
+fig, axes = plt.subplots(1, 4, figsize=(26.5,8))
 sns.boxplot(ax=axes[0], data=cov_performance_best,
     x='Range Coverage', hue=cov_performance_best['technique_x'], hue_order=order)
 sns.boxplot(ax=axes[1], data=cov_performance_best,
@@ -125,7 +125,7 @@ sns.boxplot(ax=axes[2], data=cov_performance_best,
     x='Statistic Similarity (Mean)', hue=cov_performance_best['technique_x'], hue_order=order)
 sns.boxplot(ax=axes[3], data=cov_performance_best,
     x='Correlation', hue=cov_performance_best['technique_x'], hue_order=order)
-sns.set(font_scale=2.2)
+sns.set(font_scale=2.4)
 sns.set_palette("Paired")
 axes[0].set_xlim(0,1.02)
 axes[1].set_xlim(0,1.02)
@@ -134,8 +134,9 @@ axes[3].set_xlim(0,1.02)
 axes[0].get_legend().set_visible(False)
 axes[1].get_legend().set_visible(False)
 axes[3].get_legend().set_visible(False)
+# plt.subplots_adjust(wspace = 0.1)
 sns.move_legend(axes[2], title='Transformation Techniques', bbox_to_anchor=(-0.1,1.3), loc='upper center', borderaxespad=0., ncol=6, frameon=False)
-#plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/utility_best_techniques.pdf', bbox_inches='tight')
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/utility_best_techniques.pdf', bbox_inches='tight')
 
 # %%
 privsmote = mean_cols.loc[mean_cols.technique.str.contains('PrivateSMOTE')].reset_index(drop=True)

@@ -52,7 +52,7 @@ def apply_test(candidates, metric):
     return solution_res
 
 def custom_palette(df):
-    custom_palette = {'Win': 'tab:green', 'Draw': 'orange', 'Lose': 'tab:blue'}
+    custom_palette = {'Win': '#27AE60', 'Draw': '#FBC02D', 'Lose': '#2471A3'}
     return {q: custom_palette[q] for q in set(df['Result'])}
 
 def solutions_concat(candidates, metric):
@@ -122,18 +122,18 @@ axes[1].set_xlabel('')
 
 # %%
 sns.set_style("darkgrid")
-fig, ax= plt.subplots(figsize=(10, 2.8))
+fig, ax= plt.subplots(figsize=(10, 2.7))
 sns.histplot(data=solutions_org_candidates, stat='probability', multiple='fill', x='Solution', hue='Result', edgecolor='none',
             palette = palette_candidates, shrink=0.8, hue_order=['Lose', 'Draw'])
 ax.axhline(0.5, linewidth=0.5, color='lightgrey')
 ax.margins(x=0.2)
 ax.set_xlabel("")
 ax.set_ylabel('Proportion of probability')
-sns.move_legend(ax, bbox_to_anchor=(0.5,1.35), loc='upper center', borderaxespad=0., ncol=3, frameon=False)         
-sns.set(font_scale=1.2)
+sns.move_legend(ax, bbox_to_anchor=(0.5,1.23), loc='upper center', borderaxespad=0., ncol=3, frameon=False, title="")         
+sns.set(font_scale=1.3)
 # plt.yticks(np.arange(0, 1.25, 0.25))
 plt.xticks(rotation=45)
-# plt.savefig(f'../output/plots/bayes_newprivatesmote_rocauc.pdf', bbox_inches='tight')
+# plt.savefig(f'../plots/bayes_riskperformance.pdf', bbox_inches='tight')
 
 # %%
 ###### BEST IN PERFORMANCE

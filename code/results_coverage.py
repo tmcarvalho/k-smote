@@ -99,11 +99,21 @@ sns.set(font_scale=2)
 sns.set_palette("Paired")
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/category_coverage.pdf', bbox_inches='tight')
 # %% Best for each DS and technique
+priv_results = pd.read_csv('../output_analysis/anonymeter.csv')
 predictive_results = pd.read_csv('../output_analysis/modeling_results.csv')
+priv_results['ds_complete'] = priv_results['ds_complete'].apply(lambda x: re.sub(r'_qi[0-9]','', x) if (('TVAE' in x) or ('CTGAN' in x) or ('CopulaGAN' in x) or ('dpgan' in x) or ('pategan' in x) or ('smote' in x) or ('under' in x)) else x)
+priv_util = priv_results.merge(predictive_results, on=['technique', 'ds_complete', 'ds'], how='left')
+priv_util = priv_util[~priv_util.ds.isin(['ds32', 'ds33', 'ds38'])]
 # %%
-cov_performance = mean_cols.merge(predictive_results, left_on='ds', right_on='ds_complete', how='left')
+priv_util.loc[priv_util['technique']=='PATEGAN', 'technique'] = 'PATE-GAN'
 # %%
-cov_performance_best = cov_performance.loc[cov_performance.groupby(['dsn', 'technique_x'])['roc_auc_perdif'].idxmax()]
+cov_performance = mean_cols.merge(priv_util, left_on='ds', right_on='ds_complete', how='left')
+# %%
+bestpriv_results = cov_performance[(cov_performance['value'] == cov_performance.groupby(['dsn', 'technique_x'])['value'].transform('min'))]
+
+# %%
+cov_performance_best = bestpriv_results.loc[bestpriv_results.groupby(['dsn', 'technique_x'])['roc_auc_perdif'].idxmax()].reset_index(drop=True)
+
 # %%
 sns.set_style("darkgrid")
 fig, axes = plt.subplots(1, 4, figsize=(25,7))
@@ -124,8 +134,8 @@ axes[3].set_xlim(0,1.02)
 axes[0].get_legend().set_visible(False)
 axes[1].get_legend().set_visible(False)
 axes[3].get_legend().set_visible(False)
-sns.move_legend(axes[2], title='Transformation', bbox_to_anchor=(-0.1,1.3), loc='upper center', borderaxespad=0., ncol=6, frameon=False)
-# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/utility_best_techniques.pdf', bbox_inches='tight')
+sns.move_legend(axes[2], title='Transformation Techniques', bbox_to_anchor=(-0.1,1.3), loc='upper center', borderaxespad=0., ncol=6, frameon=False)
+#plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/utility_best_techniques.pdf', bbox_inches='tight')
 
 # %%
 privsmote = mean_cols.loc[mean_cols.technique.str.contains('PrivateSMOTE')].reset_index(drop=True)

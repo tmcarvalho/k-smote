@@ -31,7 +31,7 @@ summary_costs.loc[summary_costs['technique']=='dpgan', 'technique'] = 'DPGAN'
 summary_costs.loc[summary_costs['technique']=='pategan', 'technique'] = 'PATE-GAN'
 
 # %%
-summary_costs.to_csv('../output_analysis/comp_costs.csv', index=False)
+# summary_costs.to_csv('../output_analysis/comp_costs.csv', index=False)
 # %%
 PROPS = {
     'boxprops':{'facecolor':'#00BFC4', 'edgecolor':'black'},
@@ -39,7 +39,6 @@ PROPS = {
     'whiskerprops':{'color':'black'},
     'capprops':{'color':'black'}
 }
-# %%
 # %% Remove ds32, 33 and 38 because they do not have borderline and smote
 pattern_to_exclude = re.compile(r'ds3[238]')
 summary_costs = summary_costs[~summary_costs.file.str.contains(pattern_to_exclude)]
@@ -48,7 +47,7 @@ summary_costs = summary_costs[~summary_costs.file.str.contains(pattern_to_exclud
 epi_to_exclude = re.compile(r'epi10.0')
 summary_costs = summary_costs[~summary_costs.file.str.contains(epi_to_exclude)]
 # %%
-order = ['Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
+order = ['Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATE-GAN', r'$\epsilon$-PrivateSMOTE']
 sns.set_style("darkgrid")
 plt.figure(figsize=(12,10))
 ax = sns.boxplot(x=summary_costs["technique"], y=summary_costs["elapsed_time"], order=order,**PROPS)
@@ -101,6 +100,6 @@ summary_costs_final['elapsed_time_min'] = summary_costs_final['elapsed_time'] / 
 summary_costs_final['n_variants'] = summary_costs.groupby(['technique']).size().reset_index(name='count')['count']
 
 # %%
-summary_costs_final['time_variant'] = summary_costs_final['elapsed_time'] / summary_costs_final['n_variants']
+summary_costs_final['time_variant'] = summary_costs_final['elapsed_time_min'] / summary_costs_final['n_variants']
 
 # %%

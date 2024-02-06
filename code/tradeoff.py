@@ -247,9 +247,9 @@ sns.move_legend(ax, bbox_to_anchor=(1.25,0.5), loc='center right', borderaxespad
 # %%
 # Create a density plot
 #plt.figure(figsize=(8,6))
-axs = sns.kdeplot(x=privsmote['roc_auc_perdif'], y=privsmote['value'], fill=False, thresh=0, levels=50, hue=privsmote[r'$\epsilon$'], hue_order=order_eps)
+axs = sns.kdeplot(x=privsmote['roc_auc_perdif'], y=privsmote['value'], fill=False, thresh=0, levels=100, hue=privsmote[r'$\epsilon$'], hue_order=order_eps)
 sns.set(font_scale=1.3)
-axs.set(ylim=(-0.03, 1.02))
+axs.set(ylim=(-0.15, 1.02))
 # axs.set(xlim=(-60, 85))
 sns.set_palette("viridis")
 plt.xlabel('Percentage difference of \n predictive performance (AUC)')
@@ -259,7 +259,7 @@ sns.move_legend(axs, bbox_to_anchor=(1.25,0.5), loc='center right', borderaxespa
 
 # %%
 # Create a density plot
-ax = sns.kdeplot(x=privsmote_ds16['roc_auc_perdif'], y=privsmote_ds16['value'], cmap='Blues', fill=False, thresh=0, levels=50, hue=privsmote_ds16[r'$\epsilon$'], hue_order=order_eps)
+ax = sns.kdeplot(x=privsmote_ds16['roc_auc_perdif'], y=privsmote_ds16['value'], cmap='Blues', fill=False, thresh=0, levels=10, hue=privsmote_ds16[r'$\epsilon$'], hue_order=order_eps)
 ax.set(ylim=(-0.03, 1.02))
 sns.set_palette("viridis")
 plt.xlabel('Percentage difference of \n predictive performance (AUC)')     # Label x-axis

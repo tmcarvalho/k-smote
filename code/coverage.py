@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import re
+import ast
 import os
 from sdmetrics.single_column import StatisticSimilarity, RangeCoverage, CategoryCoverage, BoundaryAdherence
 from sdmetrics.column_pairs import CorrelationSimilarity
@@ -12,16 +14,52 @@ args = parser.parse_args()
 
 orig_files = next(os.walk('original'))[2]
 
+# Extract lower bound from range string and convert to number (PPT)
+def is_range_format(value):
+    if not isinstance(value, str):
+        return False
+    return '[' in value
+
+# Function to extract lower bound from range string and convert to number
+def extract_lower_bound(range_string):
+    if is_range_format(range_string):
+        try:
+            lower_bound = range_string[1:-1].split(',')[0].strip()
+            return float(lower_bound) if '.' in lower_bound else int(lower_bound)
+        except (ValueError, TypeError):
+            return None
+    elif range_string.strip() == '*':
+        return np.nan
+    else:
+        return None
+
+# Function to transform columns with ranges into numbers
+def transform_columns_with_ranges(df):
+    for col in df.select_dtypes(include=object).columns:
+        df[col] = df[col].apply(extract_lower_bound)
+        df[col] = pd.to_numeric(df[col], errors='coerce')  # 'coerce' to handle non-numeric values gracefully
+    return df
+
 def coverage_(technique):
     all_stats = []
-    transf_files = next(os.walk(f'output/oversampled/{technique}'))[2]
+    if technique=='PPT':
+        path_ppt="PPT_transformed/PPT_train/"
+        transf_files = next(os.walk(path_ppt))[2]
+    else:
+        path="output/oversampled/"
+        transf_files = next(os.walk(f'{path}{technique}'))[2]
 
     for transf_file in transf_files:
         for orig in orig_files:
             f = int(orig.split('.csv')[0])
             if f not in [0,1,3,13,23,28,34,36,40,48,54,66,87, 100,43]:
                 if f'ds{f}' == transf_file.split('_')[0]:
-                    transf_data = pd.read_csv(f'output/oversampled/{technique}/{transf_file}')
+                    if technique=='PPT':
+                        transf_data = pd.read_csv(f'{path_ppt}{transf_file}')
+                        # Transforming columns with ranges into numbers
+                        transf_data = transform_columns_with_ranges(transf_data)
+                    else:
+                        transf_data = pd.read_csv(f'{path}{technique}/{transf_file}')
                     if technique == 'PrivateSMOTE':
                         transf_data = transf_data.loc[:, transf_data.columns[:-1]]
                     orig_data = pd.read_csv(f'original/{orig}')
@@ -102,4 +140,4 @@ df = df.loc[~df.ds.str.contains('dpgan')].reset_index(drop=True)
 
 df.to_csv(f'output_analysis/coverage_{args.input_folder}.csv', index=False)
 
-# python3 code/coverage.py --input_folder "city_data"
+# python3 code/coverage.py --input_folder "PPT"

@@ -85,7 +85,7 @@ connection.close()
 
 # find . -name ".DS_Store" -delete
 # python3 code/modeling/task.py  --input_folder "output/oversampled/PrivateSMOTE"
-# python3 code/modeling/worker.py --type "ppt" --input_folder "PPT_ARX/Cleaned" --output_folder "output/modeling/PPT_ARX"
+# python3 code/modeling/worker.py --type "ppt" --input_folder "PPT_Transformed/PPT_train" --output_folder "output/modeling/PPT_ARX"
 # python3 code/modeling/worker.py --type "gans" --input_folder "output/oversampled/TVAE" --output_folder "output/modeling/TVAE"
 # python3 code/modeling/worker.py --type "smote_under_over" --input_folder "output/oversampled/borderlineSmote" --output_folder "output/modeling/borderlineSmote"
 # python3 code/modeling/worker.py --type "PrivateSMOTE" --input_folder "output/oversampled/PrivateSMOTE" --output_folder "output/modeling/PrivateSMOTE"

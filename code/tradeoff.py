@@ -247,7 +247,7 @@ sns.move_legend(ax, bbox_to_anchor=(1.25,0.5), loc='center right', borderaxespad
 # %%
 # Create a density plot
 #plt.figure(figsize=(8,6))
-axs = sns.kdeplot(x=privsmote['roc_auc_perdif'], y=privsmote['value'], fill=False, thresh=0, levels=100, hue=privsmote[r'$\epsilon$'], hue_order=order_eps)
+axs = sns.kdeplot(x=privsmote['roc_auc_perdif'], y=privsmote['value'], fill=False, thresh=0, levels=25, hue=privsmote[r'$\epsilon$'], hue_order=order_eps)
 sns.set(font_scale=1.3)
 axs.set(ylim=(-0.15, 1.02))
 # axs.set(xlim=(-60, 85))

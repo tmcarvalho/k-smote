@@ -142,7 +142,7 @@ axes[1].get_legend().set_visible(False)
 axes[3].get_legend().set_visible(False)
 # plt.subplots_adjust(wspace = 0.1)
 sns.move_legend(axes[2], title='Transformation Techniques', bbox_to_anchor=(-0.1,1.3), loc='upper center', borderaxespad=0., ncol=5, frameon=False)
-plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/utility_best_techniques.pdf', bbox_inches='tight')
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/utility_best_techniques.pdf', bbox_inches='tight')
 
 # %%
 privsmote = mean_cols.loc[mean_cols.technique.str.contains('PrivateSMOTE')].reset_index(drop=True)
@@ -153,7 +153,8 @@ for idx, file in enumerate(privsmote.ds):
         
 # %%
 hue_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
-color_epsilons = ['#D32F2F', '#AB47BC', '#FF8F00', '#F06292', '#FFEB3B']
+#color_epsilons = ['#D32F2F', '#AB47BC', '#FF8F00', '#F06292', '#FFEB3B']
+color_epsilons = ['#3F51B5', '#AB47BC', '#FFA000', '#FFEB3B', '#AED581']
 # %%
 plt.figure(figsize=(6,4))
 sns.set_style("darkgrid")

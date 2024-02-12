@@ -246,12 +246,15 @@ sns.move_legend(ax, bbox_to_anchor=(1.25,0.5), loc='center right', borderaxespad
 
 # %%
 # Create a density plot
+color_epsilons = ['#3F51B5', '#AB47BC', '#FFA000', '#FFEB3B', '#AED581'] # '#F06292',
 #plt.figure(figsize=(8,6))
-axs = sns.kdeplot(x=privsmote['roc_auc_perdif'], y=privsmote['value'], fill=False, thresh=0, levels=25, hue=privsmote[r'$\epsilon$'], hue_order=order_eps)
+axs = sns.kdeplot(x=privsmote['roc_auc_perdif'], y=privsmote['value'],
+                  fill=False, thresh=0, levels=100, hue=privsmote[r'$\epsilon$'],
+                  hue_order=order_eps, palette=color_epsilons, alpha=0.6)
 sns.set(font_scale=1.3)
 axs.set(ylim=(-0.15, 1.02))
 # axs.set(xlim=(-60, 85))
-sns.set_palette("viridis")
+#sns.set_palette("viridis")
 plt.xlabel('Percentage difference of \n predictive performance (AUC)')
 plt.ylabel('Privacy Risk (Linkability)')
 sns.move_legend(axs, bbox_to_anchor=(1.25,0.5), loc='center right', borderaxespad=0., frameon=False)

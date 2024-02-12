@@ -250,7 +250,7 @@ color_epsilons = ['#3F51B5', '#AB47BC', '#FFA000', '#FFEB3B', '#AED581'] # '#F06
 #plt.figure(figsize=(8,6))
 axs = sns.kdeplot(x=privsmote['roc_auc_perdif'], y=privsmote['value'],
                   fill=False, thresh=0, levels=100, hue=privsmote[r'$\epsilon$'],
-                  hue_order=order_eps, palette=color_epsilons, alpha=0.6)
+                  hue_order=order_eps, palette=color_epsilons, alpha=0.7)
 sns.set(font_scale=1.3)
 axs.set(ylim=(-0.15, 1.02))
 # axs.set(xlim=(-60, 85))

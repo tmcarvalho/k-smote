@@ -55,7 +55,7 @@ All data used including the original files and all transformed data variants.
 - bayesTest.py - analysis of the Bayesian Test for the oracle (best solutions in out of sample).
 
 
-indexes.npy - indexes of the testing sets for all original data sets.
+indexes.npy - indexes of the testing sets.
 
 list_key_vars.csv - 5 random sets of quasi-identifiers for each data set.
 

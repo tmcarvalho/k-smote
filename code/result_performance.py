@@ -16,7 +16,6 @@ def join_allresults(candidate_folder, technique):
     concat_results_test = []
     c=0
     _,_,candidate_result_files = next(walk(f'{candidate_folder}/test/'))
-
     for transf_file in candidate_result_files:
         try:
             candidate_result_cv_train = pd.read_csv(f'{candidate_folder}/validation/{transf_file}')
@@ -31,20 +30,22 @@ def join_allresults(candidate_folder, technique):
             best_cv_f1 = candidate_result_test.iloc[best_cv_f1.index,:]
             best_cv_gmean = candidate_result_test.iloc[best_cv_gmean.index,:]
             best_cv_acc = candidate_result_test.iloc[best_cv_acc.index,:]
-                
+
             # save oracle results in out of sample
             oracle_candidate = candidate_result_test.loc[candidate_result_test['test_roc_auc'].idxmax(),'test_roc_auc']
             oracle_candidate_fscore = candidate_result_test.loc[candidate_result_test['test_f1_weighted'].idxmax(),'test_f1_weighted']
             oracle_candidate_gmean = candidate_result_test.loc[candidate_result_test['test_gmean'].idxmax(),'test_gmean']
             oracle_candidate_acc = candidate_result_test.loc[candidate_result_test['test_accuracy'].idxmax(),'test_accuracy']
-            best_test_roc['best_mean_f1_weighted'] = best_cv_f1.mean_test_f1_weighted
-            best_test_roc['best_mean_gmean'] = best_cv_f1.mean_test_gmean
-            best_test_roc['best_mean_acc'] = best_cv_f1.mean_test_acc
-            best_test_roc['test_roc_auc_oracle'] = oracle_candidate
-            best_test_roc['test_fscore_oracle'] = oracle_candidate_fscore
-            best_test_roc['test_gmean_oracle'] = oracle_candidate_gmean
-            best_test_roc['test_accuracy_oracle'] = oracle_candidate_acc
+            
+            best_test_roc.loc[:,'best_mean_f1_weighted'] = best_cv_f1.test_f1_weighted
+            best_test_roc.loc[:,'best_mean_gmean'] = best_cv_f1.test_gmean
+            best_test_roc.loc[:,'best_mean_acc'] = best_cv_f1.test_accuracy
+            best_test_roc.loc[:,'test_roc_auc_oracle'] = oracle_candidate
+            best_test_roc.loc[:,'test_fscore_oracle'] = oracle_candidate_fscore
+            best_test_roc.loc[:,'test_gmean_oracle'] = oracle_candidate_gmean
+            best_test_roc.loc[:,'test_accuracy_oracle'] = oracle_candidate_acc
 
+            
             # get technique
             if technique=='resampling':
                 best_test_roc.loc[:, 'technique'] = transf_file.split('_')[1].title()
@@ -63,7 +64,7 @@ def join_allresults(candidate_folder, technique):
             if c == 0:
                 concat_results_test = best_test_roc
                 c += 1
-            else:     
+            else:
                 concat_results_test = pd.concat([concat_results_test, best_test_roc])
         except: pass
     return concat_results_test
@@ -82,18 +83,22 @@ deeplearn = join_allresults('../output/modeling/deep_learning/', 'deep_learning'
 # %% synthcity
 city = join_allresults('../output/modeling/city/', 'city')
 
-# %% PrivateSMOTE
+# %% 2-PrivateSMOTE
 privatesmote = join_allresults('../output/modeling/PrivateSMOTE/', 'PrivateSMOTE')
+
+# %% 3-PrivateSMOTE
+privatesmote3 = join_allresults('../output/modeling/PrivateSMOTE3/', 'PrivateSMOTE3')
 
 # %% concat all data sets
 results = pd.concat([orig, ppt, privatesmote, deeplearn, resampling, city,
-                     ]).reset_index(drop=True)
+                     privatesmote3]).reset_index(drop=True)
 # %%
 results.loc[results['technique']=='Under', 'technique'] = 'RUS'
 results.loc[results['technique']=='Bordersmote', 'technique'] = 'BorderlineSMOTE'
 results.loc[results['technique']=='Smote', 'technique'] = 'SMOTE'
 results.loc[results['technique']=='CopulaGAN', 'technique'] = 'Copula GAN'
-results.loc[results['technique']=='PrivateSMOTE', 'technique'] = r'$\epsilon$-PrivateSMOTE'
+results.loc[results['technique']=='PrivateSMOTE', 'technique'] = r'$\epsilon$-2PrivateSMOTE'
+results.loc[results['technique']=='PrivateSMOTE3', 'technique'] = r'$\epsilon$-3PrivateSMOTE'
 # %% remove wrong results (dpgan in deep learning folders) 
 results = results.loc[results.technique != 'dpgan'].reset_index(drop=True)
 # %% prepare to calculate percentage difference
@@ -129,7 +134,7 @@ PROPS = {
     'whiskerprops':{'color':'black'},
     'capprops':{'color':'black'}
 }
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-2PrivateSMOTE', r'$\epsilon$-3PrivateSMOTE']
 # %%
 sns.set_style("darkgrid")
 plt.figure(figsize=(12,8))
@@ -139,15 +144,6 @@ plt.xticks(rotation=45)
 plt.xlabel("")
 plt.ylabel("Percentage difference of predictive performance (AUC)")
 plt.autoscale(True)
-
-# %%
-sns.set_style("darkgrid")
-plt.figure(figsize=(12,8))
-ax = sns.boxplot(data=results, x='technique', y='fscore_perdif', **PROPS, order=order)
-sns.set(font_scale=1.5)
-plt.xticks(rotation=45)
-plt.xlabel("")
-plt.ylabel("Percentage difference of predictive performance (AUC)")
 
 # %%
 results_max = results.loc[results.groupby(['ds', 'technique'])['roc_auc_perdif'].idxmax()]
@@ -161,23 +157,20 @@ plt.ylabel("Percentage difference of \npredictive performance (ROC AUC)")
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_rocauc.pdf', bbox_inches='tight')
 
 # %%
-results_max_fscore = results.loc[results.groupby(['ds', 'technique'])['fscore_perdif'].idxmax()]
-sns.set_style("darkgrid")
-plt.figure(figsize=(12,8))
-ax = sns.boxplot(data=results_max_fscore, x='technique', y='fscore_perdif', **PROPS, order=order)
-sns.set(font_scale=1.5)
-plt.xticks(rotation=45)
-plt.xlabel("")
-plt.ylabel("Percentage difference of \npredictive performance (Fscore)")
-# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_fscore.pdf', bbox_inches='tight')
-
-# %%
 privsmote = results.loc[results.technique.str.contains('PrivateSMOTE')].reset_index(drop=True)
 privsmote['epsilon'] = np.nan
+privsmote['kanon'] = np.nan
 for idx, file in enumerate(privsmote.ds_complete):
     if 'privateSMOTE' in file:
         privsmote['epsilon'][idx] = str(list(map(float, re.findall(r'\d+\.\d+', file.split('_')[1])))[0])
-        
+        if len(file.split('_')[1].split('-')[1])>12:
+            privsmote['kanon'][idx] = int(list(map(float, re.findall(r'\d+', file.split('_')[1].split('-')[1])))[0])
+        else:
+            privsmote['kanon'][idx] = int(2)
+
+# %%
+privsmote['kanon'] = privsmote['kanon'].astype(float)
+privsmote['epsilon'] = privsmote['epsilon'].astype(float)
 # %%
 privsmote_max = privsmote.loc[privsmote.groupby(['ds', 'epsilon'])['roc_auc_perdif'].idxmax()]
 
@@ -193,15 +186,12 @@ plt.ylabel("Percentage difference of \npredictive performance (ROC AUC)")
 
 
 # %%
-privsmote_max_fscore = privsmote.loc[privsmote.groupby(['ds', 'epsilon'])['fscore_perdif'].idxmax()]
-
-ep_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
-sns.set_style("darkgrid")
-plt.figure(figsize=(9,8))
-ax = sns.boxplot(data=privsmote_max, x='epsilon', y='fscore_perdif', order=ep_order, **PROPS)
-sns.set(font_scale=1.5)
-plt.xticks(rotation=45)
-plt.xlabel("")
-plt.ylabel("Percentage difference of \npredictive performance (Fscore)")
-# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_epsilons_fscore.pdf', bbox_inches='tight')
+fig = plt.figure()
+ax = plt.axes(projection='3d')
+# plotting
+ax.scatter(privsmote_max['epsilon'], privsmote_max['kanon'],privsmote_max['fscore_perdif'])
+#ax.set_xticks([0.1,0.5,1.0,5.0,10.0])
+#ax.set_yticks([2,3,5])
+plt.show()
+# %%
 # %%

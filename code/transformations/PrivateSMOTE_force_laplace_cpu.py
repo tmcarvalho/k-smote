@@ -32,7 +32,7 @@ def keep_numbers(data):
 def aux_singleouts(key_vars, dt):
     """Create single out variable based on k-anonymity"""
     k = dt.groupby(key_vars)[key_vars[0]].transform(len)
-    dt['single_out'] = np.where(k < 3, 1, 0)
+    dt['single_out'] = np.where(k <= 5, 1, 0)
     return dt
 
 def check_and_adjust_data_types(origDF, newDf):
@@ -220,7 +220,7 @@ def PrivateSMOTE_force_laplace_(input_file, keys):
     """
     print(input_file)
 
-    output_interpolation_folder = 'output/oversampled/PrivateSMOTE'
+    output_interpolation_folder = 'output/oversampled/PrivateSMOTE5'
     
     # get 80% of data to synthesise
     indexes = np.load('indexes.npy', allow_pickle=True).item()

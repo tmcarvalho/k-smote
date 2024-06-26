@@ -169,5 +169,5 @@ for thread in threads:
 connection.close()
 
 # find . -name ".DS_Store" -delete
-# python3 code/transformations/task_transf.py  --input_folder "original" --type "Synthcity"
-# python3 code/transformations/main.py --type "Synthcity"
+# python3 code/transformations/task_transf.py  --input_folder "original" --type "PrivateSMOTE"
+# python3 code/transformations/main.py --type "PrivateSMOTE"

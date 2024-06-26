@@ -56,8 +56,8 @@ if args.type == 'PrivateSMOTE':
                 for k in knn:
                     for p in per:
                         for ep in epislon:
-                            print(f'ds{file.split(".")[0]}_{ep}-privateSMOTE_QI{idx}_knn{k}_per{p}')
-                            put_file_queue(channel, f'ds{file.split(".")[0]}_{ep}-privateSMOTE_QI{idx}_knn{k}_per{p}')   
+                            print(f'ds{file.split(".")[0]}_{ep}-privateSMOTE5_QI{idx}_knn{k}_per{p}')
+                            put_file_queue(channel, f'ds{file.split(".")[0]}_{ep}-privateSMOTE5_QI{idx}_knn{k}_per{p}')   
 
 if args.type == 'SDV':
     epochs=[100, 200]

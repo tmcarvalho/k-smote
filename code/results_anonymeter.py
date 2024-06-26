@@ -31,15 +31,23 @@ risk_city = concat_each_file('../output/anonymeter/city')
 risk_privateSMOTE = concat_each_file('../output/anonymeter/PrivateSMOTE')
 
 # %%
+risk_privateSMOTE3 = concat_each_file('../output/anonymeter/PrivateSMOTE3')
+
+# %%
+risk_privateSMOTE5 = concat_each_file('../output/anonymeter/PrivateSMOTE5')
+
+# %%
 risk_ppt['technique'] = 'PPT'
 risk_resampling['technique'] = risk_resampling['ds_complete'].apply(lambda x: x.split('_')[1].title())
 risk_deeplearning['technique'] = risk_deeplearning['ds_complete'].apply(lambda x: x.split('_')[1])
 risk_city['technique'] = risk_city['ds_complete'].apply(lambda x: x.split('_')[1].upper())
-risk_privateSMOTE['technique'] = r'$\epsilon$-PrivateSMOTE'
+risk_privateSMOTE['technique'] = r'$\epsilon$-2PrivateSMOTE'
+risk_privateSMOTE3['technique'] = r'$\epsilon$-3PrivateSMOTE'
+risk_privateSMOTE5['technique'] = r'$\epsilon$-5PrivateSMOTE'
 
 # %%
-results = pd.concat([risk_ppt, risk_resampling, risk_deeplearning, risk_city, risk_privateSMOTE
-                    ]).reset_index(drop=True)
+results = pd.concat([risk_ppt, risk_resampling, risk_deeplearning, risk_city, risk_privateSMOTE,
+                    risk_privateSMOTE3, risk_privateSMOTE5]).reset_index(drop=True)
 # %%
 results['ds'] = results['ds_complete'].apply(lambda x: x.split('_')[0])
 # %%
@@ -56,7 +64,7 @@ results = results.loc[results.technique != 'dpgan'].reset_index(drop=True)
 # %%
 # results = pd.read_csv('../output_analysis/anonymeter.csv')
 # %%
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-PrivateSMOTE']
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-2PrivateSMOTE', r'$\epsilon$-3PrivateSMOTE', r'$\epsilon$-5PrivateSMOTE']
 # %%
 sns.set_style("darkgrid")
 plt.figure(figsize=(20,10))
@@ -88,10 +96,13 @@ plt.show()
 # %%
 privsmote = results.loc[results.technique.str.contains('PrivateSMOTE')].reset_index(drop=True)
 privsmote['epsilon'] = np.nan
+privsmote['kanon'] = np.nan
 for idx, file in enumerate(privsmote.ds_complete):
-    if 'privateSMOTE' in file:
-        privsmote['epsilon'][idx] = str(list(map(float, re.findall(r'\d+\.\d+', file.split('_')[1])))[0])
-        
+    privsmote['epsilon'][idx] = str(list(map(float, re.findall(r'\d+\.\d+', file.split('_')[1])))[0])
+    if len(file.split('_')[1].split('-')[1])>12:
+        privsmote['kanon'][idx] = int(list(map(float, re.findall(r'\d+', file.split('_')[1].split('-')[1])))[0])
+    else:
+        privsmote['kanon'][idx] = int(2)    
 # %%
 PROPS = {
     'boxprops':{'facecolor':'#00BFC4', 'edgecolor':'black'},
@@ -111,15 +122,14 @@ plt.ylabel("Privacy Risk (Linkability)")
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_epsilons_risk.pdf', bbox_inches='tight')
 
 # %%
-privsmote_max = privsmote.loc[privsmote.groupby(['ds', 'epsilon'])['value'].idxmin()]
+privsmote_max = privsmote.loc[privsmote.groupby(['ds', 'epsilon', 'kanon'])['value'].idxmin()]
 
 ep_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
 sns.set_style("darkgrid")
 plt.figure(figsize=(8,7))
-ax = sns.boxplot(data=privsmote_max, x='epsilon', y='value', order=ep_order, **PROPS)
+ax = sns.boxplot(data=privsmote_max, x='epsilon', y='value', hue='kanon', order=ep_order)
 sns.set(font_scale=1.5)
 plt.xticks(rotation=45)
 plt.xlabel("")
 plt.ylabel("Privacy Risk (Linkability)")
 plt.show()
-# %%

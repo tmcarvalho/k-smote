@@ -17,7 +17,7 @@ def join_allresults(candidate_folder, technique):
     c=0
     _,_,candidate_result_files = next(walk(f'{candidate_folder}/test/'))
     for transf_file in candidate_result_files:
-        try:
+        try: # pass error in roc auc for some transf files (especially with geep learning)
             candidate_result_cv_train = pd.read_csv(f'{candidate_folder}/validation/{transf_file}')
             candidate_result_test = pd.read_csv(f'{candidate_folder}/test/{transf_file}')
             # select the best model in CV
@@ -89,9 +89,12 @@ privatesmote = join_allresults('../output/modeling/PrivateSMOTE/', 'PrivateSMOTE
 # %% 3-PrivateSMOTE
 privatesmote3 = join_allresults('../output/modeling/PrivateSMOTE3/', 'PrivateSMOTE3')
 
+# %% 5-PrivateSMOTE
+privatesmote5 = join_allresults('../output/modeling/PrivateSMOTE5/', 'PrivateSMOTE5')
+
 # %% concat all data sets
 results = pd.concat([orig, ppt, privatesmote, deeplearn, resampling, city,
-                     privatesmote3]).reset_index(drop=True)
+                     privatesmote3, privatesmote5]).reset_index(drop=True)
 # %%
 results.loc[results['technique']=='Under', 'technique'] = 'RUS'
 results.loc[results['technique']=='Bordersmote', 'technique'] = 'BorderlineSMOTE'
@@ -99,6 +102,7 @@ results.loc[results['technique']=='Smote', 'technique'] = 'SMOTE'
 results.loc[results['technique']=='CopulaGAN', 'technique'] = 'Copula GAN'
 results.loc[results['technique']=='PrivateSMOTE', 'technique'] = r'$\epsilon$-2PrivateSMOTE'
 results.loc[results['technique']=='PrivateSMOTE3', 'technique'] = r'$\epsilon$-3PrivateSMOTE'
+results.loc[results['technique']=='PrivateSMOTE5', 'technique'] = r'$\epsilon$-5PrivateSMOTE'
 # %% remove wrong results (dpgan in deep learning folders) 
 results = results.loc[results.technique != 'dpgan'].reset_index(drop=True)
 # %% prepare to calculate percentage difference
@@ -134,7 +138,8 @@ PROPS = {
     'whiskerprops':{'color':'black'},
     'capprops':{'color':'black'}
 }
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN', r'$\epsilon$-2PrivateSMOTE', r'$\epsilon$-3PrivateSMOTE']
+order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATEGAN',
+         r'$\epsilon$-2PrivateSMOTE', r'$\epsilon$-3PrivateSMOTE', r'$\epsilon$-5PrivateSMOTE']
 # %%
 sns.set_style("darkgrid")
 plt.figure(figsize=(12,8))
@@ -172,16 +177,18 @@ for idx, file in enumerate(privsmote.ds_complete):
 privsmote['kanon'] = privsmote['kanon'].astype(float)
 privsmote['epsilon'] = privsmote['epsilon'].astype(float)
 # %%
-privsmote_max = privsmote.loc[privsmote.groupby(['ds', 'epsilon'])['roc_auc_perdif'].idxmax()]
+privsmote_max = privsmote.loc[privsmote.groupby(['ds', 'epsilon', 'kanon'])['roc_auc_perdif'].idxmax()]
 
 ep_order = ['0.1', '0.5', '1.0', '5.0', '10.0']
 sns.set_style("darkgrid")
 plt.figure(figsize=(9,8))
-ax = sns.boxplot(data=privsmote_max, x='epsilon', y='roc_auc_perdif', order=ep_order, **PROPS)
+ax = sns.boxplot(data=privsmote_max, x='epsilon', y='roc_auc_perdif', hue='kanon',
+                 order=ep_order, palette='Set2')
 sns.set(font_scale=1.5)
 plt.xticks(rotation=45)
 plt.xlabel("")
 plt.ylabel("Percentage difference of \npredictive performance (ROC AUC)")
+ax.legend(loc='center right', bbox_to_anchor=(1.2, 0.5), title='Kanon')
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_epsilons.pdf', bbox_inches='tight')
 
 
@@ -194,4 +201,4 @@ ax.scatter(privsmote_max['epsilon'], privsmote_max['kanon'],privsmote_max['fscor
 #ax.set_yticks([2,3,5])
 plt.show()
 # %%
-# %%
+

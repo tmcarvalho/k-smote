@@ -87,10 +87,10 @@ connection.close()
 
 
 # find . -name ".DS_Store" -delete
-# python3 code/record_linkage/task_anonymeter.py  --input_folder  "PPT_transformed/PPT_train/"
+# python3 code/record_linkage/task_anonymeter.py  --input_folder  "output/oversampled/PrivateSMOTE5"
 # python3 code/record_linkage/worker_anonymeter.py --type "PPT" --input_folder "PPT_transformed/PPT_train/" --output_folder "output/anonymeter/PPT_ARX"
 # python3 code/record_linkage/worker_anonymeter.py --type "resampling_and_gans" --input_folder "output/oversampled/re-sampling" --output_folder "output/anonymeter/re-sampling"
 # python3 code/record_linkage/worker_anonymeter.py --type "resampling_and_gans" --input_folder "output/oversampled/deep_learning" --output_folder "output/anonymeter/deep_learning"
 # python3 code/record_linkage/worker_anonymeter.py --type "resampling_and_gans" --input_folder "output/oversampled/city_data" --output_folder "output/anonymeter/city"
-# python3 code/record_linkage/worker_anonymeter.py --type "PrivateSMOTE" --input_folder "output/oversampled/PrivateSMOTE" --output_folder "output/anonymeter/PrivateSMOTE"
+# python3 code/record_linkage/worker_anonymeter.py --type "PrivateSMOTE" --input_folder "output/oversampled/PrivateSMOTE5" --output_folder "output/anonymeter/PrivateSMOTE5"
 

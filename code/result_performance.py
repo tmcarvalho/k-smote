@@ -17,6 +17,7 @@ def join_allresults(candidate_folder, technique):
     c=0
     _,_,candidate_result_files = next(walk(f'{candidate_folder}/test/'))
     for transf_file in candidate_result_files:
+        #if 'ds4' in transf_file:
         try: # pass error in roc auc for some transf files (especially with geep learning)
             candidate_result_cv_train = pd.read_csv(f'{candidate_folder}/validation/{transf_file}')
             candidate_result_test = pd.read_csv(f'{candidate_folder}/test/{transf_file}')
@@ -27,19 +28,23 @@ def join_allresults(candidate_folder, technique):
             best_cv_acc = candidate_result_cv_train.iloc[[candidate_result_cv_train['mean_test_acc'].idxmax()]]
             # use the best model in CV to get the results of it in out of sample
             best_test_roc = candidate_result_test.iloc[best_cv_roc.index,:]
-            best_cv_f1 = candidate_result_test.iloc[best_cv_f1.index,:]
-            best_cv_gmean = candidate_result_test.iloc[best_cv_gmean.index,:]
-            best_cv_acc = candidate_result_test.iloc[best_cv_acc.index,:]
+            best_test_f1 = candidate_result_test.iloc[best_cv_f1.index,:]
+            #print(candidate_result_cv_train.loc[[candidate_result_cv_train['mean_test_f1_weighted'].idxmax()], 'mean_test_f1_weighted'])
+            #print(candidate_result_test.iloc[best_cv_f1.index,:])
+            best_test_gmean = candidate_result_test.iloc[best_cv_gmean.index,:]
+            best_test_acc = candidate_result_test.iloc[best_cv_acc.index,:]
 
             # save oracle results in out of sample
             oracle_candidate = candidate_result_test.loc[candidate_result_test['test_roc_auc'].idxmax(),'test_roc_auc']
             oracle_candidate_fscore = candidate_result_test.loc[candidate_result_test['test_f1_weighted'].idxmax(),'test_f1_weighted']
             oracle_candidate_gmean = candidate_result_test.loc[candidate_result_test['test_gmean'].idxmax(),'test_gmean']
             oracle_candidate_acc = candidate_result_test.loc[candidate_result_test['test_accuracy'].idxmax(),'test_accuracy']
+            #print(best_test_f1.test_f1_weighted.values[0])
+            best_test_roc.loc[:,'best_mean_roc_auc'] = best_test_roc.test_roc_auc.values[0]
+            best_test_roc.loc[:,'best_mean_f1_weighted'] = best_test_f1.test_f1_weighted.values[0]
+            best_test_roc.loc[:,'best_mean_gmean'] = best_test_gmean.test_gmean.values[0]
+            best_test_roc.loc[:,'best_mean_acc'] = best_test_acc.test_accuracy.values[0]
             
-            best_test_roc.loc[:,'best_mean_f1_weighted'] = best_cv_f1.test_f1_weighted
-            best_test_roc.loc[:,'best_mean_gmean'] = best_cv_f1.test_gmean
-            best_test_roc.loc[:,'best_mean_acc'] = best_cv_f1.test_accuracy
             best_test_roc.loc[:,'test_roc_auc_oracle'] = oracle_candidate
             best_test_roc.loc[:,'test_fscore_oracle'] = oracle_candidate_fscore
             best_test_roc.loc[:,'test_gmean_oracle'] = oracle_candidate_gmean
@@ -121,13 +126,13 @@ for idx in results.index:
 
     # calculate the percentage difference
     # 100 * (Sc - Sb) / Sb
-    results['roc_auc_perdif'][idx] = ((results['test_roc_auc'][idx] - orig_file['test_roc_auc'].iloc[0]) / orig_file['test_roc_auc'].iloc[0]) * 100
-    results['fscore_perdif'][idx] = ((results['test_f1_weighted'][idx] - orig_file['test_f1_weighted'].iloc[0]) / orig_file['test_f1_weighted'].iloc[0]) * 100
-    results['gmean_perdif'][idx] = ((results['test_gmean'][idx] - orig_file['test_gmean'].iloc[0]) / orig_file['test_gmean'].iloc[0]) * 100
-    results['acc_perdif'][idx] = ((results['test_accuracy'][idx] - orig_file['test_accuracy'].iloc[0]) / orig_file['test_accuracy'].iloc[0]) * 100
+    results['roc_auc_perdif'][idx] = ((results['best_mean_roc_auc'][idx] - orig_file['test_roc_auc'].iloc[0]) / orig_file['test_roc_auc'].iloc[0]) * 100
+    results['fscore_perdif'][idx] = ((results['best_mean_f1_weighted'][idx] - orig_file['test_f1_weighted'].iloc[0]) / orig_file['test_f1_weighted'].iloc[0]) * 100
+    results['gmean_perdif'][idx] = ((results['best_mean_gmean'][idx] - orig_file['test_gmean'].iloc[0]) / orig_file['test_gmean'].iloc[0]) * 100
+    results['acc_perdif'][idx] = ((results['best_mean_acc'][idx] - orig_file['test_accuracy'].iloc[0]) / orig_file['test_accuracy'].iloc[0]) * 100
 
 # %%
-# results.to_csv('../output_analysis/modeling_results.csv', index=False)
+results.to_csv('../output_analysis/modeling_results.csv', index=False)
 # %%
 # results = pd.read_csv('../output_analysis/modeling_results.csv')
 
@@ -150,7 +155,7 @@ plt.xlabel("")
 plt.ylabel("Percentage difference of predictive performance (AUC)")
 plt.autoscale(True)
 
-# %%
+# %% ROC AUC
 results_max = results.loc[results.groupby(['ds', 'technique'])['roc_auc_perdif'].idxmax()]
 sns.set_style("darkgrid")
 plt.figure(figsize=(12,8))
@@ -159,6 +164,39 @@ sns.set(font_scale=1.5)
 plt.xticks(rotation=45)
 plt.xlabel("")
 plt.ylabel("Percentage difference of \npredictive performance (ROC AUC)")
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_rocauc.pdf', bbox_inches='tight')
+
+# %% FSCORE
+results_max = results.loc[results.groupby(['ds', 'technique'])['fscore_perdif'].idxmax()]
+sns.set_style("darkgrid")
+plt.figure(figsize=(12,8))
+ax = sns.boxplot(data=results_max, x='technique', y='fscore_perdif', **PROPS, order=order)
+sns.set(font_scale=1.5)
+plt.xticks(rotation=45)
+plt.xlabel("")
+plt.ylabel("Percentage difference of \npredictive performance (Fscore)")
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_rocauc.pdf', bbox_inches='tight')
+
+# %% GMEAN
+results_max = results.loc[results.groupby(['ds', 'technique'])['gmean_perdif'].idxmax()]
+sns.set_style("darkgrid")
+plt.figure(figsize=(12,8))
+ax = sns.boxplot(data=results_max, x='technique', y='gmean_perdif', **PROPS, order=order)
+sns.set(font_scale=1.5)
+plt.xticks(rotation=45)
+plt.xlabel("")
+plt.ylabel("Percentage difference of \npredictive performance (Gmean)")
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_rocauc.pdf', bbox_inches='tight')
+
+# %% ACCURACY
+results_max = results.loc[results.groupby(['ds', 'technique'])['acc_perdif'].idxmax()]
+sns.set_style("darkgrid")
+plt.figure(figsize=(12,8))
+ax = sns.boxplot(data=results_max, x='technique', y='acc_perdif', **PROPS, order=order)
+sns.set(font_scale=1.5)
+plt.xticks(rotation=45)
+plt.xlabel("")
+plt.ylabel("Percentage difference of \npredictive performance (Acc)")
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_rocauc.pdf', bbox_inches='tight')
 
 # %%
@@ -190,15 +228,3 @@ plt.xlabel("")
 plt.ylabel("Percentage difference of \npredictive performance (ROC AUC)")
 ax.legend(loc='center right', bbox_to_anchor=(1.2, 0.5), title='Kanon')
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_epsilons.pdf', bbox_inches='tight')
-
-
-# %%
-fig = plt.figure()
-ax = plt.axes(projection='3d')
-# plotting
-ax.scatter(privsmote_max['epsilon'], privsmote_max['kanon'],privsmote_max['fscore_perdif'])
-#ax.set_xticks([0.1,0.5,1.0,5.0,10.0])
-#ax.set_yticks([2,3,5])
-plt.show()
-# %%
-

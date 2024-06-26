@@ -23,9 +23,10 @@ summary_costs = summary_costs.reset_index()
 # %%
 summary_costs['technique'] = summary_costs.file.apply(lambda x: x.split('_')[1])
 # %%
-summary_costs['technique'] = ['PrivateSMOTE' if 'privateSMOTE' in tech else tech for tech in summary_costs['technique']]
+summary_costs['technique'] = [r'$\epsilon$-3PrivateSMOTE' if 'privateSMOTE3' in tech else tech for tech in summary_costs['technique']]
+summary_costs['technique'] = [r'$\epsilon$-5PrivateSMOTE' if 'privateSMOTE5' in tech else tech for tech in summary_costs['technique']]
+summary_costs['technique'] = [r'$\epsilon$-2PrivateSMOTE' if '-privateSMOTE' in tech else tech for tech in summary_costs['technique']]
 # %%
-summary_costs.loc[summary_costs['technique']=='PrivateSMOTE', 'technique'] = r'$\epsilon$-PrivateSMOTE'
 summary_costs.loc[summary_costs['technique']=='CopulaGAN', 'technique'] = 'Copula GAN'
 summary_costs.loc[summary_costs['technique']=='dpgan', 'technique'] = 'DPGAN'
 summary_costs.loc[summary_costs['technique']=='pategan', 'technique'] = 'PATE-GAN'
@@ -43,11 +44,14 @@ PROPS = {
 pattern_to_exclude = re.compile(r'ds3[238]')
 summary_costs = summary_costs[~summary_costs.file.str.contains(pattern_to_exclude)]
 
+# %% remove ds55
+summary_costs = summary_costs[~summary_costs.file.str.contains('ds55')]
+
 # %% remove epsilon=10
 epi_to_exclude = re.compile(r'epi10.0')
 summary_costs = summary_costs[~summary_costs.file.str.contains(epi_to_exclude)]
 # %%
-order = ['Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATE-GAN', r'$\epsilon$-PrivateSMOTE']
+order = ['Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATE-GAN', r'$\epsilon$-2PrivateSMOTE', r'$\epsilon$-3PrivateSMOTE', r'$\epsilon$-5PrivateSMOTE']
 sns.set_style("darkgrid")
 plt.figure(figsize=(12,10))
 ax = sns.boxplot(x=summary_costs["technique"], y=summary_costs["elapsed_time"], order=order,**PROPS)

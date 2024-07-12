@@ -142,7 +142,7 @@ axes[1].get_legend().set_visible(False)
 axes[3].get_legend().set_visible(False)
 # plt.subplots_adjust(wspace = 0.1)
 sns.move_legend(axes[2], title='Transformation Techniques', bbox_to_anchor=(-0.1,1.3), loc='upper center', borderaxespad=0., ncol=5, frameon=False)
-# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/utility_best_techniques.pdf', bbox_inches='tight')
+plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/utility_best_techniques.jpg', dpi=300, bbox_inches='tight')
 
 # %%
 privsmote = mean_cols.loc[mean_cols.technique.str.contains('PrivateSMOTE')].reset_index(drop=True)
@@ -224,7 +224,7 @@ axes[0].get_legend().set_visible(False)
 axes[1].get_legend().set_visible(False)
 axes[3].get_legend().set_visible(False)
 sns.move_legend(axes[2], bbox_to_anchor=(-0.1,1.3), loc='upper center', borderaxespad=0., ncol=6, frameon=False)
-# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/utility_epsilons.pdf', bbox_inches='tight')
+plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/utility_epsilons.jpg',dpi=300, bbox_inches='tight')
 
 # %% DS16
 privsmote_ds16 = privsmote.loc[privsmote.dsn=='ds16']

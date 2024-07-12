@@ -19,7 +19,9 @@ priv_util = priv_util[~priv_util.ds.isin(['ds32', 'ds33', 'ds38'])]
 # %%
 priv_util.loc[priv_util['technique']=='PATEGAN', 'technique'] = 'PATE-GAN'
 # %%
-
+priv_util = priv_util[~priv_util['ds_complete'].str.contains(r'privateSMOTE3|privateSMOTE5')]
+priv_util.loc[priv_util['technique']==r'$\epsilon$-2PrivateSMOTE', 'technique'] = r'$\epsilon$-PrivateSMOTE'
+# %%
 def bayesian_sign_test(diff_vector, rope_min, rope_max):
     prob_left = np.mean(diff_vector < rope_min)
     prob_rope = np.mean((diff_vector > rope_min) & (diff_vector < rope_max))
@@ -133,7 +135,7 @@ sns.move_legend(ax, bbox_to_anchor=(0.5,1.23), loc='upper center', borderaxespad
 sns.set(font_scale=1.3)
 # plt.yticks(np.arange(0, 1.25, 0.25))
 plt.xticks(rotation=45)
-# plt.savefig(f'../plots/bayes_riskperformance.pdf', bbox_inches='tight')
+plt.savefig(f'../plots/bayes_riskperformance.jpg', dpi=300, bbox_inches='tight')
 
 # %%
 ###### BEST IN PERFORMANCE

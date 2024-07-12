@@ -140,6 +140,42 @@ axes[0,1].set_ylim(-0.02,1.02)
 axes[1,1].set_ylim(-0.02,1.02)
 #plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_risk_together_khighest.pdf', bbox_inches='tight')
 
+# %% together only with 2PrivateSMOTE
+performance_priv_paper = performance_priv[~performance_priv['ds_complete'].str.contains(r'privateSMOTE3|privateSMOTE5')]
+priv_performance_paper = priv_performance[~priv_performance['ds_complete'].str.contains(r'privateSMOTE3|privateSMOTE5')]
+order_ = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATE-GAN',
+         r'$\epsilon$-PrivateSMOTE']
+performance_priv_paper.loc[performance_priv_paper['technique']==r'$\epsilon$-2PrivateSMOTE', 'technique'] = r'$\epsilon$-PrivateSMOTE'
+priv_performance_paper.loc[priv_performance_paper['technique']==r'$\epsilon$-2PrivateSMOTE', 'technique'] = r'$\epsilon$-PrivateSMOTE'
+# %%
+sns.set_style("darkgrid")
+fig, axes = plt.subplots(2, 2, figsize=(30,20))
+sns.boxplot(ax=axes[0,0], data=performance_priv_paper,
+    x='technique', y='roc_auc_perdif', order=order_, **PROPS)
+sns.boxplot(ax=axes[0,1], data=performance_priv_paper,
+    x='technique', y='value', order=order_, **PROPS)
+sns.boxplot(ax=axes[1,0], data=priv_performance_paper,
+    x='technique', y='roc_auc_perdif', order=order_, **PROPS_RISK)
+sns.boxplot(ax=axes[1,1], data=priv_performance_paper,
+    x='technique', y='value', order=order_, **PROPS_RISK)
+sns.set(font_scale=3)
+axes[0,1].set_ylabel("Privacy Risk (linkability)")
+axes[1,1].set_ylabel("Privacy Risk (linkability)")
+axes[0,0].set_xlabel("")
+axes[0,1].set_xlabel("")
+axes[1,0].set_xlabel("")
+axes[1,1].set_xlabel("")
+axes[1,0].set_xticklabels(axes[1,0].get_xticklabels(), rotation=60)
+axes[0,0].set_xticklabels("")
+axes[0,0].set_ylabel("Percentage difference of \n predictive performance (AUC)")
+axes[1,0].set_ylabel("Percentage difference of \n predictive performance (AUC)")
+axes[1,1].set_xticklabels(axes[1,1].get_xticklabels(), rotation=60)
+axes[0,1].set_xticklabels("")
+axes[0,0].set_ylim(-70,100)
+axes[1,0].set_ylim(-70,100)
+axes[0,1].set_ylim(-0.02,1.02)
+axes[1,1].set_ylim(-0.02,1.02)
+plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_risk_together.pdf', dpi=300, bbox_inches='tight')
 
 #############################
 #       Each technique      #
@@ -226,7 +262,7 @@ ax.margins(y=0.2)
 ax.set_ylim(-70,100)
 ax.use_sticky_edges = False
 sns.move_legend(ax, bbox_to_anchor=(0.5,1.15), loc='upper center', borderaxespad=0., frameon=False, ncol=3, title='k-highest-risk', labels=['2','3','5'])
-# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privatesmote_epsilons_khighest.pdf', bbox_inches='tight')
+plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privatesmote_epsilons_khighest.jpg', dpi=300, bbox_inches='tight')
 
 # %%
 privsmote_ds16 = privsmote.loc[privsmote.ds=='ds16']
@@ -245,10 +281,11 @@ plt.xlabel("Percentage difference of \n predictive performance (AUC)")
 
 # %%
 # Create a density plot
+privsmote2 = privsmote.loc[privsmote.ds_complete.str.contains('SMOTE_')].reset_index(drop=True)
 color_epsilons = ['#3F51B5', '#AB47BC', '#FFA000', '#FFEB3B', '#AED581'] # '#F06292',
 #plt.figure(figsize=(8,6))
-axs = sns.kdeplot(x=privsmote['roc_auc_perdif'], y=privsmote['value'],
-                  fill=False, thresh=0, levels=100, hue=privsmote[r'$\epsilon$'],
+axs = sns.kdeplot(x=privsmote2['roc_auc_perdif'], y=privsmote2['value'],
+                  fill=False, thresh=0, levels=100, hue=privsmote2[r'$\epsilon$'],
                    #hue_order=order_eps,
                    palette=color_epsilons, alpha=0.7)
 sns.set(font_scale=1.3)
@@ -258,7 +295,7 @@ axs.set(ylim=(-0.15, 1.02))
 plt.xlabel('Percentage difference of \n predictive performance (AUC)')
 plt.ylabel('Privacy Risk (Linkability)')
 sns.move_legend(axs, bbox_to_anchor=(1.25,0.5), loc='center right', borderaxespad=0., frameon=False)
-# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_density.pdf', bbox_inches='tight')
+plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/privateSMOTE_tradeoff_density.jpg', dpi=300, bbox_inches='tight')
 
 # %% 3D plot
 x_values = privsmote_max[r'$\epsilon$'].values

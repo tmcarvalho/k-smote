@@ -74,6 +74,17 @@ ax.set_xticklabels(ax.get_xticklabels(), rotation=60)
 # plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/cpu.pdf', bbox_inches='tight')
 
 # %%
+# %%
+plt.figure(figsize=(12,10))
+ax = sns.boxplot(x=summary_costs["technique"], y=summary_costs["ram_percent"], order=order,**PROPS)
+# sns.move_legend(ax, bbox_to_anchor=(1,0.5), loc='center left', title='Transformation', borderaxespad=0., frameon=False)
+ax.set_ylim(-1.5,100)
+ax.set_ylabel("Percentage of RAM")
+ax.set_xlabel("")
+ax.set_xticklabels(ax.get_xticklabels(), rotation=60)
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/cpu.pdf', bbox_inches='tight')
+
+# %%
 plt.figure(figsize=(12,10))
 ax = sns.boxplot(x=summary_costs["technique"], y=summary_costs["gpu_percent"], order=order,**PROPS)
 # sns.move_legend(ax, bbox_to_anchor=(1,0.5), loc='center left', title='Transformation', borderaxespad=0., frameon=False)

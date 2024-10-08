@@ -176,7 +176,7 @@ axes[0,0].set_ylim(-70,100)
 axes[1,0].set_ylim(-70,100)
 axes[0,1].set_ylim(-0.02,1.02)
 axes[1,1].set_ylim(-0.02,1.02)
-#plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_risk_together.jpg', dpi=300, bbox_inches='tight')
+#plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_risk_together.pdf', dpi=300, bbox_inches='tight')
 
 #############################
 #       Each technique      #

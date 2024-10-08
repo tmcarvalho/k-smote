@@ -18,7 +18,7 @@ results = pd.concat([coverage_privsmote, coverage_city, coverage_deep_learning, 
 results['technique'] = ['PrivateSMOTE' if 'privateSMOTE' in file else file.split('_')[1] for file in results.ds]
 
 # %%
-results.loc[results['technique'].str.contains('transf'), 'technique'] = 'PPT'
+results.loc[results['technique'].str.contains('transf'), 'technique'] = 'Generalisation'
 results.loc[results['technique']=='under', 'technique'] = 'RUS'
 results.loc[results['technique']=='bordersmote', 'technique'] = 'BorderlineSMOTE'
 results.loc[results['technique']=='smote', 'technique'] = 'SMOTE'
@@ -36,7 +36,7 @@ mean_cols.loc[mean_cols['technique']=='PrivateSMOTE', 'technique'] = r'$\epsilon
 # %% Remove ds32, 33 and 38 because they do not have borderline and smote
 mean_cols = mean_cols[~mean_cols.dsn.isin(['ds32', 'ds33', 'ds38'])]
 # %%
-order = ['PPT','RUS','SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATE-GAN', r'$\epsilon$-PrivateSMOTE']
+order = ['Generalisation','RUS','SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATE-GAN', r'$\epsilon$-PrivateSMOTE']
 color_techniques = ['#311B92', '#673AB7', '#3F51B5', '#42A5F5', '#4DD0E1', '#81C784', '#DCE775', '#FFF176', '#FFCC80', '#FF8A65']
 color_techniques_ = ['#EC407A', '#7E57C2', '#42A5F5', '#26C6DA', '#66BB6A', '#D4E157', '#FFEE58', '#FFA726', '#FF7043', '#78909C']
 # %%
@@ -46,7 +46,7 @@ ax = sns.boxplot(x=mean_cols["Statistic Similarity (Mean)"], hue=mean_cols["tech
 sns.move_legend(ax, bbox_to_anchor=(1,0.5), loc='center left', title='Transformation', borderaxespad=0., frameon=False)
 ax.set_xlim(0,1.02)
 sns.set(font_scale=2)
-plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/statistic_similarity.pdf', bbox_inches='tight')
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/statistic_similarity.pdf', bbox_inches='tight')
 
 # %%
 sns.set_style("darkgrid")
@@ -142,7 +142,7 @@ axes[1].get_legend().set_visible(False)
 axes[3].get_legend().set_visible(False)
 # plt.subplots_adjust(wspace = 0.1)
 sns.move_legend(axes[2], title='Transformation Techniques', bbox_to_anchor=(-0.1,1.3), loc='upper center', borderaxespad=0., ncol=5, frameon=False)
-plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/utility_best_techniques.jpg', dpi=300, bbox_inches='tight')
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/utility_best_techniques.jpg', dpi=300, bbox_inches='tight')
 
 # %%
 privsmote = mean_cols.loc[mean_cols.technique.str.contains('PrivateSMOTE')].reset_index(drop=True)
@@ -224,7 +224,7 @@ axes[0].get_legend().set_visible(False)
 axes[1].get_legend().set_visible(False)
 axes[3].get_legend().set_visible(False)
 sns.move_legend(axes[2], bbox_to_anchor=(-0.1,1.3), loc='upper center', borderaxespad=0., ncol=6, frameon=False)
-plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/utility_epsilons.jpg',dpi=300, bbox_inches='tight')
+#plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/utility_epsilons.jpg',dpi=300, bbox_inches='tight')
 
 # %% DS16
 privsmote_ds16 = privsmote.loc[privsmote.dsn=='ds16']

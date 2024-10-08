@@ -20,6 +20,7 @@ priv_util = priv_util[priv_util.roc_auc_perdif.notna()]
 priv_util = priv_util[~priv_util.ds.isin(['ds32', 'ds33', 'ds38', 'ds55'])]
 # %%
 priv_util.loc[priv_util['technique']=='PATEGAN', 'technique'] = 'PATE-GAN'
+priv_util.loc[priv_util['technique']=='PPT', 'technique'] = 'Generalisation'
 #%%
 PROPS = {
     'boxprops':{'facecolor':'#00BFC4', 'edgecolor':'black'},
@@ -33,7 +34,7 @@ PROPS_RISK = {
     'whiskerprops':{'color':'black'},
     'capprops':{'color':'black'}
 }
-order = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATE-GAN',
+order = ['Generalisation', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATE-GAN',
          r'$\epsilon$-2PrivateSMOTE', r'$\epsilon$-3PrivateSMOTE', r'$\epsilon$-5PrivateSMOTE']
 order_eps = ['0.1', '0.5', '1.0', '5.0', '10.0']
 # %%
@@ -62,10 +63,10 @@ sns.set(font_scale=2.2)
 sns.light_palette("seagreen", as_cmap=True)
 axes[0].set_ylabel("Percentage difference of \n predictive performance (AUC)")
 axes[0].set_xlabel("")
-axes[0].set_xticklabels(axes[0].get_xticklabels(), rotation=60)
+axes[0].set_xticklabels(axes[0].get_xticklabels(), rotation=70)
 axes[1].set_ylabel("Privacy Risk (linkability)")
 axes[1].set_xlabel("")
-axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=60)
+axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=70)
 axes[0].margins(y=0.2)
 #axes[0].yaxis.set_ticks(np.arange(-80,20, 10))
 #axes[0].set_ylim(-70,120)
@@ -97,10 +98,10 @@ sns.set(font_scale=2.2)
 sns.light_palette("seagreen", as_cmap=True)
 axes[0].set_ylabel("Privacy Risk (linkability)")
 axes[0].set_xlabel("")
-axes[0].set_xticklabels(axes[0].get_xticklabels(), rotation=60)
+axes[0].set_xticklabels(axes[0].get_xticklabels(), rotation=70)
 axes[1].set_ylabel("Percentage difference of \n predictive performance (AUC)")
 axes[1].set_xlabel("")
-axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=60)
+axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=70)
 axes[0].margins(y=0.2)
 axes[1].set_ylim(-70,120)
 axes[0].set_ylim(-0.02,1.02)
@@ -128,22 +129,22 @@ axes[0,0].set_xlabel("")
 axes[0,1].set_xlabel("")
 axes[1,0].set_xlabel("")
 axes[1,1].set_xlabel("")
-axes[1,0].set_xticklabels(axes[1,0].get_xticklabels(), rotation=60)
+axes[1,0].set_xticklabels(axes[1,0].get_xticklabels(), rotation=70)
 axes[0,0].set_xticklabels("")
 axes[0,0].set_ylabel("Percentage difference of \n predictive performance (AUC)")
 axes[1,0].set_ylabel("Percentage difference of \n predictive performance (AUC)")
-axes[1,1].set_xticklabels(axes[1,1].get_xticklabels(), rotation=60)
+axes[1,1].set_xticklabels(axes[1,1].get_xticklabels(), rotation=70)
 axes[0,1].set_xticklabels("")
 axes[0,0].set_ylim(-70,100)
 axes[1,0].set_ylim(-70,100)
 axes[0,1].set_ylim(-0.02,1.02)
 axes[1,1].set_ylim(-0.02,1.02)
-#plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_risk_together_khighest.pdf', bbox_inches='tight')
+plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_risk_together_khighest.pdf', bbox_inches='tight')
 
 # %% together only with 2PrivateSMOTE
 performance_priv_paper = performance_priv[~performance_priv['ds_complete'].str.contains(r'privateSMOTE3|privateSMOTE5')]
 priv_performance_paper = priv_performance[~priv_performance['ds_complete'].str.contains(r'privateSMOTE3|privateSMOTE5')]
-order_ = ['PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATE-GAN',
+order_ = ['Generalisation', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE', 'CTGAN', 'DPGAN', 'PATE-GAN',
          r'$\epsilon$-PrivateSMOTE']
 performance_priv_paper.loc[performance_priv_paper['technique']==r'$\epsilon$-2PrivateSMOTE', 'technique'] = r'$\epsilon$-PrivateSMOTE'
 priv_performance_paper.loc[priv_performance_paper['technique']==r'$\epsilon$-2PrivateSMOTE', 'technique'] = r'$\epsilon$-PrivateSMOTE'
@@ -175,7 +176,7 @@ axes[0,0].set_ylim(-70,100)
 axes[1,0].set_ylim(-70,100)
 axes[0,1].set_ylim(-0.02,1.02)
 axes[1,1].set_ylim(-0.02,1.02)
-plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_risk_together.jpg', dpi=300, bbox_inches='tight')
+#plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_risk_together.jpg', dpi=300, bbox_inches='tight')
 
 #############################
 #       Each technique      #

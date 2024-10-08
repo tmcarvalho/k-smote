@@ -18,6 +18,7 @@ priv_util = anonymeter_results.merge(performance_priv, on=['technique', 'ds_comp
 priv_util = priv_util[~priv_util.ds.isin(['ds32', 'ds33', 'ds38'])]
 # %%
 priv_util.loc[priv_util['technique']=='PATEGAN', 'technique'] = 'PATE-GAN'
+priv_util.loc[priv_util['technique']=='PPT', 'technique'] = 'Generalisation'
 # %%
 priv_util = priv_util[~priv_util['ds_complete'].str.contains(r'privateSMOTE3|privateSMOTE5')]
 priv_util.loc[priv_util['technique']==r'$\epsilon$-2PrivateSMOTE', 'technique'] = r'$\epsilon$-PrivateSMOTE'
@@ -66,7 +67,7 @@ def solutions_concat(candidates, metric):
 
 def sorter(column):
     reorder = [
-        'PPT', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE',
+        'Generalisation', 'RUS', 'SMOTE', 'BorderlineSMOTE', 'Copula GAN', 'TVAE',
         'CTGAN', 'DPGAN', 'PATE-GAN', r'$\epsilon$-PrivateSMOTE'
     ]
     cat = pd.Categorical(column, categories=reorder, ordered=True)
@@ -135,7 +136,7 @@ sns.move_legend(ax, bbox_to_anchor=(0.5,1.23), loc='upper center', borderaxespad
 sns.set(font_scale=1.3)
 # plt.yticks(np.arange(0, 1.25, 0.25))
 plt.xticks(rotation=45)
-plt.savefig(f'../plots/bayes_riskperformance.jpg', dpi=300, bbox_inches='tight')
+#plt.savefig(f'../plots/bayes_riskperformance_.jpg', dpi=300, bbox_inches='tight')
 
 # %%
 ###### BEST IN PERFORMANCE

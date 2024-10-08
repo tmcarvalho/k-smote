@@ -136,7 +136,7 @@ sns.move_legend(ax, bbox_to_anchor=(0.5,1.23), loc='upper center', borderaxespad
 sns.set(font_scale=1.3)
 # plt.yticks(np.arange(0, 1.25, 0.25))
 plt.xticks(rotation=45)
-#plt.savefig(f'../plots/bayes_riskperformance_.jpg', dpi=300, bbox_inches='tight')
+#plt.savefig(f'../plots/bayes_riskperformance.jpg', dpi=300, bbox_inches='tight')
 
 # %%
 ###### BEST IN PERFORMANCE

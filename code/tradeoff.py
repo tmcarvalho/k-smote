@@ -176,7 +176,7 @@ axes[0,0].set_ylim(-70,100)
 axes[1,0].set_ylim(-70,100)
 axes[0,1].set_ylim(-0.02,1.02)
 axes[1,1].set_ylim(-0.02,1.02)
-plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_risk_together_.jpg', dpi=300, bbox_inches='tight')
+# plt.savefig(f'{os.path.dirname(os.getcwd())}/plots/performance_risk_together_.jpg', dpi=300, bbox_inches='tight')
 
 #############################
 #       Each technique      #
@@ -288,7 +288,7 @@ color_epsilons = ['#3F51B5', '#AB47BC', '#FFA000', '#FFEB3B', '#AED581'] # '#F06
 axs = sns.kdeplot(x=privsmote2['roc_auc_perdif'], y=privsmote2['value'],
                   fill=False, thresh=0, levels=100, hue=privsmote2[r'$\epsilon$'],
                    #hue_order=order_eps,
-                   palette=color_epsilons, alpha=0.7)
+                   palette=color_epsilons, alpha=0.4)
 sns.set(font_scale=1.3)
 axs.set(ylim=(-0.15, 1.02))
 # axs.set(xlim=(-60, 85))
